@@ -42,7 +42,7 @@ export default async function NotificationsPage() {
   const currency = (companyData as { currency?: string } | null)?.currency ?? "XOF";
 
   const today = new Date().toISOString().split("T")[0];
-  const twelveHoursAgo = new Date(Date.now() - 12 * 3_600_000).toISOString();
+  const twelveHoursAgo = new Date(new Date().getTime() - 12 * 3_600_000).toISOString();
 
   const [
     { data: overdueInvoicesData },
@@ -82,7 +82,7 @@ export default async function NotificationsPage() {
   const openAttendances = (openAttendanceData ?? []) as Pick<Attendance, "id" | "user_id" | "check_in">[];
 
   // Résoudre les noms des employés avec pointage ouvert
-  let attendanceUserNames: Record<string, string | null> = {};
+  const attendanceUserNames: Record<string, string | null> = {};
   if (openAttendances.length > 0) {
     const uids = [...new Set(openAttendances.map(a => a.user_id))];
     const { data: usersData } = await admin.from("users").select("id, full_name").in("id", uids);

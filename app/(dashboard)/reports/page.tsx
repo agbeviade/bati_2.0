@@ -87,7 +87,7 @@ export default async function ReportsPage() {
   }
 
   const userIds = Object.keys(hoursByUser);
-  let userNames: Record<string, string | null> = {};
+  const userNames: Record<string, string | null> = {};
   if (userIds.length > 0) {
     const { data: usersData } = await admin.from("users").select("id, full_name").in("id", userIds);
     for (const u of (usersData ?? []) as Pick<User, "id" | "full_name">[]) {
