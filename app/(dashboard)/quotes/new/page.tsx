@@ -240,18 +240,19 @@ export default function NewQuotePage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {/* En-tête colonnes */}
-            <div className="hidden md:grid grid-cols-[1fr_2fr_80px_80px_110px_36px] gap-2 text-xs text-muted-foreground px-1">
+            <div className="hidden md:grid grid-cols-[1fr_2fr_80px_80px_110px_110px_36px] gap-2 text-xs text-muted-foreground px-1">
               <span>Catégorie</span>
               <span>Description</span>
               <span>Qté</span>
               <span>Unité</span>
               <span className="text-right">P.U.</span>
+              <span className="text-right">Montant</span>
               <span />
             </div>
             <Separator className="hidden md:block" />
 
             {items.map((item) => (
-              <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_80px_80px_110px_36px] gap-2 items-center">
+              <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_80px_80px_110px_110px_36px] gap-2 items-center">
                 <select
                   value={item.category}
                   onChange={e => updateItem(item.id, "category", e.target.value)}
@@ -283,6 +284,9 @@ export default function NewQuotePage() {
                   onChange={e => updateItem(item.id, "unit_price", e.target.value)}
                   className="h-9 text-right"
                 />
+                <div className="h-9 flex items-center justify-end px-2 text-sm font-medium text-right tabular-nums">
+                  {formatAmount(lineTotal(item))}
+                </div>
                 <Button
                   type="button" variant="ghost" size="icon"
                   className="h-9 w-9 text-muted-foreground hover:text-destructive"

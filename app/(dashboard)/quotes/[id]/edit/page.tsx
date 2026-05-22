@@ -228,7 +228,7 @@ export default function EditQuotePage() {
           ) : (
             <>
               {newItems.map(item => (
-                <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_80px_80px_110px_36px] gap-2 items-center">
+                <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_80px_80px_110px_110px_36px] gap-2 items-center">
                   <select value={item.category} onChange={e => updateNew(item.id, "category", e.target.value)}
                     className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
@@ -237,6 +237,9 @@ export default function EditQuotePage() {
                   <Input type="number" min="0" value={item.quantity} onChange={e => updateNew(item.id, "quantity", e.target.value)} className="h-9 text-right" />
                   <Input placeholder="u" value={item.unit} onChange={e => updateNew(item.id, "unit", e.target.value)} className="h-9" />
                   <Input type="number" min="0" step="100" value={item.unit_price} onChange={e => updateNew(item.id, "unit_price", e.target.value)} className="h-9 text-right" />
+                  <div className="h-9 flex items-center justify-end px-2 text-sm font-medium tabular-nums">
+                    {fmt((Number(item.quantity) || 0) * (Number(item.unit_price) || 0))}
+                  </div>
                   <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive"
                     onClick={() => setNewItems(prev => prev.filter(i => i.id !== item.id))}>
                     <Trash2 className="h-3.5 w-3.5" />
