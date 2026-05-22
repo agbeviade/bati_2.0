@@ -7,7 +7,7 @@ import { LogOut, Construction } from "lucide-react";
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/portal/login");
 
   const admin = createAdminClient();
   const { data: profile } = await admin

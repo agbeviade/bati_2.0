@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { createQuote, type QuoteItemInput } from "../actions";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { createClient } from "@/lib/supabase/client";
 
 type ItemCategory = "material" | "labor" | "transport" | "equipment" | "other";
 
@@ -49,6 +50,9 @@ export default function NewQuotePage() {
   const [items, setItems] = useState<LineItem[]>([newLine()]);
   const [taxRate, setTaxRate] = useState("18");
   const [marginPct, setMarginPct] = useState("0");
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiDesc, setAiDesc] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
 
   const subtotal = items.reduce((s, i) => s + lineTotal(i), 0);
   const tax = subtotal * (Number(taxRate) || 0) / 100;
@@ -62,6 +66,43 @@ export default function NewQuotePage() {
   function removeItem(id: string) {
     if (items.length === 1) return;
     setItems(prev => prev.filter(i => i.id !== id));
+  }
+
+  async function handleGenerateAI(formEl: HTMLFormElement | null) {
+    if (aiDesc.trim().length < 10) {
+      toast.error("Décrivez le chantier (min 10 caractères).");
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const supabase = createClient();
+      const surface = formEl ? (formEl.elements.namedItem("surface_m2") as HTMLInputElement)?.value : "";
+      const projectType = formEl ? (formEl.elements.namedItem("project_type") as HTMLInputElement)?.value : "";
+      const { data, error } = await supabase.functions.invoke("generate-quote", {
+        body: {
+          description: aiDesc,
+          surface_m2: surface ? Number(surface) : undefined,
+          project_type: projectType || undefined,
+        },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error ?? error?.message ?? "Erreur IA.");
+        return;
+      }
+      const generated = (data.items ?? []) as { category: ItemCategory; label: string; quantity: number; unit: string; unit_price: number }[];
+      setItems(generated.map(it => ({
+        id: crypto.randomUUID(),
+        category: it.category,
+        label: it.label,
+        quantity: String(it.quantity),
+        unit: it.unit,
+        unit_price: String(it.unit_price),
+      })));
+      setAiOpen(false);
+      toast.success(`${generated.length} lignes générées par l'IA.`);
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -111,7 +152,50 @@ export default function NewQuotePage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6" id="quote-form">
+        {/* Bloc IA */}
+        <Card className="border-dashed border-purple-300 bg-purple-50/40">
+          <CardHeader className="py-3 px-4">
+            <button
+              type="button"
+              className="flex items-center gap-2 w-full text-left"
+              onClick={() => setAiOpen(v => !v)}
+            >
+              <Sparkles className="h-4 w-4 text-purple-500" />
+              <span className="font-semibold text-sm text-purple-800">Générer avec l&apos;IA</span>
+              <span className="text-xs text-purple-500 ml-1">(Groq / LLaMA)</span>
+              <span className="ml-auto">
+                {aiOpen ? <ChevronUp className="h-4 w-4 text-purple-400" /> : <ChevronDown className="h-4 w-4 text-purple-400" />}
+              </span>
+            </button>
+          </CardHeader>
+          {aiOpen && (
+            <CardContent className="pt-0 pb-4 px-4 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Décrivez le chantier et l&apos;IA proposera automatiquement les lignes du devis.
+                Remplissez d&apos;abord le type de projet et la surface pour un meilleur résultat.
+              </p>
+              <textarea
+                value={aiDesc}
+                onChange={e => setAiDesc(e.target.value)}
+                rows={3}
+                placeholder="Ex : Construction d'une villa R+1 de 180m², fondations, gros œuvre, toiture en zinc, plomberie et électricité incluses."
+                className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+              />
+              <Button
+                type="button"
+                size="sm"
+                disabled={aiLoading}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={() => handleGenerateAI(document.getElementById("quote-form") as HTMLFormElement)}
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                {aiLoading ? "Génération en cours..." : "Générer les lignes"}
+              </Button>
+            </CardContent>
+          )}
+        </Card>
+
         {/* Infos générales */}
         <Card>
           <CardHeader><CardTitle>Informations générales</CardTitle></CardHeader>
