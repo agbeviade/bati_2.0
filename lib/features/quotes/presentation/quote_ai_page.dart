@@ -87,8 +87,8 @@ class _QuoteAiPageState extends State<QuoteAiPage> {
       if (companyId == null) throw Exception('Entreprise non configurée');
 
       // Génère un numéro de devis
-      final count = await client.from('quotes').select('id', {'count': 'exact', 'head': true}).eq('company_id', companyId);
-      final quoteNumber = 'DEV-${DateTime.now().year}-${(((count as dynamic).count ?? 0) + 1).toString().padLeft(3, '0')}';
+      final countRes = await client.from('quotes').select('id').eq('company_id', companyId).count();
+      final quoteNumber = 'DEV-${DateTime.now().year}-${(countRes.count + 1).toString().padLeft(3, '0')}';
 
       final subtotal = _items.fold(0.0, (s, i) => s + i.quantity * i.unitPrice);
       const taxRate = 0.18;

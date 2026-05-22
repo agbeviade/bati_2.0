@@ -53,7 +53,7 @@ class NotificationService {
         // Matériaux en stock faible
         client.from('materials').select('id, name, stock_qty, min_stock_qty').gt('min_stock_qty', 0),
         // Pointages ouverts depuis plus de 12h
-        client.from('attendance').select('id').is_('check_out', null).lt('check_in', monthStart),
+        client.from('attendance').select('id').isFilter('check_out', null).lt('check_in', monthStart),
       ]);
 
       int notifId = 100;
