@@ -11,18 +11,24 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const CATEGORIES = [
-  { value: "cement",      label: "Ciment" },
-  { value: "steel",       label: "Acier / Fer" },
-  { value: "wood",        label: "Bois" },
-  { value: "sand_gravel", label: "Sable / Gravier" },
-  { value: "paint",       label: "Peinture" },
-  { value: "electrical",  label: "Électricité" },
-  { value: "plumbing",    label: "Plomberie" },
-  { value: "tools",       label: "Outillage" },
-  { value: "other",       label: "Autre" },
+  { value: "cement",       label: "Ciment & Liants" },
+  { value: "steel",        label: "Acier / Fer à béton" },
+  { value: "sand_gravel",  label: "Sable & Gravier" },
+  { value: "wood",         label: "Menuiserie Bois" },
+  { value: "paint",        label: "Peintures & Enduits" },
+  { value: "electrical",   label: "Électricité" },
+  { value: "plumbing",     label: "Plomberie & Sanitaire" },
+  { value: "tiling",       label: "Carrelage & Revêtement" },
+  { value: "waterproofing",label: "Étanchéité" },
+  { value: "partition",    label: "Plafonds & Cloisons" },
+  { value: "tools",        label: "Outillage" },
+  { value: "other",        label: "Autre" },
 ];
 
-const UNITS = ["u", "kg", "t", "m", "m²", "m³", "L", "sac", "barre", "planche", "rouleau", "boîte"];
+const UNITS = [
+  "unité", "sac", "kg", "tonne", "m", "m²", "m³", "L", "ml",
+  "barre", "botte", "rouleau", "panneau", "plaque", "bidon", "pot", "seau", "ensemble",
+];
 
 export default function NewMaterialPage() {
   const [loading, setLoading] = useState(false);

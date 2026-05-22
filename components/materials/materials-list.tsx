@@ -18,9 +18,18 @@ export type MaterialRow = {
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
-  cement: "Ciment", steel: "Acier/Fer", wood: "Bois", sand_gravel: "Sable/Gravier",
-  paint: "Peinture", electrical: "Électricité", plumbing: "Plomberie",
-  tools: "Outillage", other: "Autre",
+  cement: "Ciment & Liants",
+  steel: "Acier / Fer à béton",
+  sand_gravel: "Sable & Gravier",
+  wood: "Menuiserie Bois",
+  paint: "Peintures & Enduits",
+  electrical: "Électricité",
+  plumbing: "Plomberie & Sanitaire",
+  tiling: "Carrelage & Revêtement",
+  waterproofing: "Étanchéité",
+  partition: "Plafonds & Cloisons",
+  tools: "Outillage",
+  other: "Autre",
 };
 
 const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value, label }));
