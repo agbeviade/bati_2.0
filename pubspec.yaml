@@ -1,0 +1,52 @@
+name: batiflow_mobile
+description: BatiFlow — Gestion BTP
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Supabase
+  supabase_flutter: ^2.8.4
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # UI
+  google_fonts: ^6.2.1
+
+  # Géolocalisation
+  geolocator: ^13.0.4
+  permission_handler: ^11.3.1
+
+  # Caméra / Photos
+  image_picker: ^1.1.2
+
+  # PDF / URLs
+  url_launcher: ^6.3.1
+
+  # Notifications locales
+  flutter_local_notifications: ^18.0.1
+
+  # Utilitaires
+  intl: ^0.19.0
+  timeago: ^3.7.0
+  cached_network_image: ^3.4.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
