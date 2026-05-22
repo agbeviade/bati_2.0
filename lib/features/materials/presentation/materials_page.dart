@@ -109,6 +109,21 @@ class _MaterialsPageState extends State<MaterialsPage> {
   }
 }
 
+const _kCategoryLabels = {
+  'cement': 'Ciment & Liants',
+  'steel': 'Acier / Fer à béton',
+  'sand_gravel': 'Sable & Gravier',
+  'wood': 'Menuiserie Bois',
+  'paint': 'Peintures & Enduits',
+  'electrical': 'Électricité',
+  'plumbing': 'Plomberie & Sanitaire',
+  'tiling': 'Carrelage & Revêtement',
+  'waterproofing': 'Étanchéité',
+  'partition': 'Plafonds & Cloisons',
+  'tools': 'Outillage',
+  'other': 'Autre',
+};
+
 class _MaterialTile extends StatelessWidget {
   final models.Material material;
   const _MaterialTile({required this.material});
@@ -154,7 +169,7 @@ class _MaterialTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(m.name, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                  Text(m.category, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                  Text(_kCategoryLabels[m.category] ?? m.category, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                 ],
               ),
             ),
