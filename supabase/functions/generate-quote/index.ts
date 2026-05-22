@@ -1,3 +1,5 @@
+import { PRIX_REFERENCE_CI } from "./prices_ci.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -28,11 +30,23 @@ Deno.serve(async (req) => {
 
     const apiKey = Deno.env.get("GROQ_API_KEY")!;
 
-    const systemPrompt = `Tu es un expert en estimation de chantiers BTP en Afrique de l'Ouest (prix en ${currency}).
-Tu génères des devis détaillés avec des prix réalistes pour le marché local.
+    const systemPrompt = `Tu es un expert en estimation de chantiers BTP en Côte d'Ivoire et en Afrique de l'Ouest (prix en ${currency}).
+Tu génères des devis détaillés avec des prix RÉELS issus du marché local ivoirien.
+Tu dois OBLIGATOIREMENT utiliser les prix de référence ci-dessous pour chaque ligne du devis.
+Ne jamais inventer des prix — utilise toujours la fourchette basse ou médiane de la référence.
+
+${PRIX_REFERENCE_CI}
+
 Réponds UNIQUEMENT avec un JSON valide, sans texte avant ou après.
 Format: { "items": [...], "notes": "..." }
-Chaque item: { "category": "material"|"labor"|"transport"|"equipment"|"other", "label": string, "quantity": number, "unit": string, "unit_price": number }`;
+Chaque item: { "category": "material"|"labor"|"transport"|"equipment"|"other", "label": string, "quantity": number, "unit": string, "unit_price": number }
+
+Règles importantes :
+- Utilise les unités exactes de la référence (sac, m², ml, barre, botte, rouleau, jour, m³...)
+- Pour la main d'œuvre : category = "labor", unit = "jour" ou "h"
+- Pour les matériaux : calcule les quantités réelles en fonction de la surface fournie
+- Inclure : fondations, gros œuvre, charpente/toiture, menuiseries, carrelage, plomberie, électricité, peinture selon le type de chantier
+- Entre 12 et 25 lignes pour un devis complet`;
 
     const userPrompt = `Génère un devis détaillé pour ce chantier:
 Description: ${description}
