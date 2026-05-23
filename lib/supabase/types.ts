@@ -345,9 +345,15 @@ export type Database = {
         Update: Partial<Omit<Attendance, "id">>;
         Relationships: [];
       };
+      material_categories: {
+        Row: { id: string; company_id: string; slug: string; label: string; created_at: string };
+        Insert: { id?: string; company_id: string; slug: string; label: string; created_at?: string };
+        Update: { label?: string };
+        Relationships: [];
+      };
       materials: {
         Row: Material;
-        Insert: { id?: string; company_id: string; name: string; category: MaterialCategory; unit: string; stock_qty?: number; min_stock_qty?: number; unit_cost?: number; created_at?: string; updated_at?: string };
+        Insert: { id?: string; company_id: string; name: string; category: string; unit: string; stock_qty?: number; min_stock_qty?: number; unit_cost?: number; created_at?: string; updated_at?: string };
         Update: Partial<Omit<Material, "id">>;
         Relationships: [];
       };
