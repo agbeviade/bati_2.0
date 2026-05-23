@@ -50,8 +50,8 @@ class NotificationService {
         client.from('invoices').select('id').inFilter('status', ['sent', 'overdue']).lt('due_date', now),
         // Devis expirés (valides hier et statut sent)
         client.from('quotes').select('id').eq('status', 'sent').lt('valid_until', now),
-        // Matériaux en stock faible
-        client.from('materials').select('id, name, stock_qty, min_stock_qty').gt('min_stock_qty', 0),
+        // placeholder — stock minimum supprimé
+        Future.value(<dynamic>[]),
         // Pointages ouverts depuis plus de 12h
         client.from('attendance').select('id').isFilter('check_out', null).lt('check_in', monthStart),
       ]);
@@ -72,17 +72,6 @@ class NotificationService {
             payload: '/quotes');
       }
 
-      final materials = results[2] as List;
-      final lowStock = materials.where((m) {
-        final stock = (m['stock_qty'] as num?)?.toDouble() ?? 0;
-        final min = (m['min_stock_qty'] as num?)?.toDouble() ?? 0;
-        return min > 0 && stock <= min;
-      }).toList();
-      if (lowStock.isNotEmpty) {
-        final name = lowStock.first['name'] as String;
-        final extra = lowStock.length > 1 ? ' et ${lowStock.length - 1} autre${lowStock.length > 2 ? 's' : ''}' : '';
-        await show(notifId++, 'Stock faible', '$name$extra en dessous du seuil minimum', payload: '/materials');
-      }
 
       final openAttendance = (results[3] as List).length;
       if (openAttendance > 0) {

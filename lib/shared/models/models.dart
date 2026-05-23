@@ -318,7 +318,6 @@ class Material {
   final String category;
   final String unit;
   final double stockQty;
-  final double minStockQty;
   final double unitCost;
 
   const Material({
@@ -327,11 +326,8 @@ class Material {
     required this.category,
     required this.unit,
     required this.stockQty,
-    required this.minStockQty,
     required this.unitCost,
   });
-
-  bool get isLowStock => minStockQty > 0 && stockQty <= minStockQty;
 
   factory Material.fromJson(Map<String, dynamic> j) => Material(
         id: j['id'] as String,
@@ -339,7 +335,6 @@ class Material {
         category: j['category'] as String? ?? 'other',
         unit: j['unit'] as String? ?? 'u',
         stockQty: (j['stock_qty'] as num?)?.toDouble() ?? 0,
-        minStockQty: (j['min_stock_qty'] as num?)?.toDouble() ?? 0,
         unitCost: (j['unit_cost'] as num?)?.toDouble() ?? 0,
       );
 }

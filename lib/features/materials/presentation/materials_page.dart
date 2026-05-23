@@ -14,7 +14,9 @@ class MaterialsPage extends StatefulWidget {
 class _MaterialsPageState extends State<MaterialsPage> {
   bool _loading = true;
   List<models.Material> _materials = [];
+  Map<String, String> _categoryLabels = {};
   String _search = '';
+  String _selectedCategory = '';
 
   @override
   void initState() {
@@ -25,12 +27,20 @@ class _MaterialsPageState extends State<MaterialsPage> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final data = await Supabase.instance.client
-          .from('materials')
-          .select()
-          .order('name');
+      final client = Supabase.instance.client;
+      final results = await Future.wait([
+        client.from('materials').select('id, name, category, unit, stock_qty, unit_cost').order('name'),
+        client.from('material_categories').select('slug, label').order('label'),
+      ]);
+
+      final labels = <String, String>{};
+      for (final c in (results[1] as List)) {
+        labels[c['slug'] as String] = c['label'] as String;
+      }
+
       setState(() {
-        _materials = (data as List).map((j) => models.Material.fromJson(j)).toList();
+        _materials = (results[0] as List).map((j) => models.Material.fromJson(j)).toList();
+        _categoryLabels = labels;
         _loading = false;
       });
     } catch (_) {
@@ -39,15 +49,19 @@ class _MaterialsPageState extends State<MaterialsPage> {
   }
 
   List<models.Material> get _filtered {
-    if (_search.isEmpty) return _materials;
-    return _materials.where((m) => m.name.toLowerCase().contains(_search.toLowerCase())).toList();
+    return _materials.where((m) {
+      final matchSearch = _search.isEmpty || m.name.toLowerCase().contains(_search.toLowerCase());
+      final matchCat = _selectedCategory.isEmpty || m.category == _selectedCategory;
+      return matchSearch && matchCat;
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final lowStock = _materials.where((m) => m.isLowStock).length;
     final filtered = _filtered;
+
+    final categories = _categoryLabels.entries.toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Matériaux & Stock')),
@@ -63,23 +77,8 @@ class _MaterialsPageState extends State<MaterialsPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                if (lowStock > 0)
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(color: const Color(0xFFFFF7ED), borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.inventory_2, color: Color(0xFFEA580C), size: 18),
-                        const SizedBox(width: 8),
-                        Text('$lowStock matériau${lowStock > 1 ? 'x' : ''} en stock faible',
-                            style: const TextStyle(color: Color(0xFFEA580C), fontWeight: FontWeight.w500, fontSize: 13)),
-                      ],
-                    ),
-                  ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: TextField(
                     decoration: const InputDecoration(
                       hintText: 'Rechercher...',
@@ -89,17 +88,48 @@ class _MaterialsPageState extends State<MaterialsPage> {
                     onChanged: (v) => setState(() => _search = v),
                   ),
                 ),
+                if (categories.isNotEmpty)
+                  SizedBox(
+                    height: 40,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                      children: [
+                        _FilterChip(
+                          label: 'Tous',
+                          selected: _selectedCategory.isEmpty,
+                          onTap: () => setState(() => _selectedCategory = ''),
+                        ),
+                        ...categories.map((e) => _FilterChip(
+                              label: e.value,
+                              selected: _selectedCategory == e.key,
+                              onTap: () => setState(() => _selectedCategory = e.key),
+                            )),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 4),
                 Expanded(
                   child: filtered.isEmpty
                       ? (_materials.isEmpty
-                          ? const EmptyState(icon: Icons.inventory_2_outlined, title: 'Aucun matériau', subtitle: 'Ajoutez des matériaux depuis la version web')
-                          : Center(child: Text('Aucun résultat', style: TextStyle(color: cs.onSurfaceVariant))))
+                          ? const EmptyState(
+                              icon: Icons.inventory_2_outlined,
+                              title: 'Aucun matériau',
+                              subtitle: 'Ajoutez des matériaux depuis la version web',
+                            )
+                          : Center(
+                              child: Text('Aucun résultat',
+                                  style: TextStyle(color: cs.onSurfaceVariant)),
+                            ))
                       : RefreshIndicator(
                           onRefresh: _load,
                           child: ListView.builder(
                             padding: const EdgeInsets.all(16),
                             itemCount: filtered.length,
-                            itemBuilder: (_, i) => _MaterialTile(material: filtered[i]),
+                            itemBuilder: (_, i) => _MaterialTile(
+                              material: filtered[i],
+                              categoryLabel: _categoryLabels[filtered[i].category] ?? filtered[i].category,
+                            ),
                           ),
                         ),
                 ),
@@ -109,41 +139,46 @@ class _MaterialsPageState extends State<MaterialsPage> {
   }
 }
 
-const _kCategoryLabels = {
-  'installation':      'Installation de chantier',
-  'terrassement':      'Terrassement',
-  'gros_oeuvre':       'Gros œuvres / Béton',
-  'etancheite':        'Étanchéité',
-  'menuiserie_alu':    'Menuiserie aluminium',
-  'vitrage':           'Vitrage',
-  'serrurerie':        'Serrurerie',
-  'plomberie':         'Plomberie sanitaire',
-  'assainissement':    'Assainissement',
-  'electricite':       'Électricité',
-  'climatisation':     'Climatisation',
-  'telephonie':        'Téléphonie',
-  'revetement_dur':    'Revêtements durs',
-  'revetement_souple': 'Revêtements souples',
-  'menuiserie_bois':   'Menuiserie bois / PVC',
-  'faux_plafond':      'Faux plafonds',
-  'peinture':          'Peinture / Vernis',
-  'charpente':         'Charpente / Couverture',
-  // anciens slugs
-  'cement': 'Ciment & Liants', 'steel': 'Acier / Fer à béton',
-  'sand_gravel': 'Sable & Gravier', 'wood': 'Menuiserie Bois',
-  'paint': 'Peintures & Enduits', 'electrical': 'Électricité',
-  'plumbing': 'Plomberie & Sanitaire', 'other': 'Autre',
-};
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected ? cs.primary : cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: selected ? cs.onPrimary : cs.onSurfaceVariant,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _MaterialTile extends StatelessWidget {
   final models.Material material;
-  const _MaterialTile({required this.material});
+  final String categoryLabel;
+  const _MaterialTile({required this.material, required this.categoryLabel});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final m = material;
-    final isLow = m.isLowStock;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -154,53 +189,52 @@ class _MaterialTile extends StatelessWidget {
             extra: {'materialId': m.id, 'materialName': m.name},
           );
           if (done == true && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Stock mis à jour')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Stock mis à jour')),
+            );
           }
         },
         child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: isLow ? const Color(0xFFFFF7ED) : cs.primaryContainer,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.inventory_2_outlined,
-                color: isLow ? const Color(0xFFEA580C) : cs.onPrimaryContainer,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(m.name, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                  Text(_kCategoryLabels[m.category] ?? m.category, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${m.stockQty.toStringAsFixed(m.stockQty % 1 == 0 ? 0 : 1)} ${m.unit}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isLow ? const Color(0xFFEA580C) : cs.onSurface,
-                      ),
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                if (isLow)
-                  const Text('Stock faible', style: TextStyle(fontSize: 11, color: Color(0xFFEA580C), fontWeight: FontWeight.w500)),
-              ],
-            ),
-          ],
+                child: Icon(Icons.inventory_2_outlined, color: cs.onPrimaryContainer, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(m.name,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600)),
+                    Text(categoryLabel,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: cs.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+              Text(
+                '${m.stockQty.toStringAsFixed(m.stockQty % 1 == 0 ? 0 : 1)} ${m.unit}',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

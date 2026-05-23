@@ -32,7 +32,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       final results = await Future.wait<dynamic>([
         client.from('invoices').select('id, invoice_number, amount, due_date').inFilter('status', ['sent', 'overdue']).lt('due_date', now),
         client.from('quotes').select('id, quote_number, client_name').eq('status', 'sent').lt('valid_until', now.substring(0, 10)),
-        client.from('materials').select('id, name, stock_qty, min_stock_qty').gt('min_stock_qty', 0),
+        Future.value(<dynamic>[]), // stock minimum supprimé
         client.from('attendance').select('id, check_in').eq('user_id', uid).isFilter('check_out', null).lt('check_in', openThreshold),
       ]);
 
@@ -58,21 +58,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
           subtitle: q['client_name'] != null ? 'Client : ${q['client_name']}' : 'Renouveler ou relancer',
           route: '/quotes',
         ));
-      }
-
-      // Stock faible
-      for (final m in (results[2] as List)) {
-        final stock = (m['stock_qty'] as num).toDouble();
-        final min = (m['min_stock_qty'] as num).toDouble();
-        if (stock <= min) {
-          alerts.add(_Alert(
-            level: _AlertLevel.warning,
-            icon: Icons.inventory_2_outlined,
-            title: '${m['name']} — stock faible',
-            subtitle: 'Stock : $stock (min : $min)',
-            route: '/materials',
-          ));
-        }
       }
 
       // Pointages ouverts > 12h

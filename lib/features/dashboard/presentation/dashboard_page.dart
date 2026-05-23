@@ -37,7 +37,7 @@ class _DashboardPageState extends State<DashboardPage> {
       final results = await Future.wait([
         client.from('projects').select('id').eq('status', 'in_progress'),
         client.from('invoices').select('id').inFilter('status', ['sent', 'overdue']).lt('due_date', now.toIso8601String()),
-        client.from('materials').select('id').gt('min_stock_qty', 0),
+        Future.value(<dynamic>[]), // stock minimum supprimé
         client.from('invoices').select('amount').eq('status', 'paid').gte('created_at', firstOfMonth),
         client.from('projects').select('id, name, status, progress_pct, budget, spent').order('created_at', ascending: false).limit(5),
       ]);
