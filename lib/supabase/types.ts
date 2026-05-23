@@ -220,7 +220,7 @@ export type Material = {
   id: string;
   company_id: string;
   name: string;
-  category: MaterialCategory;
+  category: string;
   unit: string;
   stock_qty: number;
   min_stock_qty: number;
