@@ -11,18 +11,24 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const CATEGORIES = [
-  { value: "cement",       label: "Ciment & Liants" },
-  { value: "steel",        label: "Acier / Fer à béton" },
-  { value: "sand_gravel",  label: "Sable & Gravier" },
-  { value: "wood",         label: "Menuiserie Bois" },
-  { value: "paint",        label: "Peintures & Enduits" },
-  { value: "electrical",   label: "Électricité" },
-  { value: "plumbing",     label: "Plomberie & Sanitaire" },
-  { value: "tiling",       label: "Carrelage & Revêtement" },
-  { value: "waterproofing",label: "Étanchéité" },
-  { value: "partition",    label: "Plafonds & Cloisons" },
-  { value: "tools",        label: "Outillage" },
-  { value: "other",        label: "Autre" },
+  { value: "installation",      label: "Installation de chantier" },
+  { value: "terrassement",      label: "Terrassement" },
+  { value: "gros_oeuvre",       label: "Gros œuvres / Béton" },
+  { value: "etancheite",        label: "Étanchéité" },
+  { value: "menuiserie_alu",    label: "Menuiserie aluminium" },
+  { value: "vitrage",           label: "Vitrage" },
+  { value: "serrurerie",        label: "Serrurerie" },
+  { value: "plomberie",         label: "Plomberie sanitaire" },
+  { value: "assainissement",    label: "Assainissement" },
+  { value: "electricite",       label: "Électricité" },
+  { value: "climatisation",     label: "Climatisation" },
+  { value: "telephonie",        label: "Téléphonie" },
+  { value: "revetement_dur",    label: "Revêtements durs" },
+  { value: "revetement_souple", label: "Revêtements souples" },
+  { value: "menuiserie_bois",   label: "Menuiserie bois / PVC" },
+  { value: "faux_plafond",      label: "Faux plafonds" },
+  { value: "peinture",          label: "Peinture / Vernis" },
+  { value: "charpente",         label: "Charpente / Couverture" },
 ];
 
 const UNITS = [
