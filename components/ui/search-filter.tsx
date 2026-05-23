@@ -56,8 +56,9 @@ export function SearchFilter<T>({
     return result;
   }, [items, query, activeFilter, searchKeys, filterKey]);
 
-  const totalPages = pageSize ? Math.max(1, Math.ceil(filtered.length / pageSize)) : 1;
-  const paginated = pageSize ? filtered.slice((page - 1) * pageSize, page * pageSize) : filtered;
+  const hasQuery = query.trim() !== "";
+  const totalPages = (pageSize && !hasQuery) ? Math.max(1, Math.ceil(filtered.length / pageSize)) : 1;
+  const paginated = (pageSize && !hasQuery) ? filtered.slice((page - 1) * pageSize, page * pageSize) : filtered;
 
   return (
     <div className={className}>
