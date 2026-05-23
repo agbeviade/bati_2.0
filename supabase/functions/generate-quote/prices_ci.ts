@@ -1,224 +1,55 @@
-// Référence des prix du marché de la construction en Côte d'Ivoire
-// Source : produitbat.ci — scraping 2026
-// Utilisé par l'IA pour générer des devis au plus proche des prix réels du marché local.
-
+// Bordereau des Prix Unitaires BTP — Côte d'Ivoire 2024 (Volume A)
+// Source officielle btprix.net — Prix FOURNITURE + POSE HT en FCFA
 export const PRIX_REFERENCE_CI = `
-## RÉFÉRENCE PRIX MATÉRIAUX — CÔTE D'IVOIRE (FCFA) — Source: produitbat.ci 2026
+BORDEREAU PRIX UNITAIRES BTP — CÔTE D'IVOIRE 2024 (fourniture+pose HT)
 
-### GROS ŒUVRE — CIMENTS & LIANTS
-- Ciment CPJ 32,5R (tonne) : 85 000 – 90 000 FCFA/tonne
-- Ciment CPJ 32,5R (sac 50kg) : 4 500 – 5 000 FCFA/sac
-- Ciment CPA 52,5N blanc (sac 50kg) : 18 000 FCFA/sac
-- Ciment CHF 350 (tonne) : 96 000 FCFA/tonne
-- Enduit joint rapide 4H (sac 25kg) : 10 000 FCFA/sac
-- Mortier-colle C1 webercol dur (sac 25kg) : 6 000 FCFA/sac
-- SIKACERAM 80 CI mortier-colle C2 (sac 25kg) : 8 500 FCFA/sac
+INSTALLATION CHANTIER: baraque chantier MC+montage/mois=160000, conteneur 20 pieds achat=3000000, conteneur 20 pieds location/mois=160000, implantation simple ff=229590
 
-### GROS ŒUVRE — SABLE & GRAVIER
-- Sable de mer (m³) : 15 000 – 20 000 FCFA/m³
-- Sable de carrière (m³) : 18 000 – 25 000 FCFA/m³
-- Gravier 5/15 granite (m³) : 7 500 FCFA/livraison partielle
-- Gravier 5/25 granite (m³) : 25 000 – 35 000 FCFA/m³
-- Latérite compactage (m³) : 8 000 – 12 000 FCFA/m³
+TERRASSEMENT: fouille 1ère cat m³=1391, fouille 2ème cat m³=1617, fouille 3ème cat m³=1843, remblai compact m³=178
 
-### GROS ŒUVRE — FER À BÉTON & ACIER
-- HA 6mm FE500 (botte 6 barres 12m) : 46 000 FCFA/botte
-- HA 7-9mm FE500 (botte 6 barres 12m) : 62 100 FCFA/botte
-- HA 8mm FE500 (botte 6 barres 12m) : 40 000 – 52 000 FCFA/botte
-- HA 10mm FE500 (botte 6 barres 12m) : 40 000 – 52 000 FCFA/botte
-- HA 11-12mm FE500 (botte 6 barres 12m) : 52 000 – 62 100 FCFA/botte
-- HA 14mm FE500 (botte 6 barres 12m) : 52 000 FCFA/botte
-- HA 16mm FE500 (botte 6 barres 12m) : 52 000 FCFA/botte
-- HA 20mm FE500 (botte 6 barres 12m) : 52 000 FCFA/botte
-- HA 25-32mm FE500 (botte 6 barres 12m) : 52 000 FCFA/botte
-- Tôle plane 1000×2000×3mm : 42 100 FCFA/unité
-- Tôle plane 1500×3000×5mm : 204 000 FCFA/unité
-- Tôle striée 3mm 1500×3000 : 105 000 FCFA/unité
-- Poutrelle UPN 120 - 6m : 90 100 FCFA/barre
-- Cornière acier 40×40×3mm : 9 000 FCFA/barre (6m)
-- Cornière acier 50×50×3mm : 13 350 FCFA/barre (6m)
-- Fer plat 40×6mm (6m) : 13 100 FCFA/unité
-- Tube carré 25×25×2mm : 9 100 FCFA/m
-- Tube carré 40×40×2mm : 11 500 FCFA/barre (5.8m)
-- Tube carré 80×80×2mm : 22 500 FCFA/m
-- Tube rectangle 60×40×2mm : 19 300 FCFA/m
+BÉTON CHANTIER (BPF): béton propreté 200kg m³=59724, béton fondation 250kg m³=79534, béton 300kg m³=90368, béton 350kg m³=99992, béton 400kg m³=109022, béton élévation 350kg poteaux/chainages m³=90750, béton radier 350kg m³=99992, béton voiles 400kg m³=109022
 
-### GROS ŒUVRE — BRIQUES & BLOCS
-- Brique creuse 10×20×40 cm : 310 FCFA/pièce
-- Brique creuse 12×20×40 cm : 320 – 340 FCFA/pièce
-- Brique creuse 15×20×40 cm : 350 – 390 FCFA/pièce
-- Brique creuse 20×20×40 cm : 470 – 500 FCFA/pièce
-- Brique pleine standard : 200 – 240 FCFA/pièce
-- Brique pleine 12×20×40 (lot 1000) : 470 FCFA/pièce
-- Parpaing creux 15×20×40 cm : 350 – 400 FCFA/pièce
-- Hourdis américain 10×20×53cm : 500 FCFA/pièce
-- Hourdis américain 12×20×53cm : 550 FCFA/pièce
-- Hourdis américain 15×20×53cm : 750 FCFA/pièce
-- Hourdis français 10×20×53cm : 425 FCFA/pièce
-- Hourdis français 12×20×53cm : 500 FCFA/pièce
-- Pavé béton autobloquant coloré : 6 500 – 7 500 FCFA/m²
+BÉTON PRÊT EMPLOI (BPE): béton propreté C10 m³=69351, béton fondation radier C25 m³=108527
 
-### CARRELAGE & REVÊTEMENT
-- Carrelage grès cérame 40×40 : 7 500 FCFA/pièce (≈ 46 875 FCFA/m²)
-- Carrelage grès cérame 60×60 (import) : 7 800 – 8 000 FCFA/pièce (≈ 10 000 FCFA/m²)
-- Carrelage sol grès cérame 80×80 : 14 000 – 18 000 FCFA/m²
-- Carrelage mural faïence 30×60 : 6 000 – 9 000 FCFA/m²
-- Carrelage extérieur antidérapant : 7 000 – 11 000 FCFA/m²
-- Mortier-colle C1 carrelage (sac 25kg) : 4 116 – 6 000 FCFA/sac
-- Mortier-colle C2 carrelage (sac 25kg) : 8 500 – 10 080 FCFA/sac
-- Joint de carrelage (sac 5kg) : 3 500 FCFA/sac
-- Sous-couche parquet Basic 1,6mm (20m²) : 30 500 FCFA/rouleau
-- Profilé aluminium de finition : 3 500 – 5 000 FCFA/ml
+MAÇONNERIE (agglos fournis+posés): agglo creux 7cm u=75, agglo creux 10cm u=89, agglo creux 12cm u=104, agglo creux 15cm u=134, agglo creux 20cm u=188, agglo plein 7cm u=95, agglo plein 10cm u=119, agglo plein 12cm u=148, agglo plein 15cm u=193, agglo plein 20cm u=288
 
-### PLOMBERIE & SANITAIRE
-- Tube PVC évacuation Ø40 (barre 4m) : 3 500 FCFA/barre
-- Tube PVC évacuation Ø50 (barre 4m) : 5 000 FCFA/barre
-- Tube PVC évacuation Ø75 (barre 4m) : 8 500 FCFA/barre
-- Tube PVC évacuation Ø110 (barre 6m) : 18 500 FCFA/barre
-- Tube PPR alimentation Ø20 (100m) : 45 000 FCFA/rouleau
-- Tube PPR alimentation Ø25 (100m) : 60 000 FCFA/rouleau
-- Robinet de puisage à clé 3/4'' : 3 000 FCFA/unité
-- Robinet pour machine à laver 3/4'' : 3 500 FCFA/unité
-- Robinet mitigeur lavabo (entrée gamme) : 15 000 – 30 000 FCFA/unité
-- Robinet mitigeur lavabo Sopal (haut de gamme) : 30 000 – 35 000 FCFA/unité
-- Robinet mitigeur douche : 20 000 – 40 000 FCFA/unité
-- Robinet à capteur infrarouge : 170 000 FCFA/unité
-- Cuvette WC chasse basse : 18 480 FCFA/ensemble
-- Cuvette WC à poser + réservoir : 35 000 – 80 000 FCFA/ensemble
-- Urinoir complet : 40 000 FCFA/unité
-- Lave-mains 45cm : 5 040 FCFA/unité
-- Lavabo céramique 60cm : 20 000 – 45 000 FCFA/unité
-- Receveur de douche 80×80 : 35 000 – 70 000 FCFA/unité
-- Évier inox 1 bac : 15 000 – 30 000 FCFA/unité
-- Ballon d'eau chaude électrique 50L : 80 000 – 120 000 FCFA/unité
-- Raccord coude PPR 20 : 400 FCFA/unité
-- Raccord té PPR 20 : 500 FCFA/unité
+DALLAGE/CHAPE: dallage 5cm m²=10028, dallage 10cm m²=13058, chape lissée m²=3023, plancher corps creux 250kg m²=29500, plancher hourdis m²=33548
 
-### ÉLECTRICITÉ
-- Fil TH 2,5mm² (rouleau 100m) : 27 000 FCFA/rouleau
-- Câble rigide VGV 2×1,5mm² (100m) : 50 000 FCFA/rouleau
-- Câble rigide VGV 2×2,5mm² (100m) : 85 000 FCFA/rouleau
-- Câble rigide VGV 3×1,5mm² (100m) : 75 000 – 87 000 FCFA/rouleau
-- Câble rigide VGV 3×2,5mm² (100m) : 92 000 FCFA/rouleau
-- Câble rigide VGV 2×4mm² (100m) : 89 000 FCFA/rouleau
-- Câble rigide 1×120mm² : 13 000 FCFA/ml
-- Gaine annelée ICTA 3422 (50m) : 53 000 FCFA/rouleau
-- Tube ICTA Ø16 (50m) : 45 000 FCFA/rouleau
-- Disjoncteur Ph+N 10A : 7 500 FCFA/unité
-- Disjoncteur Ph+N 16A : 8 000 FCFA/unité
-- Disjoncteur miniature Easy9 1P 16A : 5 000 – 15 000 FCFA/unité
-- Disjoncteur miniature Easy9 2P 16A : 16 500 FCFA/unité
-- Interrupteur simple allumage (entrée gamme) : 936 – 1 000 FCFA/unité
-- Interrupteur simple encastré YAKI : 2 500 FCFA/unité
-- Interrupteur double allumage : 1 500 FCFA/unité
-- Interrupteur étanche : 3 550 FCFA/unité
-- Prise encastrée (entrée gamme) : 900 – 1 200 FCFA/unité
-- Prise de courant 16A 2P+T : 2 500 – 5 000 FCFA/unité
-- Prise 2P+T 10/16A 250V encastrée Legrand : 10 600 FCFA/unité
-- Prise Terre étanche : 2 000 FCFA/unité
-- Tableau électrique 12 modules : 18 000 – 25 000 FCFA/unité
-- Ampoule LED 9W E27 : 2 500 – 4 000 FCFA/unité
-- Spot encastrable LED 6W : 4 000 FCFA/unité
-- Hublot ovale plastique E27 : 3 500 – 4 000 FCFA/unité
-- Vigi iC60 bloc différentiel 4P 25A : 50 000 FCFA/unité
-- Boîte d'encastrement : 1 600 FCFA/unité
+ÉTANCHÉITÉ TERRASSE: terrasse inaccessible 1 feutre+1 bitume m²=33525, terrasse inaccessible 2 feutres m²=57219, terrasse accessible 1 feutre+1 bitume m²=53135, terrasse accessible 2 feutres m²=68813, terrasse accessible 2 feutres SBS m²=69070, relevé étanchéité avec gorges m²=8810, relevé surface m²=9861, acrotère m²=12987
 
-### MENUISERIE BOIS
-- Contreplaqué formica 15mm (244×122 cm) : 25 000 FCFA/panneau
-- Contreplaqué formica 18mm (244×122 cm) : 32 000 FCFA/panneau
-- Chevron bois 6/8 brut (4m) : 4 500 FCFA/pièce
-- Chevron 75×50mm (6m) : 8 000 – 12 000 FCFA/unité
-- Planche bois 30cm (ml) : 7 280 FCFA/ml
-- Liteau sapin traité 40×27mm (3m) : 7 000 FCFA/unité
-- Porte isoplane intérieure 90×210 cm : 35 000 – 55 000 FCFA/unité
-- Porte pleine en bois massif : 80 000 – 150 000 FCFA/unité
-- Serrure à encastrer : 12 000 – 32 000 FCFA/unité
-- Traitement bois Xylophène 5L : 45 000 FCFA/unité
+MENUISERIE ALUMINIUM: verre simple 4mm m²=29466, verre isolant 4/6/4 m²=13141, verre isolant 4/9/4 m²=14893, verre isolant 4/12/4 m²=17494, verre isolant 4/16/4 m²=20596, verre isolant 4/20/4 m²=23741, glace miroir m²=41462, verre trempé m²=4396, volet simple m²=20846, volet double m²=29488
 
-### ALUMINIUM & VITRAGE
-- Fenêtre aluminium 100×120 cm (coulissante) : 90 000 – 150 000 FCFA/unité
-- Porte aluminium 90×210 cm : 120 000 – 200 000 FCFA/unité
-- Verre simple 4mm (m²) : 15 000 – 20 000 FCFA/m²
-- Verre feuilleté 44.2 (m²) : 35 000 – 50 000 FCFA/m²
-- Moustiquaire aluminium (m²) : 8 000 – 12 000 FCFA/m²
+MENUISERIE BOIS: porte bois panneau 1 battant u=111870, porte bois panneau 2 battants u=119670, porte coulissante bois u=407637, porte trapézoïdale 100/220 u=196725, porte trapézoïdale 110/220 u=223720, porte trapézoïdale 120/220 u=262420, pré-cadre bois u=10550, lambris paroi m²=22930, panneau placage 19mm m²=38344, chassis PVC fenêtre 100x120 u=156990, chassis PVC porte 100x210 u=201925
 
-### PEINTURES & ENDUITS
-- Peinture vinylique intérieure mat 30kg (basse gamme) : 9 000 – 23 500 FCFA/seau
-- Peinture vinylique intérieure mat 30kg (haute gamme) : 30 000 – 38 000 FCFA/seau
-- Peinture vinylique extérieure 30kg : 39 000 FCFA/seau
-- Peinture glycéro email 20L : 45 000 – 65 000 FCFA/seau
-- Sous-couche universelle 10L : 18 000 – 25 000 FCFA/seau
-- Enduit de lissage intérieur économique (sac 25kg) : 9 000 – 19 000 FCFA/sac
-- Enduit en pâte prêt à l'emploi (sac 25kg) : 17 500 – 19 000 FCFA/sac
-- Enduit AFRIC grand format : 70 000 FCFA/unité
-- Enduit façade extérieure (sac 25kg) : 12 000 – 20 000 FCFA/sac
-- Colle blanche à bois 1kg : 2 200 FCFA/pot
-- Colle blanche à bois 4kg : 8 800 FCFA/pot
-- Vernis eau 1L : 3 600 – 4 700 FCFA/litre
-- Vernis cellulosique brillant 18L : 53 500 FCFA/bidon
-- Diluant cellulosique 18L : 40 000 – 58 600 FCFA/bidon
-- Diluant 4L : 8 000 FCFA/bidon
+SERRURERIE: porte métallique 1 vantail u=127937, porte métallique 2 vantaux u=134960, portail métallique 1 vantail u=97731, portail métallique 2 vantaux u=97227, grille u=103529
 
-### ÉTANCHÉITÉ
-- Membrane bitumineuse autocollante (rouleau 10m) : 40 500 FCFA/rouleau
-- HYRENE TS membrane bitumineuse armature polyester (rouleau) : 60 500 FCFA/rouleau
-- HYRENE 25/25 TS membrane armature voile de verre (rouleau) : 52 800 FCFA/rouleau
-- PAXALU 30 mastic polymère mono-composant : 38 500 FCFA/unité
-- SikaCem Hydrofuge liquide 5L : 25 000 FCFA/bidon (estimé)
-- SikaCem Hydrofuge liquide 20L : 70 000 FCFA/bidon
-- Sika Imper Mur (pot 5kg) : 25 500 FCFA/pot
-- FLINTKOTE Be3 enduit d'imprégnation (bidon) : 48 000 FCFA/bidon
-- Emulsion bitumineuse 15kg : 13 500 FCFA/pot
-- SIPLAST PRIMER 25L : 93 000 FCFA/bidon
-- Polyane film plastique (mètre) : 1 300 FCFA/ml
+PLOMBERIE ALIMENTATION (ml posé): tube PVC Ø16=2075, Ø20=2562, Ø25=3171, Ø32=4648, Ø50=14830, Ø63=18397, Ø110=35100, tube PER Ø16=1280, Ø20=1500, Ø25=2280, Ø32=3550, Ø40=5000, Ø50=8603, tube cuivre Ø16=3000, tube PEHD Ø63=3660
 
-### PLAFONDS & CLOISONS
-- Plaque de plâtre BA13 (120×250 cm) : 8 000 – 12 000 FCFA/plaque
-- Plaque de plâtre hydrofuge BA13 : 12 000 – 16 000 FCFA/plaque
-- Rail métallique pour cloison (3m) : 2 500 – 4 000 FCFA/ml
-- Montant métallique pour cloison (3m) : 2 500 – 4 000 FCFA/ml
-- Laine de verre isolation (rouleau 15m²) : 35 000 – 55 000 FCFA/rouleau
-- Dalle de faux-plafond 60×60 cm : 2 000 – 4 500 FCFA/unité
+SANITAIRES: WC réservoir attenant u=167783, lavabo collectif u=55000, ensemble résidentiel complet u=1141670, ensemble lavabo WC réduit u=156512, chauffe-eau électrique 50L u=80130, glace de douche u=24380
 
-### OUTILLAGES
-- Perceuse électrique SDS-PLUS 900W 32mm : 50 000 FCFA/unité
-- Perceuse sans fil Li-Ion 18V : 40 000 FCFA/unité
-- Perceuse à colonne magnétique 900W : 650 000 FCFA/unité
-- Marteau de menuisier (fibre de verre) : 5 000 FCFA/unité
-- Massette : 4 000 FCFA/unité
-- Marteau piqueur SDS-HEX 1700W : 125 000 FCFA/unité
+ASSAINISSEMENT: tuyau béton Ø250 ml=7518, Ø300 ml=10140, Ø350 ml=17140, Ø400 ml=29145, tuyau PVC Ø110 ml=7751, Ø160 ml=33842, Ø200 ml=57802, regard 40x40 u=23882, regard 50x50 u=43824, regard 60x60 u=53062, regard 80x80 u=57880, fosse perte PEHD 20 usagers u=451960, caniveau béton 0.8x0.25 ml=197886, caniveau 1.0x0.25 ml=157739, caniveau 1.2x0.40 ml=171508, caniveau 1.5x0.40 ml=195512
 
-### MAIN D'ŒUVRE — TARIFS JOURNALIERS (Abidjan)
-- Manœuvre : 4 000 – 6 000 FCFA/jour
-- Maçon qualifié : 8 000 – 15 000 FCFA/jour
-- Chef maçon : 15 000 – 25 000 FCFA/jour
-- Carreleur : 8 000 – 15 000 FCFA/jour
-- Plombier : 10 000 – 20 000 FCFA/jour
-- Électricien : 10 000 – 20 000 FCFA/jour
-- Peintre : 7 000 – 12 000 FCFA/jour
-- Ferrailleur : 8 000 – 15 000 FCFA/jour
-- Charpentier : 10 000 – 18 000 FCFA/jour
-- Menuisier bois : 10 000 – 18 000 FCFA/jour
-- Menuisier aluminium : 12 000 – 22 000 FCFA/jour
-- Chef de chantier : 25 000 – 50 000 FCFA/jour
+ÉLECTRICITÉ BRANCHEMENT: alimentation 5A u=9876, 10A u=40247, disjoncteur mono 10A u=52386, 20A u=154543, 25A u=163543, disjoncteur tri 10A u=253246, 15A u=300918, 30A u=428730, tableau résidentiel u=177560, tableau professionnel u=197350, tableau 20A résidentiel u=301793, tableau 40A résidentiel u=518120
 
-### TRANSPORT & LOCATION ENGINS
-- Camion benne 10t (journée) : 80 000 – 120 000 FCFA/jour
-- Bétonière 350L (journée) : 15 000 – 25 000 FCFA/jour
-- Compacteur (journée) : 40 000 – 60 000 FCFA/jour
-- Grue mobile (journée) : 150 000 – 250 000 FCFA/jour
-- Transport matériaux (forfait livraison) : 20 000 – 50 000 FCFA/livraison
+CÂBLES ÉLECTRIQUES (ml posé): câble 1.5mm²=1985, câble 2.5mm²=2190, câble 16mm²=30282, tube R/3=396, mise à la terre u=9298
 
-### TAUX HORAIRES MAIN D'ŒUVRE
-- Coût horaire moyen maçon : 1 200 – 2 000 FCFA/h
-- Coût horaire moyen électricien : 1 500 – 2 500 FCFA/h
-- Coût horaire moyen plombier : 1 500 – 2 500 FCFA/h
+LUMINAIRES: luminaire LED étanche ml=13946, luminaire escalier 50W u=69126, luminaire ballon Ø200 u=9042, réglette rgt 2 tubes u=19254, luminaire 1x18W u=3497, luminaire fluorescent indirect u=53233
 
-### RATIOS MATÉRIAUX COURANTS (pour aider à l'estimation)
-- Béton armé standard : 300 kg ciment/m³ + 800 kg sable + 1200 kg gravier + 150 kg HA
-- Maçonnerie parpaing creux (m²) : 12 parpaings + 15 kg ciment + 30 kg sable
-- Enduit mural (m²) : 8 kg ciment + 25 kg sable (épaisseur 1,5cm)
-- Carrelage (m²) : 1,05 m² carrelage + 1 sac mortier-colle 25kg pour 4m²
-- Peinture (m²) : 0,15L/couche pour peinture vinylique (2 couches standard)
-- Plancher hourdis (m²) : 12 hourdis 12cm + 0,5 botte HA10 + 3 sacs ciment
+CLIMATISATION: split mural 1CV u=276114, split mural 2CV u=307702, split 4CV u=687279, split 5CV u=873105, split profond 1CV u=300882, split profond 2CV u=403277
+
+CARRELAGE/REVÊTEMENT: grès cérame cloture m²=9940, grès cérame qualité évoluée m²=20660, grès cérame noir m²=3002, grès cérame qualité pied m²=47300, parquet standard m²=3455, butée porte u=16500, tapis-brosse m²=57930, seuil laiton ml=6005, couvre-joint dilatation ml=13154, cornière protection marches ml=15075, moquette type tapis m²=7134, moquette velours m²=28548, dalle thermoplastique m²=107863, moquette m²=9461
+
+FAUX PLAFOND: contreplaqué blanc 5mm m²=11686, contreplaqué 10mm m²=13616, contreplaqué 20mm m²=28118, tôle plancher m²=33014, plaque roche m²=40680, staff m²=62547, corniche ml=278
+
+PEINTURE (surfaces préparées): peinture extérieure maçonnerie m²=1060, peinture intérieure murs sans enduit m²=2046, peinture avec enduit m²=3941, peinture semi-brillante sans enduit m²=2942, peinture semi-brillante avec enduit m²=3942, peinture premium intérieure m²=7940, peinture plafond m²=3511
+
+CHARPENTE: charpente bois rouge assemblée m²=234966, charpente bois m²=297172, charpente métallique PF200 kg=1500, charpente métallique PF240 kg=3271, poutrelle LPN120 kg=1400
+
+COUVERTURE: tôle ondulée 4/10 m²=9637, tôle ondulée 5/10 m²=7575, tôle ondulée 6/10 m²=7020, tôle alu 4/10 m²=3062, tôle alu 5/10 m²=12048, lambris aluminium m²=17530, bardage bois 1cm m²=3320, bardage fibrociment 5mm m²=6540, bardage tôle alu m²=7348, chéneau métallique ml=42949, faîtage aluminium ml=? (consulter fournisseur)
+
+MAIN D'ŒUVRE/JOUR (Abidjan): manœuvre=5000, maçon=12000, chef maçon=20000, carreleur=12000, plombier=15000, électricien=15000, peintre=9000, ferrailleur=12000, charpentier=14000, menuisier=14000, chef chantier=35000
+
+TRANSPORT/LOCATION: camion benne 10t/jour=100000, bétonière 350L/jour=20000, livraison matériaux forfait=35000
+
+RATIOS: béton armé m³ = 300kg ciment + 800kg sable + 1200kg gravier + 150kg HA | parpaing 15cm m² = 12 agglos + 15kg ciment + 30kg sable | carrelage m² = 1.05m² carreau + 1 sac colle C1 pour 4m² | peinture m² = 0.15L/couche 2 couches standard
 `;
