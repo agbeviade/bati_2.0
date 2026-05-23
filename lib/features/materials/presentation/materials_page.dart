@@ -110,18 +110,29 @@ class _MaterialsPageState extends State<MaterialsPage> {
 }
 
 const _kCategoryLabels = {
-  'cement': 'Ciment & Liants',
-  'steel': 'Acier / Fer à béton',
-  'sand_gravel': 'Sable & Gravier',
-  'wood': 'Menuiserie Bois',
-  'paint': 'Peintures & Enduits',
-  'electrical': 'Électricité',
-  'plumbing': 'Plomberie & Sanitaire',
-  'tiling': 'Carrelage & Revêtement',
-  'waterproofing': 'Étanchéité',
-  'partition': 'Plafonds & Cloisons',
-  'tools': 'Outillage',
-  'other': 'Autre',
+  'installation':      'Installation de chantier',
+  'terrassement':      'Terrassement',
+  'gros_oeuvre':       'Gros œuvres / Béton',
+  'etancheite':        'Étanchéité',
+  'menuiserie_alu':    'Menuiserie aluminium',
+  'vitrage':           'Vitrage',
+  'serrurerie':        'Serrurerie',
+  'plomberie':         'Plomberie sanitaire',
+  'assainissement':    'Assainissement',
+  'electricite':       'Électricité',
+  'climatisation':     'Climatisation',
+  'telephonie':        'Téléphonie',
+  'revetement_dur':    'Revêtements durs',
+  'revetement_souple': 'Revêtements souples',
+  'menuiserie_bois':   'Menuiserie bois / PVC',
+  'faux_plafond':      'Faux plafonds',
+  'peinture':          'Peinture / Vernis',
+  'charpente':         'Charpente / Couverture',
+  // anciens slugs
+  'cement': 'Ciment & Liants', 'steel': 'Acier / Fer à béton',
+  'sand_gravel': 'Sable & Gravier', 'wood': 'Menuiserie Bois',
+  'paint': 'Peintures & Enduits', 'electrical': 'Électricité',
+  'plumbing': 'Plomberie & Sanitaire', 'other': 'Autre',
 };
 
 class _MaterialTile extends StatelessWidget {
