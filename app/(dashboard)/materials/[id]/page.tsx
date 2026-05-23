@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Package, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Package } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
@@ -72,7 +72,6 @@ export default async function MaterialDetailPage({
     .in("status", ["planned", "in_progress"]);
   const projects = (projectsData ?? []) as Pick<Project, "id" | "name">[];
 
-  const isLow = mat.min_stock_qty > 0 && mat.stock_qty <= mat.min_stock_qty;
   const stockValue = mat.stock_qty * mat.unit_cost;
 
   const updateWithId = updateMaterial.bind(null, id);
@@ -88,7 +87,6 @@ export default async function MaterialDetailPage({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold truncate">{mat.name}</h2>
-            {isLow && <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0" />}
           </div>
           <p className="text-sm text-muted-foreground">{CATEGORY_LABELS[mat.category] ?? mat.category}</p>
         </div>
@@ -101,7 +99,7 @@ export default async function MaterialDetailPage({
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-4 text-center">
-            <div className={`text-2xl font-bold ${isLow ? "text-orange-600" : ""}`}>
+            <div className="text-2xl font-bold">
               {mat.stock_qty.toLocaleString("fr-FR")}
             </div>
             <p className="text-xs text-muted-foreground">Stock ({mat.unit})</p>
@@ -120,13 +118,6 @@ export default async function MaterialDetailPage({
           </CardContent>
         </Card>
       </div>
-
-      {isLow && (
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-orange-200 bg-orange-50 text-orange-800 text-sm">
-          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-          <span>Stock faible — minimum : {mat.min_stock_qty} {mat.unit}</span>
-        </div>
-      )}
 
       {/* Edit form */}
       {edit === "1" && (
@@ -157,15 +148,9 @@ export default async function MaterialDetailPage({
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="unit_cost">Prix unitaire</Label>
-                  <Input id="unit_cost" name="unit_cost" type="number" min="0" step="1" defaultValue={mat.unit_cost} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="min_stock_qty">Stock minimum</Label>
-                  <Input id="min_stock_qty" name="min_stock_qty" type="number" min="0" step="0.01" defaultValue={mat.min_stock_qty} />
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="unit_cost">Prix unitaire</Label>
+                <Input id="unit_cost" name="unit_cost" type="number" min="0" step="1" defaultValue={mat.unit_cost} />
               </div>
               <div className="flex gap-2 pt-1">
                 <Button type="submit" size="sm">Enregistrer</Button>

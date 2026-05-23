@@ -28,26 +28,12 @@ export async function createMaterial(formData: FormData) {
     name,
     category: (formData.get("category") as MaterialCategory) || "other",
     unit: (formData.get("unit") as string)?.trim() || "u",
-    min_stock_qty: Number(formData.get("min_stock_qty")) || 0,
     unit_cost: Number(formData.get("unit_cost")) || 0,
   }).select("id").single();
 
   if (error || !material) {
     console.error("[createMaterial]", error);
     return { error: error?.message };
-  }
-
-  // Stock initial optionnel
-  const initial_qty = Number(formData.get("initial_qty"));
-  if (initial_qty > 0) {
-    await admin.from("stock_movements").insert({
-      material_id: material.id,
-      type: "purchase" as MovementType,
-      quantity: initial_qty,
-      unit_cost: Number(formData.get("unit_cost")) || 0,
-      notes: "Stock initial",
-      created_by: user.id,
-    });
   }
 
   revalidatePath("/materials");
@@ -62,7 +48,6 @@ export async function updateMaterial(id: string, formData: FormData) {
     name,
     category: (formData.get("category") as MaterialCategory) || "other",
     unit: (formData.get("unit") as string)?.trim() || "u",
-    min_stock_qty: Number(formData.get("min_stock_qty")) || 0,
     unit_cost: Number(formData.get("unit_cost")) || 0,
   }).eq("id", id);
 

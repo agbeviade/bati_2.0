@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, X } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ type Props<T> = {
   emptyState: React.ReactNode;
   placeholder?: string;
   className?: string;
+  pageSize?: number;
 };
 
 export function SearchFilter<T>({
@@ -30,17 +31,19 @@ export function SearchFilter<T>({
   emptyState,
   placeholder = "Rechercher...",
   className,
+  pageSize,
 }: Props<T>) {
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => { setPage(1); }, [query, activeFilter]);
 
   const filtered = useMemo(() => {
     let result = items;
-
     if (activeFilter !== "all" && filterKey) {
       result = result.filter((item) => String(item[filterKey]) === activeFilter);
     }
-
     if (query.trim()) {
       const q = query.toLowerCase();
       result = result.filter((item) =>
@@ -50,9 +53,11 @@ export function SearchFilter<T>({
         })
       );
     }
-
     return result;
   }, [items, query, activeFilter, searchKeys, filterKey]);
+
+  const totalPages = pageSize ? Math.max(1, Math.ceil(filtered.length / pageSize)) : 1;
+  const paginated = pageSize ? filtered.slice((page - 1) * pageSize, page * pageSize) : filtered;
 
   return (
     <div className={className}>
@@ -111,11 +116,38 @@ export function SearchFilter<T>({
           </div>
         ) : emptyState
       ) : (
-        <div className="space-y-2">
-          {filtered.map((item, i) => (
-            <div key={i}>{renderItem(item)}</div>
-          ))}
-        </div>
+        <>
+          <div className="space-y-2">
+            {paginated.map((item, i) => (
+              <div key={i}>{renderItem(item)}</div>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4">
+              <p className="text-sm text-muted-foreground">
+                {(page - 1) * pageSize! + 1}–{Math.min(page * pageSize!, filtered.length)} sur {filtered.length}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline" size="icon"
+                  disabled={page === 1}
+                  onClick={() => setPage(p => p - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm">Page {page} / {totalPages}</span>
+                <Button
+                  variant="outline" size="icon"
+                  disabled={page === totalPages}
+                  onClick={() => setPage(p => p + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

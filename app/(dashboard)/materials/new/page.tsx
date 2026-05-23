@@ -80,21 +80,9 @@ export default function NewMaterialPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="unit_cost">Prix unitaire</Label>
-                <Input id="unit_cost" name="unit_cost" type="number" min="0" step="1" placeholder="0" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="min_stock_qty">Stock minimum</Label>
-                <Input id="min_stock_qty" name="min_stock_qty" type="number" min="0" step="0.01" placeholder="0" />
-              </div>
-            </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="initial_qty">Stock initial (optionnel)</Label>
-              <Input id="initial_qty" name="initial_qty" type="number" min="0" step="0.001" placeholder="0" />
-              <p className="text-xs text-muted-foreground">Crée automatiquement un mouvement d'achat.</p>
+              <Label htmlFor="unit_cost">Prix unitaire</Label>
+              <Input id="unit_cost" name="unit_cost" type="number" min="0" step="1" placeholder="0" />
             </div>
 
             <div className="flex gap-2 pt-2">
