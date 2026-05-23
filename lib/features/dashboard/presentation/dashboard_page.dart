@@ -16,7 +16,6 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _loading = true;
   int _activeProjects = 0;
   int _overdueInvoices = 0;
-  int _lowStockItems = 0;
   double _monthRevenue = 0;
   List<Project> _recentProjects = [];
 
@@ -37,22 +36,20 @@ class _DashboardPageState extends State<DashboardPage> {
       final results = await Future.wait([
         client.from('projects').select('id').eq('status', 'in_progress'),
         client.from('invoices').select('id').inFilter('status', ['sent', 'overdue']).lt('due_date', now.toIso8601String()),
-        Future.value(<dynamic>[]), // stock minimum supprimé
         client.from('invoices').select('amount').eq('status', 'paid').gte('created_at', firstOfMonth),
         client.from('projects').select('id, name, status, progress_pct, budget, spent').order('created_at', ascending: false).limit(5),
       ]);
 
       double revenue = 0;
-      for (final inv in (results[3] as List)) {
+      for (final inv in (results[2] as List)) {
         revenue += (inv['amount'] as num?)?.toDouble() ?? 0;
       }
 
       setState(() {
         _activeProjects = (results[0] as List).length;
         _overdueInvoices = (results[1] as List).length;
-        _lowStockItems = (results[2] as List).length;
         _monthRevenue = revenue;
-        _recentProjects = (results[4] as List).map((j) => Project.fromJson(j)).toList();
+        _recentProjects = (results[3] as List).map((j) => Project.fromJson(j)).toList();
         _loading = false;
       });
     } catch (_) {
@@ -69,7 +66,7 @@ class _DashboardPageState extends State<DashboardPage> {
         actions: [
           IconButton(
             icon: Badge(
-              isLabelVisible: _overdueInvoices > 0 || _lowStockItems > 0,
+              isLabelVisible: _overdueInvoices > 0,
               child: const Icon(Icons.notifications_outlined),
             ),
             onPressed: () => context.go('/notifications'),
@@ -84,7 +81,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   _buildKpiGrid(cs),
-                  if (_overdueInvoices > 0 || _lowStockItems > 0) ...[
+                  if (_overdueInvoices > 0) ...[
                     const SizedBox(height: 16),
                     _buildAlerts(cs),
                   ],
@@ -115,7 +112,7 @@ class _DashboardPageState extends State<DashboardPage> {
         _KpiCard(label: 'Chantiers actifs', value: '$_activeProjects', icon: Icons.construction, color: cs.primary, onTap: () => context.go('/projects')),
         _KpiCard(label: 'CA ce mois', value: _formatAmount(_monthRevenue), icon: Icons.trending_up, color: const Color(0xFF16A34A)),
         _KpiCard(label: 'Factures en retard', value: '$_overdueInvoices', icon: Icons.warning_amber_outlined, color: const Color(0xFFDC2626), onTap: () => context.go('/invoices')),
-        _KpiCard(label: 'Stock faible', value: '$_lowStockItems', icon: Icons.inventory_2_outlined, color: const Color(0xFFEA580C), onTap: () => context.go('/materials')),
+        _KpiCard(label: 'Matériaux', value: 'Stock', icon: Icons.inventory_2_outlined, color: const Color(0xFFEA580C), onTap: () => context.go('/materials')),
       ],
     );
   }
@@ -130,14 +127,6 @@ class _DashboardPageState extends State<DashboardPage> {
             color: const Color(0xFFFEE2E2),
             iconColor: const Color(0xFFDC2626),
             onTap: () => context.go('/invoices'),
-          ),
-        if (_lowStockItems > 0)
-          _AlertBanner(
-            icon: Icons.inventory_2,
-            message: '$_lowStockItems matériau${_lowStockItems > 1 ? 'x' : ''} en stock faible',
-            color: const Color(0xFFFFF7ED),
-            iconColor: const Color(0xFFEA580C),
-            onTap: () => context.go('/materials'),
           ),
       ],
     );

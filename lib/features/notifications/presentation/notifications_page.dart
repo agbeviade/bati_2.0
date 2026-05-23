@@ -32,7 +32,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
       final results = await Future.wait<dynamic>([
         client.from('invoices').select('id, invoice_number, amount, due_date').inFilter('status', ['sent', 'overdue']).lt('due_date', now),
         client.from('quotes').select('id, quote_number, client_name').eq('status', 'sent').lt('valid_until', now.substring(0, 10)),
-        Future.value(<dynamic>[]), // stock minimum supprimé
         client.from('attendance').select('id, check_in').eq('user_id', uid).isFilter('check_out', null).lt('check_in', openThreshold),
       ]);
 
@@ -61,7 +60,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       }
 
       // Pointages ouverts > 12h
-      for (final att in (results[3] as List)) {
+      for (final att in (results[2] as List)) {
         final checkIn = DateTime.parse(att['check_in'] as String).toLocal();
         final hours = DateTime.now().difference(checkIn).inHours;
         alerts.add(_Alert(

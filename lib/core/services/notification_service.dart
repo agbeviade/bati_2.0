@@ -48,10 +48,8 @@ class NotificationService {
       final results = await Future.wait<dynamic>([
         // Factures en retard
         client.from('invoices').select('id').inFilter('status', ['sent', 'overdue']).lt('due_date', now),
-        // Devis expirés (valides hier et statut sent)
+        // Devis expirés
         client.from('quotes').select('id').eq('status', 'sent').lt('valid_until', now),
-        // placeholder — stock minimum supprimé
-        Future.value(<dynamic>[]),
         // Pointages ouverts depuis plus de 12h
         client.from('attendance').select('id').isFilter('check_out', null).lt('check_in', monthStart),
       ]);
@@ -73,7 +71,7 @@ class NotificationService {
       }
 
 
-      final openAttendance = (results[3] as List).length;
+      final openAttendance = (results[2] as List).length;
       if (openAttendance > 0) {
         await show(notifId++, 'Pointage ouvert',
             '$openAttendance pointage${openAttendance > 1 ? 's' : ''} ouvert${openAttendance > 1 ? 's' : ''} depuis plus de 24h',
