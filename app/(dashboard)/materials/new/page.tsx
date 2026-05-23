@@ -1,99 +1,25 @@
-"use client";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { NewMaterialForm } from "@/components/materials/new-material-form";
+import type { CategoryRow } from "@/components/materials/category-manager";
 
-import { useState } from "react";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { toast } from "sonner";
-import { createMaterial } from "@/app/(dashboard)/materials/actions";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+export default async function NewMaterialPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-const CATEGORIES = [
-  { value: "installation",      label: "Installation de chantier" },
-  { value: "terrassement",      label: "Terrassement" },
-  { value: "gros_oeuvre",       label: "Gros œuvres / Béton" },
-  { value: "etancheite",        label: "Étanchéité" },
-  { value: "menuiserie_alu",    label: "Menuiserie aluminium" },
-  { value: "vitrage",           label: "Vitrage" },
-  { value: "serrurerie",        label: "Serrurerie" },
-  { value: "plomberie",         label: "Plomberie sanitaire" },
-  { value: "assainissement",    label: "Assainissement" },
-  { value: "electricite",       label: "Électricité" },
-  { value: "climatisation",     label: "Climatisation" },
-  { value: "telephonie",        label: "Téléphonie" },
-  { value: "revetement_dur",    label: "Revêtements durs" },
-  { value: "revetement_souple", label: "Revêtements souples" },
-  { value: "menuiserie_bois",   label: "Menuiserie bois / PVC" },
-  { value: "faux_plafond",      label: "Faux plafonds" },
-  { value: "peinture",          label: "Peinture / Vernis" },
-  { value: "charpente",         label: "Charpente / Couverture" },
-];
+  const admin = createAdminClient();
+  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  if (!profile?.company_id) redirect("/onboarding");
 
-const UNITS = [
-  "unité", "sac", "kg", "tonne", "m", "m²", "m³", "L", "ml",
-  "barre", "botte", "rouleau", "panneau", "plaque", "bidon", "pot", "seau", "ensemble",
-];
+  const { data } = await admin
+    .from("material_categories")
+    .select("id, slug, label")
+    .eq("company_id", profile.company_id)
+    .order("label");
 
-export default function NewMaterialPage() {
-  const [loading, setLoading] = useState(false);
+  const categories = (data ?? []) as CategoryRow[];
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    const result = await createMaterial(new FormData(e.currentTarget));
-    setLoading(false);
-    if (result?.error) toast.error(result.error);
-  }
-
-  return (
-    <div className="space-y-4 max-w-lg">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/materials"><ArrowLeft className="h-4 w-4" /></Link>
-        </Button>
-        <h2 className="text-2xl font-bold">Nouveau matériau</h2>
-      </div>
-
-      <Card>
-        <CardHeader><CardTitle>Informations</CardTitle></CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Nom *</Label>
-              <Input id="name" name="name" placeholder="Ciment CPA 42.5, Fer 10mm..." required />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="category">Catégorie</Label>
-                <select name="category" id="category" className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="unit">Unité *</Label>
-                <select name="unit" id="unit" className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="unit_cost">Prix unitaire</Label>
-              <Input id="unit_cost" name="unit_cost" type="number" min="0" step="1" placeholder="0" />
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" disabled={loading}>{loading ? "Création..." : "Créer le matériau"}</Button>
-              <Button type="button" variant="ghost" asChild>
-                <Link href="/materials">Annuler</Link>
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <NewMaterialForm categories={categories} />;
 }

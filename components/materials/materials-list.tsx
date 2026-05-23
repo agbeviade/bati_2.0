@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SearchFilter } from "@/components/ui/search-filter";
+import type { CategoryRow } from "@/components/materials/category-manager";
 
 export type MaterialRow = {
   id: string;
@@ -16,43 +17,15 @@ export type MaterialRow = {
   unit_cost: number;
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  installation:     "Installation de chantier",
-  terrassement:     "Terrassement",
-  gros_oeuvre:      "Gros œuvres / Béton",
-  etancheite:       "Étanchéité",
-  menuiserie_alu:   "Menuiserie aluminium",
-  vitrage:          "Vitrage",
-  serrurerie:       "Serrurerie",
-  plomberie:        "Plomberie sanitaire",
-  assainissement:   "Assainissement",
-  electricite:      "Électricité",
-  climatisation:    "Climatisation",
-  telephonie:       "Téléphonie",
-  revetement_dur:   "Revêtements durs",
-  revetement_souple:"Revêtements souples",
-  menuiserie_bois:  "Menuiserie bois / PVC",
-  faux_plafond:     "Faux plafonds",
-  peinture:         "Peinture / Vernis",
-  charpente:        "Charpente / Couverture",
-  // anciens slugs conservés pour compatibilité
-  cement:       "Ciment & Liants",
-  steel:        "Acier / Fer à béton",
-  sand_gravel:  "Sable & Gravier",
-  wood:         "Menuiserie Bois",
-  paint:        "Peintures & Enduits",
-  electrical:   "Électricité",
-  plumbing:     "Plomberie & Sanitaire",
-  tiling:       "Revêtements durs",
-  waterproofing:"Étanchéité",
-  partition:    "Faux plafonds",
-  tools:        "Outillage",
-  other:        "Autre",
-};
-
-const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value, label }));
-
-export function MaterialsList({ materials }: { materials: MaterialRow[] }) {
+export function MaterialsList({
+  materials,
+  categories,
+}: {
+  materials: MaterialRow[];
+  categories: CategoryRow[];
+}) {
+  const labelMap = Object.fromEntries(categories.map((c) => [c.slug, c.label]));
+  const filterOptions = categories.map((c) => ({ value: c.slug, label: c.label }));
   const emptyState = (
     <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
       <div className="p-4 rounded-full bg-muted">
@@ -73,7 +46,7 @@ export function MaterialsList({ materials }: { materials: MaterialRow[] }) {
       items={materials}
       searchKeys={["name"]}
       filterKey="category"
-      filterOptions={CATEGORY_OPTIONS}
+      filterOptions={filterOptions}
       filterAllLabel="Tous"
       placeholder="Rechercher par nom..."
       pageSize={100}
@@ -82,21 +55,16 @@ export function MaterialsList({ materials }: { materials: MaterialRow[] }) {
         <Link href={`/materials/${m.id}`} className="block group">
           <Card className="transition-shadow group-hover:shadow-md">
             <CardContent className="py-4 flex items-center gap-4">
-              <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-4 gap-2 items-center">
+              <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-2 items-center">
                 <div className="min-w-0">
                   <p className="font-medium text-sm">{m.name}</p>
-                  <p className="text-xs text-muted-foreground">{CATEGORY_LABELS[m.category] ?? m.category}</p>
+                  <p className="text-xs text-muted-foreground">{labelMap[m.category] ?? m.category}</p>
                 </div>
                 <div className="text-sm font-semibold">
                   {m.stock_qty.toLocaleString("fr-FR")} {m.unit}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground text-right">
                   {m.unit_cost > 0 ? `${m.unit_cost.toLocaleString("fr-FR")} FCFA / ${m.unit}` : "Prix non défini"}
-                </div>
-                <div className="text-right">
-                  <Badge variant="outline" className="text-xs">
-                    {CATEGORY_LABELS[m.category] ?? m.category}
-                  </Badge>
                 </div>
               </div>
             </CardContent>

@@ -1,26 +1,19 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Package } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { MovementSection } from "@/components/materials/movement-section";
 import { deleteMaterial, updateMaterial } from "@/app/(dashboard)/materials/actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DeleteButton } from "@/components/ui/delete-button";
 import type { Material, StockMovement, Project } from "@/lib/supabase/types";
+import type { CategoryRow } from "@/components/materials/category-manager";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  cement: "Ciment", steel: "Acier/Fer", wood: "Bois", sand_gravel: "Sable/Gravier",
-  paint: "Peinture", electrical: "Électricité", plumbing: "Plomberie",
-  tools: "Outillage", other: "Autre",
-};
-
-const CATEGORIES = Object.entries(CATEGORY_LABELS).map(([v, l]) => ({ value: v, label: l }));
-const UNITS = ["u", "kg", "t", "m", "m²", "m³", "L", "sac", "barre", "planche", "rouleau", "boîte"];
+const UNITS = ["u", "kg", "t", "m", "m²", "m³", "L", "ml", "sac", "barre", "planche", "rouleau", "boîte"];
 
 export default async function MaterialDetailPage({
   params,
@@ -40,6 +33,14 @@ export default async function MaterialDetailPage({
   const { data: matData } = await admin.from("materials").select("*").eq("id", id).maybeSingle();
   if (!matData) notFound();
   const mat = matData as Material;
+
+  const { data: categoriesData } = await admin
+    .from("material_categories")
+    .select("id, slug, label")
+    .eq("company_id", mat.company_id)
+    .order("label");
+  const categories = (categoriesData ?? []) as CategoryRow[];
+  const categoryLabel = categories.find((c) => c.slug === mat.category)?.label ?? mat.category;
 
   const { data: movData } = await admin
     .from("stock_movements")
@@ -88,7 +89,7 @@ export default async function MaterialDetailPage({
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold truncate">{mat.name}</h2>
           </div>
-          <p className="text-sm text-muted-foreground">{CATEGORY_LABELS[mat.category] ?? mat.category}</p>
+          <p className="text-sm text-muted-foreground">{categoryLabel}</p>
         </div>
         <Button variant="outline" size="sm" asChild>
           <Link href={`/materials/${id}?edit=1`}>Modifier</Link>
@@ -135,7 +136,7 @@ export default async function MaterialDetailPage({
                     name="category" id="category" defaultValue={mat.category}
                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    {categories.map(c => <option key={c.id} value={c.slug}>{c.label}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
