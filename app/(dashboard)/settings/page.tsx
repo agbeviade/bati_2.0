@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ProfileForm, CompanyForm } from "@/components/settings/settings-form";
+import { CompanyAssetsForm } from "@/components/settings/company-assets-form";
 import type { User, Company } from "@/lib/supabase/types";
 
 export default async function SettingsPage() {
@@ -22,11 +23,11 @@ export default async function SettingsPage() {
 
   const { data: companyData } = await admin
     .from("companies")
-    .select("id, name, address, phone, email, currency, plan, subscription_status")
+    .select("id, name, address, phone, email, currency, plan, subscription_status, header_url, footer_url")
     .eq("id", profile.company_id)
     .single();
 
-  const company = companyData as Pick<Company, "id" | "name" | "address" | "phone" | "email" | "currency" | "plan" | "subscription_status">;
+  const company = companyData as Pick<Company, "id" | "name" | "address" | "phone" | "email" | "currency" | "plan" | "subscription_status" | "header_url" | "footer_url">;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -37,6 +38,11 @@ export default async function SettingsPage() {
 
       <ProfileForm profile={profile} />
       <CompanyForm company={company} />
+      <CompanyAssetsForm
+        companyId={company.id}
+        headerUrl={company.header_url}
+        footerUrl={company.footer_url}
+      />
     </div>
   );
 }

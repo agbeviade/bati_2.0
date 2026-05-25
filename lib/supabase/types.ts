@@ -34,6 +34,8 @@ export type Company = {
   currency: string;
   plan: SubscriptionPlan;
   subscription_status: SubscriptionStatus;
+  header_url: string | null;
+  footer_url: string | null;
   created_at: string;
   updated_at: string;
 };

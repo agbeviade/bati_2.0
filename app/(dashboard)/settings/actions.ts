@@ -62,3 +62,69 @@ export async function updateCompany(companyId: string, formData: FormData) {
   revalidatePath("/settings");
   revalidatePath("/dashboard");
 }
+
+export async function uploadCompanyAsset(
+  companyId: string,
+  formData: FormData,
+  type: "header" | "footer"
+): Promise<{ url: string | null; error?: string }> {
+  await getUser();
+
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return { url: null, error: "Aucun fichier." };
+
+  const MAX = 3 * 1024 * 1024;
+  if (file.size > MAX) return { url: null, error: "Fichier trop lourd (max 3 Mo)." };
+
+  const allowed = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
+  if (!allowed.includes(file.type)) return { url: null, error: "Format non supporté (JPG, PNG, WebP, SVG)." };
+
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
+  const path = `${companyId}/${type}.${ext}`;
+
+  const admin = createAdminClient();
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  const { error: uploadError } = await admin.storage
+    .from("company-assets")
+    .upload(path, buffer, { upsert: true, contentType: file.type });
+
+  if (uploadError) return { url: null, error: uploadError.message };
+
+  const { data: { publicUrl } } = admin.storage.from("company-assets").getPublicUrl(path);
+
+  const updateData = type === "header"
+    ? { header_url: publicUrl }
+    : { footer_url: publicUrl };
+  const { error: dbError } = await admin.from("companies")
+    .update(updateData)
+    .eq("id", companyId);
+
+  if (dbError) return { url: null, error: dbError.message };
+
+  revalidatePath("/settings");
+  return { url: publicUrl };
+}
+
+export async function removeCompanyAsset(
+  companyId: string,
+  type: "header" | "footer"
+): Promise<{ error?: string }> {
+  await getUser();
+  const admin = createAdminClient();
+
+  // On essaie les extensions courantes
+  for (const ext of ["png", "jpg", "jpeg", "webp", "svg"]) {
+    await admin.storage.from("company-assets").remove([`${companyId}/${type}.${ext}`]);
+  }
+
+  const clearData = type === "header" ? { header_url: null } : { footer_url: null };
+  const { error } = await admin.from("companies")
+    .update(clearData)
+    .eq("id", companyId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/settings");
+  return {};
+}
