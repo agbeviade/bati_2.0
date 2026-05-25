@@ -15,13 +15,14 @@ import {
   type ComposantRecette,
 } from "@/lib/calcul-ouvrage";
 import { createOuvrage, updateOuvrage, saveOuvrageType } from "@/app/(dashboard)/metres/actions";
+import { suggestRecette, extractMetresFromImage, analyserCoherence } from "@/app/(dashboard)/metres/ai-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Save, BookOpen } from "lucide-react";
+import { Plus, Trash2, Save, BookOpen, Sparkles, Camera, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import type { ProjectOuvrage, OuvrageType } from "@/lib/supabase/types";
 
 // ---------------------------------------------------------------------------
@@ -53,6 +54,10 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [savedType, setSavedType] = useState(false);
+
+  // --- États AI ---
+  const [aiLoading, setAiLoading] = useState<"recette" | "photo" | "coherence" | null>(null);
+  const [coherence, setCoherence] = useState<{ alerte: string | null; niveau: "ok" | "warning" | "error" } | null>(null);
 
   // --- État du formulaire ---
   const [designation, setDesignation] = useState(initialData?.designation ?? "");
@@ -144,6 +149,63 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
     setRecette((prev) => prev.filter((c) => c._key !== key));
   }
 
+  // --- AI Feature 1 : Suggestion de recette ---
+  async function handleSuggestRecette() {
+    if (!designation.trim()) return;
+    setAiLoading("recette");
+    const result = await suggestRecette(designation, type, materials);
+    setAiLoading(null);
+    if (result.recette.length > 0) {
+      setRecette(result.recette.map((c, i) => ({ ...c, _key: `ai-${i}-${Date.now()}` })));
+      setCoherence(null);
+    } else {
+      setServerError("L'IA n'a pas trouvé de recette pour ces matériaux. Ajoutez d'abord vos matériaux en stock.");
+    }
+  }
+
+  // --- AI Feature 2 : Extraction depuis photo ---
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAiLoading("photo");
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      const mime = file.type as "image/jpeg" | "image/png" | "image/webp";
+      const result = await extractMetresFromImage(base64, mime);
+      setAiLoading(null);
+
+      if (result.ouvrages.length > 0) {
+        const first = result.ouvrages[0];
+        setDesignation(first.designation);
+        setType(first.type_geometrie);
+        setDimensions(first.dimensions as DimensionsOuvrage);
+        setVides([]);
+        setCoherence(null);
+      } else {
+        setServerError("Impossible d'extraire des métrés depuis cette image.");
+      }
+      e.target.value = "";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // --- AI Feature 3 : Analyse de cohérence ---
+  async function handleAnalyserCoherence() {
+    if (computed.quantite_nette <= 0 || computed.recette_calculee.length === 0) return;
+    setAiLoading("coherence");
+    const result = await analyserCoherence(
+      designation,
+      type,
+      computed.quantite_nette,
+      computed.unite_principale,
+      computed.recette_calculee
+    );
+    setAiLoading(null);
+    setCoherence(result);
+  }
+
   // --- Appliquer un type/recette sauvegardé ---
   function applyOuvrageType(typeId: string) {
     const ot = ouvrageTypes.find((t) => t.id === typeId);
@@ -211,12 +273,25 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label>Désignation *</Label>
-            <Input
-              value={designation}
-              onChange={(e) => setDesignation(e.target.value)}
-              placeholder="ex: Mur en agglos 15cm, Dalle de sol..."
-              required
-            />
+            <div className="flex gap-2">
+              <Input
+                value={designation}
+                onChange={(e) => setDesignation(e.target.value)}
+                placeholder="ex: Mur en agglos 15cm, Dalle de sol..."
+                required
+                className="flex-1"
+              />
+              {/* AI Feature 2 — Analyser une photo */}
+              <label className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-md border text-sm cursor-pointer transition-colors shrink-0",
+                "border-violet-300 text-violet-700 hover:bg-violet-50",
+                aiLoading === "photo" && "opacity-60 pointer-events-none"
+              )}>
+                {aiLoading === "photo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                Photo
+                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+              </label>
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label>Chantier</Label>
@@ -417,10 +492,26 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Recette matériaux</CardTitle>
-            <Button type="button" variant="outline" size="sm" onClick={addComposant} disabled={materials.length === 0}>
-              <Plus className="h-4 w-4 mr-1" />
-              Ajouter
-            </Button>
+            <div className="flex gap-2">
+              {/* AI Feature 1 — Suggérer recette */}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-violet-300 text-violet-700 hover:bg-violet-50"
+                onClick={handleSuggestRecette}
+                disabled={!designation.trim() || aiLoading === "recette" || materials.length === 0}
+              >
+                {aiLoading === "recette"
+                  ? <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  : <Sparkles className="h-4 w-4 mr-1" />}
+                IA
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={addComposant} disabled={materials.length === 0}>
+                <Plus className="h-4 w-4 mr-1" />
+                Ajouter
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -498,6 +589,38 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
       </Card>
 
       {/* ---- Récapitulatif ---- */}
+      {/* AI Feature 3 — Analyse de cohérence */}
+      {computed.recette_calculee.length > 0 && computed.quantite_nette > 0 && (
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="border-violet-300 text-violet-700 hover:bg-violet-50"
+            onClick={handleAnalyserCoherence}
+            disabled={aiLoading === "coherence"}
+          >
+            {aiLoading === "coherence"
+              ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              : <Sparkles className="h-4 w-4 mr-2" />}
+            Analyser la cohérence
+          </Button>
+          {coherence && (
+            <div className={cn(
+              "flex items-center gap-2 text-sm px-3 py-1.5 rounded-md",
+              coherence.niveau === "ok" && "bg-green-50 text-green-700",
+              coherence.niveau === "warning" && "bg-amber-50 text-amber-700",
+              coherence.niveau === "error" && "bg-red-50 text-red-700",
+            )}>
+              {coherence.niveau === "ok"
+                ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+                : <AlertTriangle className="h-4 w-4 shrink-0" />}
+              {coherence.alerte ?? "Métrés cohérents ✓"}
+            </div>
+          )}
+        </div>
+      )}
+
       {computed.recette_calculee.length > 0 && computed.quantite_nette > 0 && (
         <Card className="border-primary/30 bg-primary/5">
           <CardHeader>

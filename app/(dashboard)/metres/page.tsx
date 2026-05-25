@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { OuvragesList } from "@/components/metres/ouvrages-list";
+import { GenerateQuoteButton } from "@/components/metres/generate-quote-button";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
@@ -44,6 +45,13 @@ export default async function MetresPage() {
           </Link>
         </Button>
       </div>
+
+      {(ouvrages ?? []).length > 0 && (
+        <GenerateQuoteButton
+          ouvrages={ouvrages ?? []}
+          projects={projects ?? []}
+        />
+      )}
 
       <OuvragesList
         ouvrages={ouvrages ?? []}
