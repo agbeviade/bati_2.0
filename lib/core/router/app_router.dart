@@ -25,6 +25,7 @@ import '../../features/portal/presentation/portal_invoices_page.dart';
 import '../../features/reports/presentation/reports_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/metres/presentation/metres_page.dart';
+import '../../features/metres/presentation/ouvrage_form_page.dart';
 import '../../features/clients/presentation/clients_page.dart';
 import '../../features/clients/presentation/client_form_page.dart';
 import '../../features/clients/presentation/client_detail_page.dart';
@@ -103,7 +104,13 @@ GoRouter buildRouter() => GoRouter(
               ],
             ),
             GoRoute(path: '/attendance', builder: (_, $) => const AttendancePage(teamId: null)),
-            GoRoute(path: '/metres', builder: (_, $) => const MetresPage()),
+            GoRoute(
+              path: '/metres',
+              builder: (_, $) => const MetresPage(),
+              routes: [
+                GoRoute(path: 'new', builder: (_, $) => const OuvrageFormPage()),
+              ],
+            ),
             GoRoute(
               path: '/quotes',
               builder: (_, $) => const QuotesPage(),

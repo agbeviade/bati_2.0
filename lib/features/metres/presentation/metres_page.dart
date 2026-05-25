@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_theme.dart';
+import 'ouvrage_form_page.dart';
 
 const _kTypeIcons = <String, IconData>{
   'surface_l_h': Icons.crop_landscape_outlined,
@@ -48,6 +50,7 @@ class MetresPage extends StatefulWidget {
 class _MetresPageState extends State<MetresPage> {
   bool _loading = true;
   List<Map<String, dynamic>> _ouvrages = [];
+  bool _generating = false;
 
   @override
   void initState() {
@@ -56,18 +59,170 @@ class _MetresPageState extends State<MetresPage> {
   }
 
   Future<void> _load() async {
+    setState(() => _loading = true);
     try {
       final data = await Supabase.instance.client
           .from('project_ouvrages')
-          .select('id, designation, type_geometrie, quantite_nette, unite_principale, projects(name)')
+          .select('id, designation, type_geometrie, quantite_nette, unite_principale, project_id, projects(name)')
           .order('created_at', ascending: false)
-          .limit(50);
+          .limit(100);
       setState(() {
         _ouvrages = List<Map<String, dynamic>>.from(data as List);
         _loading = false;
       });
     } catch (_) {
       setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _delete(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer l\'ouvrage ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await Supabase.instance.client.from('project_ouvrages').delete().eq('id', id);
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur : $e'), backgroundColor: AppColors.red));
+      }
+    }
+  }
+
+  Future<void> _generateDevis(String projectId, List<Map<String, dynamic>> ouvrages) async {
+    setState(() => _generating = true);
+    try {
+      final uid = Supabase.instance.client.auth.currentUser!.id;
+      final profile = await Supabase.instance.client
+          .from('users')
+          .select('company_id')
+          .eq('id', uid)
+          .single();
+      final companyId = profile['company_id'] as String;
+
+      final countResult = await Supabase.instance.client
+          .from('quotes')
+          .select('id')
+          .eq('company_id', companyId)
+          .count();
+      final count = countResult.count;
+      final year = DateTime.now().year;
+      final quoteNumber = 'DEVIS-$year-${(count + 1).toString().padLeft(3, '0')}';
+
+      final inserted = await Supabase.instance.client
+          .from('quotes')
+          .insert({
+            'company_id': companyId,
+            'quote_number': quoteNumber,
+            'project_id': projectId,
+            'project_type': 'Travaux BTP',
+            'subtotal': 0,
+            'tax_rate': 0,
+            'tax_amount': 0,
+            'margin_pct': 0,
+            'total': 0,
+            'status': 'draft',
+            'notes': 'Généré depuis les métrés — compléter les prix unitaires',
+            'created_by': uid,
+          })
+          .select('id')
+          .single();
+
+      final quoteId = inserted['id'] as String;
+
+      // Créer une ligne par ouvrage
+      final items = ouvrages.asMap().entries.map((entry) {
+        final i = entry.key;
+        final o = entry.value;
+        final qty = (o['quantite_nette'] as num?)?.toDouble() ?? 0;
+        final unite = o['unite_principale'] as String? ?? 'u';
+        return {
+          'quote_id': quoteId,
+          'category': 'other',
+          'label': o['designation'] as String? ?? 'Ouvrage',
+          'quantity': qty,
+          'unit': unite,
+          'unit_price': 0,
+          'sort_order': i,
+        };
+      }).toList();
+
+      if (items.isNotEmpty) {
+        await Supabase.instance.client.from('quote_items').insert(items);
+      }
+
+      if (mounted) {
+        context.push('/quotes/$quoteId');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e'), backgroundColor: AppColors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _generating = false);
+    }
+  }
+
+  Future<void> _showGenerateSheet() async {
+    // Group ouvrages by project
+    final byProject = <String, List<Map<String, dynamic>>>{};
+    for (final o in _ouvrages) {
+      final pid = o['project_id'] as String? ?? '';
+      byProject.putIfAbsent(pid, () => []).add(o);
+    }
+
+    if (!mounted) return;
+
+    if (byProject.length == 1) {
+      final projectId = byProject.keys.first;
+      final ouvrages = byProject[projectId]!;
+      await _generateDevis(projectId, ouvrages);
+      return;
+    }
+
+    // Multiple projects — let user pick
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 12),
+          const Text('Choisir le chantier',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          const SizedBox(height: 8),
+          ...byProject.entries.map((entry) {
+            final projectName = entry.value.first['projects'] != null
+                ? (entry.value.first['projects'] as Map)['name'] as String? ?? 'Chantier'
+                : 'Chantier';
+            return ListTile(
+              title: Text(projectName),
+              subtitle: Text('${entry.value.length} ouvrage${entry.value.length > 1 ? 's' : ''}'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+              onTap: () => Navigator.pop(ctx, entry.key),
+            );
+          }),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+
+    if (selected != null && mounted) {
+      await _generateDevis(selected, byProject[selected]!);
     }
   }
 
@@ -105,7 +260,10 @@ class _MetresPageState extends State<MetresPage> {
                               const SizedBox(width: 12),
                               const Text(
                                 'Métrés',
-                                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800),
                               ),
                             ],
                           ),
@@ -113,8 +271,9 @@ class _MetresPageState extends State<MetresPage> {
                           Text(
                             _loading
                                 ? 'Chargement...'
-                                : '${_ouvrages.length} ouvrage${_ouvrages.length > 1 ? 's' : ''}',
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 13),
+                                : '${_ouvrages.length} ouvrage${_ouvrages.length != 1 ? 's' : ''}',
+                            style:
+                                TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 13),
                           ),
                         ],
                       ),
@@ -123,10 +282,27 @@ class _MetresPageState extends State<MetresPage> {
                 ),
                 title: const Text(
                   'Métrés',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17),
+                  style:
+                      TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17),
                 ),
                 titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
               ),
+              actions: [
+                if (!_loading && _ouvrages.isNotEmpty)
+                  _generating
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.description_outlined, color: Colors.white),
+                          tooltip: 'Générer un devis',
+                          onPressed: _showGenerateSheet,
+                        ),
+              ],
             ),
             if (_loading)
               const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
@@ -134,10 +310,29 @@ class _MetresPageState extends State<MetresPage> {
               const SliverFillRemaining(child: _EmptyMetres())
             else
               SliverPadding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
-                    (context, i) => _OuvrageCard(ouvrage: _ouvrages[i]),
+                    (context, i) => _OuvrageCard(
+                      ouvrage: _ouvrages[i],
+                      onEdit: () async {
+                        // Load full ouvrage data for edit
+                        final data = await Supabase.instance.client
+                            .from('project_ouvrages')
+                            .select()
+                            .eq('id', _ouvrages[i]['id'] as String)
+                            .single();
+                        if (!context.mounted) return;
+                        final result = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => OuvrageFormPage(ouvrage: data),
+                          ),
+                        );
+                        if (result == true) _load();
+                      },
+                      onDelete: () => _delete(_ouvrages[i]['id'] as String),
+                    ),
                     childCount: _ouvrages.length,
                   ),
                 ),
@@ -145,13 +340,23 @@ class _MetresPageState extends State<MetresPage> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.add),
+        label: const Text('Nouvel ouvrage'),
+        onPressed: () async {
+          final result = await context.push('/metres/new');
+          if (result == true) _load();
+        },
+      ),
     );
   }
 }
 
 class _OuvrageCard extends StatelessWidget {
   final Map<String, dynamic> ouvrage;
-  const _OuvrageCard({required this.ouvrage});
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  const _OuvrageCard({required this.ouvrage, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -169,74 +374,92 @@ class _OuvrageCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [color.withValues(alpha: 0.75), color],
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onEdit,
+        onLongPress: onDelete,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [color.withValues(alpha: 0.75), color],
+                  ),
+                  borderRadius: BorderRadius.circular(13),
                 ),
-                borderRadius: BorderRadius.circular(13),
+                child: Icon(icon, color: Colors.white, size: 20),
               ),
-              child: Icon(icon, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ouvrage['designation'] as String? ?? '',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: AppColors.textPrimary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        _TypeChip(label: typeLabel, color: color),
+                        if (project != null) ...[
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              project['name'] as String? ?? '',
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppColors.textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    ouvrage['designation'] as String? ?? '',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppColors.textPrimary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    quantite == quantite.truncateToDouble()
+                        ? quantite.toStringAsFixed(0)
+                        : quantite.toStringAsFixed(2),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 17, color: color),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _TypeChip(label: typeLabel, color: color),
-                      if (project != null) ...[
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            project['name'] as String? ?? '',
-                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ],
+                  Text(
+                    unite,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  quantite == quantite.truncateToDouble()
-                      ? quantite.toStringAsFixed(0)
-                      : quantite.toStringAsFixed(2),
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: color),
-                ),
-                Text(
-                  unite,
-                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ],
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -256,7 +479,8 @@ class _TypeChip extends StatelessWidget {
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+      child: Text(label,
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
     );
   }
 }
@@ -282,13 +506,14 @@ class _EmptyMetres extends StatelessWidget {
               child: const Icon(Icons.square_foot, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Aucun métré',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-            ),
+            const Text('Aucun métré',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary)),
             const SizedBox(height: 8),
             const Text(
-              'Créez vos métrés depuis l\'interface web\npour les retrouver ici.',
+              'Créez votre premier ouvrage\npour calculer les quantités automatiquement.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
             ),
