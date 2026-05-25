@@ -103,6 +103,8 @@ class Company {
   final String? email;
   final String currency;
   final String plan;
+  final String? headerUrl;
+  final String? footerUrl;
 
   const Company({
     required this.id,
@@ -112,6 +114,8 @@ class Company {
     this.email,
     required this.currency,
     required this.plan,
+    this.headerUrl,
+    this.footerUrl,
   });
 
   factory Company.fromJson(Map<String, dynamic> j) => Company(
@@ -122,6 +126,8 @@ class Company {
         email: j['email'] as String?,
         currency: j['currency'] as String? ?? 'XOF',
         plan: j['plan'] as String? ?? 'free',
+        headerUrl: j['header_url'] as String?,
+        footerUrl: j['footer_url'] as String?,
       );
 }
 

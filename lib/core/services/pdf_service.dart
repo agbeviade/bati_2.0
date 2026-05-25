@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -20,7 +21,9 @@ class PdfService {
 
   static Future<void> shareQuote(Quote quote, List<Map<String, dynamic>> items) async {
     final company = await _loadCompany();
-    final bytes = await _buildQuotePdf(quote, items, company);
+    final headerImage = await _fetchImage(company?.headerUrl);
+    final footerImage = await _fetchImage(company?.footerUrl);
+    final bytes = await _buildQuotePdf(quote, items, company, headerImage, footerImage);
     await Printing.sharePdf(
       bytes: bytes,
       filename: 'devis-${quote.quoteNumber}.pdf',
@@ -29,11 +32,26 @@ class PdfService {
 
   static Future<void> shareInvoice(Invoice invoice) async {
     final company = await _loadCompany();
-    final bytes = await _buildInvoicePdf(invoice, company);
+    final headerImage = await _fetchImage(company?.headerUrl);
+    final footerImage = await _fetchImage(company?.footerUrl);
+    final bytes = await _buildInvoicePdf(invoice, company, headerImage, footerImage);
     await Printing.sharePdf(
       bytes: bytes,
       filename: 'facture-${invoice.invoiceNumber}.pdf',
     );
+  }
+
+  // ── Image fetcher ───────────────────────────────────────────
+
+  static Future<pw.MemoryImage?> _fetchImage(String? url) async {
+    if (url == null || url.isEmpty) return null;
+    try {
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return pw.MemoryImage(response.bodyBytes);
+      }
+    } catch (_) {}
+    return null;
   }
 
   // ── Company loader ──────────────────────────────────────────
@@ -51,7 +69,7 @@ class PdfService {
       if (cid == null) return null;
       final cd = await Supabase.instance.client
           .from('companies')
-          .select()
+          .select('id, name, address, phone, email, currency, plan, header_url, footer_url')
           .eq('id', cid)
           .single();
       return Company.fromJson(cd);
@@ -66,6 +84,8 @@ class PdfService {
     Quote quote,
     List<Map<String, dynamic>> items,
     Company? company,
+    pw.MemoryImage? headerImage,
+    pw.MemoryImage? footerImage,
   ) async {
     final doc = pw.Document(
       title: 'Devis ${quote.quoteNumber}',
@@ -93,8 +113,8 @@ class PdfService {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
         header: (ctx) => _buildHeader(ctx, company, 'DEVIS', quote.quoteNumber,
-            quote.createdAt, font, fontBold, fontSemiBold),
-        footer: (ctx) => _buildFooter(ctx, font),
+            quote.createdAt, font, fontBold, fontSemiBold, headerImage),
+        footer: (ctx) => _buildFooter(ctx, font, footerImage),
         build: (ctx) => [
           _clientSection(quote.clientName, quote.projectType, quote.validUntil,
               font, fontBold, fontSemiBold),
@@ -119,7 +139,8 @@ class PdfService {
   // ── Invoice PDF ─────────────────────────────────────────────
 
   static Future<Uint8List> _buildInvoicePdf(
-      Invoice invoice, Company? company) async {
+      Invoice invoice, Company? company,
+      pw.MemoryImage? headerImage, pw.MemoryImage? footerImage) async {
     final doc = pw.Document(
       title: 'Facture ${invoice.invoiceNumber}',
       author: company?.name ?? 'BatiFlow',
@@ -137,7 +158,7 @@ class PdfService {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             _buildHeader(ctx, company, 'FACTURE', invoice.invoiceNumber,
-                invoice.createdAt, font, fontBold, fontSemiBold),
+                invoice.createdAt, font, fontBold, fontSemiBold, headerImage),
             pw.SizedBox(height: 24),
             _clientSection(invoice.clientName, null, null, font, fontBold, fontSemiBold),
             pw.SizedBox(height: 12),
@@ -147,7 +168,7 @@ class PdfService {
             pw.SizedBox(height: 24),
             _invoiceDatesBlock(invoice, font, fontBold, fontSemiBold),
             pw.Spacer(),
-            _buildFooter(ctx, font),
+            _buildFooter(ctx, font, footerImage),
           ],
         ),
       ),
@@ -167,7 +188,45 @@ class PdfService {
     pw.Font font,
     pw.Font fontBold,
     pw.Font fontSemiBold,
+    pw.MemoryImage? headerImage,
   ) {
+    // Si l'entreprise a uploadé une image d'en-tête : l'utiliser pleine largeur
+    // puis afficher le type et numéro de document en dessous
+    if (headerImage != null) {
+      return pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Image(headerImage, width: double.infinity, fit: pw.BoxFit.contain),
+          pw.SizedBox(height: 8),
+          pw.Container(
+            padding: const pw.EdgeInsets.only(bottom: 10),
+            decoration: pw.BoxDecoration(
+              border: pw.Border(bottom: pw.BorderSide(color: _grey300, width: 0.5)),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.SizedBox(), // spacer
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(docType,
+                        style: pw.TextStyle(font: fontBold, fontSize: 20, color: _primary, letterSpacing: 1)),
+                    pw.SizedBox(height: 2),
+                    pw.Text(docNumber,
+                        style: pw.TextStyle(font: fontSemiBold, fontSize: 10, color: _grey900)),
+                    pw.Text(_fmtDate(date),
+                        style: pw.TextStyle(font: font, fontSize: 8, color: _grey500)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Fallback texte si pas d'image
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 16),
       decoration: pw.BoxDecoration(
@@ -176,7 +235,6 @@ class PdfService {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          // Company info
           pw.Expanded(
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -189,12 +247,7 @@ class PdfService {
                   ),
                   child: pw.Text(
                     company?.name ?? 'BATIFLOW',
-                    style: pw.TextStyle(
-                      font: fontBold,
-                      fontSize: 14,
-                      color: PdfColors.white,
-                      letterSpacing: 0.5,
-                    ),
+                    style: pw.TextStyle(font: fontBold, fontSize: 14, color: PdfColors.white, letterSpacing: 0.5),
                   ),
                 ),
                 pw.SizedBox(height: 6),
@@ -207,24 +260,17 @@ class PdfService {
               ],
             ),
           ),
-          // Document info
           pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
-              pw.Text(
-                docType,
-                style: pw.TextStyle(font: fontBold, fontSize: 22, color: _primary, letterSpacing: 1),
-              ),
+              pw.Text(docType,
+                  style: pw.TextStyle(font: fontBold, fontSize: 22, color: _primary, letterSpacing: 1)),
               pw.SizedBox(height: 4),
-              pw.Text(
-                docNumber,
-                style: pw.TextStyle(font: fontSemiBold, fontSize: 11, color: _grey900),
-              ),
+              pw.Text(docNumber,
+                  style: pw.TextStyle(font: fontSemiBold, fontSize: 11, color: _grey900)),
               pw.SizedBox(height: 2),
-              pw.Text(
-                _fmtDate(date),
-                style: pw.TextStyle(font: font, fontSize: 9, color: _grey500),
-              ),
+              pw.Text(_fmtDate(date),
+                  style: pw.TextStyle(font: font, fontSize: 9, color: _grey500)),
             ],
           ),
         ],
@@ -232,7 +278,30 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildFooter(pw.Context ctx, pw.Font font) {
+  static pw.Widget _buildFooter(pw.Context ctx, pw.Font font, pw.MemoryImage? footerImage) {
+    // Si l'entreprise a uploadé une image de pied de page : l'utiliser pleine largeur
+    if (footerImage != null) {
+      return pw.Column(
+        children: [
+          pw.Container(
+            margin: const pw.EdgeInsets.only(top: 8),
+            padding: const pw.EdgeInsets.only(bottom: 6),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              children: [
+                pw.Text(
+                  'Page ${ctx.pageNumber}/${ctx.pagesCount}',
+                  style: pw.TextStyle(font: font, fontSize: 7, color: _grey500),
+                ),
+              ],
+            ),
+          ),
+          pw.Image(footerImage, width: double.infinity, fit: pw.BoxFit.contain),
+        ],
+      );
+    }
+
+    // Fallback texte
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 16),
       padding: const pw.EdgeInsets.only(top: 8),
