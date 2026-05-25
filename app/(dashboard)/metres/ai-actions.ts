@@ -258,23 +258,24 @@ export async function genererDevisDepuisMetres(
 
     const response = await ai.messages.create({
       model: AI_MODEL,
-      max_tokens: 3072,
+      max_tokens: 8192,
       system: `Tu es un expert en devis BTP Côte d'Ivoire. Tu connais le Bordereau des Prix BTP CI 2024.
 Tu génères des devis précis avec les prix du marché ivoirien (en FCFA).
-Tu réponds UNIQUEMENT en JSON valide.`,
+Tu réponds UNIQUEMENT en JSON valide, sans troncature ni résumé.`,
       messages: [
         {
           role: "user",
-          content: `Génère un devis détaillé pour le projet "${nomProjet}" basé sur ces métrés :
+          content: `Génère un devis COMPLET et EXHAUSTIF pour le projet "${nomProjet}" basé sur ces métrés :
 
 ${ouvragesJson}
 
-Pour chaque ouvrage et ses matériaux, crée des lignes de devis avec :
-- Les prix unitaires du marché BTP ivoirien 2024 (en FCFA)
-- Une ligne pour les matériaux
-- Une ligne pour la main d'œuvre (si applicable)
+RÈGLES IMPORTANTES :
+- Crée UNE ligne par matériau par ouvrage (ne regroupe pas, ne résume pas)
+- Crée UNE ligne de main d'œuvre par ouvrage
+- N'omets AUCUN matériau, même si la liste est longue
+- Les prix sont en FCFA selon le bordereau BTP CI 2024
 
-Réponds avec ce JSON :
+Réponds avec ce JSON (tableau items aussi long que nécessaire) :
 {
   "items": [
     {
