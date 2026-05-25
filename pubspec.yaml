@@ -32,6 +32,8 @@ dependencies:
 
   # PDF / URLs
   url_launcher: ^6.3.1
+  pdf: ^3.11.0
+  printing: ^5.13.1
 
   # Notifications locales
   flutter_local_notifications: ^18.0.1

@@ -3,6 +3,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/models/models.dart';
+import '../../../core/services/pdf_service.dart';
+import '../../../core/theme/app_theme.dart';
 
 class QuoteDetailPage extends StatefulWidget {
   final String id;
@@ -14,6 +16,7 @@ class QuoteDetailPage extends StatefulWidget {
 
 class _QuoteDetailPageState extends State<QuoteDetailPage> {
   bool _loading = true;
+  bool _exporting = false;
   Quote? _quote;
   List<Map<String, dynamic>> _items = [];
 
@@ -41,6 +44,22 @@ class _QuoteDetailPageState extends State<QuoteDetailPage> {
     }
   }
 
+  Future<void> _shareAsPdf() async {
+    if (_quote == null) return;
+    setState(() => _exporting = true);
+    try {
+      await PdfService.shareQuote(_quote!, _items);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur PDF : $e'), backgroundColor: AppColors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
   String _fmt(double v) => '${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]} ')} XOF';
 
   @override
@@ -63,13 +82,23 @@ class _QuoteDetailPageState extends State<QuoteDetailPage> {
         actions: [
           if (q.pdfUrl != null)
             IconButton(
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-              tooltip: 'Voir le PDF',
+              icon: const Icon(Icons.open_in_browser_outlined),
+              tooltip: 'Voir le PDF en ligne',
               onPressed: () async {
                 final uri = Uri.parse(q.pdfUrl!);
                 if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
               },
             ),
+          _exporting
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.share_outlined),
+                  tooltip: 'Partager PDF',
+                  onPressed: _shareAsPdf,
+                ),
         ],
       ),
       body: RefreshIndicator(
