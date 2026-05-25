@@ -14,6 +14,8 @@ import '../../features/quotes/presentation/quote_detail_page.dart';
 import '../../features/quotes/presentation/quote_ai_page.dart';
 import '../../features/invoices/presentation/invoices_page.dart';
 import '../../features/invoices/presentation/invoice_detail_page.dart';
+import '../../features/invoices/presentation/invoice_form_page.dart';
+import '../../shared/models/models.dart' show Invoice;
 import '../../features/materials/presentation/materials_page.dart';
 import '../../features/materials/presentation/movement_form_page.dart';
 import '../../features/notifications/presentation/notifications_page.dart';
@@ -114,8 +116,18 @@ GoRouter buildRouter() => GoRouter(
               builder: (_, $) => const InvoicesPage(),
               routes: [
                 GoRoute(
+                  path: 'new',
+                  builder: (_, $) => const InvoiceFormPage(),
+                ),
+                GoRoute(
                   path: ':id',
                   builder: (_, state) => InvoiceDetailPage(id: state.pathParameters['id']!),
+                  routes: [
+                    GoRoute(
+                      path: 'edit',
+                      builder: (_, state) => InvoiceFormPage(invoice: state.extra as Invoice?),
+                    ),
+                  ],
                 ),
               ],
             ),

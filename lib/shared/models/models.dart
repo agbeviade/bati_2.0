@@ -285,6 +285,9 @@ class Invoice {
   final String? dueDate;
   final String? paidAt;
   final String? pdfUrl;
+  final String? notes;
+  final String? projectId;
+  final String? quoteId;
   final DateTime createdAt;
 
   const Invoice({
@@ -296,6 +299,9 @@ class Invoice {
     this.dueDate,
     this.paidAt,
     this.pdfUrl,
+    this.notes,
+    this.projectId,
+    this.quoteId,
     required this.createdAt,
   });
 
@@ -314,7 +320,60 @@ class Invoice {
         dueDate: j['due_date'] as String?,
         paidAt: j['paid_at'] as String?,
         pdfUrl: j['pdf_url'] as String?,
+        notes: j['notes'] as String?,
+        projectId: j['project_id'] as String?,
+        quoteId: j['quote_id'] as String?,
         createdAt: DateTime.parse(j['created_at'] as String),
+      );
+}
+
+enum PaymentMethod { cash, transfer, check, other }
+
+PaymentMethod paymentMethodFromString(String s) => switch (s) {
+      'transfer' => PaymentMethod.transfer,
+      'check' => PaymentMethod.check,
+      'other' => PaymentMethod.other,
+      _ => PaymentMethod.cash,
+    };
+
+String paymentMethodToString(PaymentMethod m) => switch (m) {
+      PaymentMethod.cash => 'cash',
+      PaymentMethod.transfer => 'transfer',
+      PaymentMethod.check => 'check',
+      PaymentMethod.other => 'other',
+    };
+
+String paymentMethodLabel(PaymentMethod m) => switch (m) {
+      PaymentMethod.cash => 'Espèces',
+      PaymentMethod.transfer => 'Virement',
+      PaymentMethod.check => 'Chèque',
+      PaymentMethod.other => 'Autre',
+    };
+
+class Payment {
+  final String id;
+  final String invoiceId;
+  final double amount;
+  final PaymentMethod method;
+  final String? reference;
+  final DateTime paidAt;
+
+  const Payment({
+    required this.id,
+    required this.invoiceId,
+    required this.amount,
+    required this.method,
+    this.reference,
+    required this.paidAt,
+  });
+
+  factory Payment.fromJson(Map<String, dynamic> j) => Payment(
+        id: j['id'] as String,
+        invoiceId: j['invoice_id'] as String,
+        amount: (j['amount'] as num).toDouble(),
+        method: paymentMethodFromString(j['method'] as String? ?? 'cash'),
+        reference: j['reference'] as String?,
+        paidAt: DateTime.parse(j['paid_at'] as String),
       );
 }
 
