@@ -70,13 +70,35 @@ class _MaterialsPageState extends State<MaterialsPage> {
           final done = await context.push('/materials/movement');
           if (done == true) _load();
         },
-        icon: const Icon(Icons.swap_vert),
-        label: const Text('Mouvement'),
+        icon: const Icon(Icons.add_shopping_cart_outlined),
+        label: const Text('Achat / Ajustement'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                // Info banner: exits are managed from projects
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 15, color: Color(0xFF2563EB)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Les sorties chantier se saisissent depuis l\'onglet Matériaux de chaque chantier.',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF1D4ED8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: TextField(

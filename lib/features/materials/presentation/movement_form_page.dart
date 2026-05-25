@@ -16,12 +16,11 @@ class _MovementFormPageState extends State<MovementFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _qtyCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
-  models.MovementType _type = models.MovementType.use;
+  // Only purchase/adjustment here — exits (use/return) are done from the project detail
+  models.MovementType _type = models.MovementType.purchase;
   String? _materialId;
-  String? _projectId;
   bool _saving = false;
   List<Map<String, dynamic>> _materials = [];
-  List<Map<String, dynamic>> _projects = [];
 
   @override
   void initState() {
@@ -38,29 +37,25 @@ class _MovementFormPageState extends State<MovementFormPage> {
   }
 
   Future<void> _loadData() async {
-    final client = Supabase.instance.client;
-    final results = await Future.wait<dynamic>([
-      client.from('materials').select('id, name, unit, stock_qty').order('name'),
-      client.from('projects').select('id, name').inFilter('status', ['in_progress', 'planned']).order('name'),
-    ]);
+    final data = await Supabase.instance.client
+        .from('materials')
+        .select('id, name, unit, stock_qty')
+        .order('name');
     setState(() {
-      _materials = (results[0] as List).cast<Map<String, dynamic>>();
-      _projects = (results[1] as List).cast<Map<String, dynamic>>();
+      _materials = (data as List).cast<Map<String, dynamic>>();
     });
   }
 
   String _typeLabel(models.MovementType t) => switch (t) {
         models.MovementType.purchase => 'Achat / Réception',
-        models.MovementType.use => 'Utilisation chantier',
-        models.MovementType.returnItem => 'Retour stock',
-        models.MovementType.adjustment => 'Ajustement inventaire',
+        models.MovementType.adjustment => 'Correction de stock',
+        _ => 'Achat',
       };
 
   String _typeDb(models.MovementType t) => switch (t) {
         models.MovementType.purchase => 'purchase',
-        models.MovementType.use => 'use',
-        models.MovementType.returnItem => 'return',
         models.MovementType.adjustment => 'adjustment',
+        _ => 'purchase',
       };
 
   Future<void> _save() async {
@@ -74,7 +69,6 @@ class _MovementFormPageState extends State<MovementFormPage> {
       final uid = Supabase.instance.client.auth.currentUser!.id;
       await Supabase.instance.client.from('stock_movements').insert({
         'material_id': _materialId,
-        'project_id': _projectId,
         'type': _typeDb(_type),
         'quantity': double.parse(_qtyCtrl.text.trim()),
         'notes': _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
@@ -100,12 +94,35 @@ class _MovementFormPageState extends State<MovementFormPage> {
         : null;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mouvement de stock')),
+      appBar: AppBar(title: const Text('Achat & ajustement stock')),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Info banner
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Color(0xFF2563EB)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Les sorties chantier se saisissent depuis l\'onglet Matériaux de chaque chantier.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF1D4ED8)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             if (widget.materialId == null)
               DropdownButtonFormField<String>(
                 // ignore: deprecated_member_use
@@ -146,7 +163,7 @@ class _MovementFormPageState extends State<MovementFormPage> {
               // ignore: deprecated_member_use
               value: _type,
               decoration: const InputDecoration(labelText: 'Type de mouvement', prefixIcon: Icon(Icons.swap_vert)),
-              items: models.MovementType.values
+              items: [models.MovementType.purchase, models.MovementType.adjustment]
                   .map((t) => DropdownMenuItem(value: t, child: Text(_typeLabel(t))))
                   .toList(),
               onChanged: (v) => setState(() => _type = v!),
@@ -164,19 +181,6 @@ class _MovementFormPageState extends State<MovementFormPage> {
               },
             ),
             const SizedBox(height: 12),
-            if (_type == models.MovementType.use || _type == models.MovementType.returnItem) ...[
-              DropdownButtonFormField<String>(
-                // ignore: deprecated_member_use
-                value: _projectId,
-                decoration: const InputDecoration(labelText: 'Chantier concerné', prefixIcon: Icon(Icons.construction_outlined)),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Aucun')),
-                  ..._projects.map((p) => DropdownMenuItem(value: p['id'] as String, child: Text(p['name'] as String))),
-                ],
-                onChanged: (v) => setState(() => _projectId = v),
-              ),
-              const SizedBox(height: 12),
-            ],
             TextFormField(
               controller: _notesCtrl,
               maxLines: 2,
