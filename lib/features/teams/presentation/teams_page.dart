@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/empty_state.dart';
+import '../../../core/theme/app_theme.dart';
 
 class TeamsPage extends StatefulWidget {
   const TeamsPage({super.key});
@@ -13,7 +14,7 @@ class TeamsPage extends StatefulWidget {
 
 class _TeamsPageState extends State<TeamsPage> {
   bool _loading = true;
-  List<_TeamWithCount> _teams = [];
+  List<_TeamRow> _teams = [];
 
   @override
   void initState() {
@@ -32,7 +33,7 @@ class _TeamsPageState extends State<TeamsPage> {
         _teams = (data as List).map((j) {
           final team = Team.fromJson(j);
           final count = (j['team_members'] as List?)?.firstOrNull?['count'] as int? ?? 0;
-          return _TeamWithCount(team: team, memberCount: count);
+          return _TeamRow(team: team, memberCount: count);
         }).toList();
         _loading = false;
       });
@@ -43,6 +44,8 @@ class _TeamsPageState extends State<TeamsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Équipes')),
       body: _loading
@@ -50,26 +53,37 @@ class _TeamsPageState extends State<TeamsPage> {
           : RefreshIndicator(
               onRefresh: _load,
               child: _teams.isEmpty
-                  ? const EmptyState(icon: Icons.groups_outlined, title: 'Aucune équipe', subtitle: 'Créez des équipes depuis la version web')
+                  ? const EmptyState(
+                      icon: Icons.groups_outlined,
+                      title: 'Aucune équipe',
+                      subtitle: 'Créez votre première équipe',
+                    )
                   : ListView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                       itemCount: _teams.length,
                       itemBuilder: (_, i) {
                         final t = _teams[i];
                         return Card(
                           margin: const EdgeInsets.only(bottom: 10),
                           child: InkWell(
-                            onTap: () => context.go('/teams/${t.team.id}/attendance'),
+                            onTap: () async {
+                              await context.push('/teams/${t.team.id}');
+                              _load();
+                            },
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Row(
                                 children: [
                                   CircleAvatar(
-                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                    radius: 22,
+                                    backgroundColor: AppColors.cyan.withValues(alpha: 0.15),
                                     child: Text(
-                                      t.team.name.substring(0, 1).toUpperCase(),
-                                      style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                      t.team.name[0].toUpperCase(),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.cyan,
+                                          fontSize: 16),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -77,15 +91,38 @@ class _TeamsPageState extends State<TeamsPage> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(t.team.name, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                                        Text('${t.memberCount} membre${t.memberCount != 1 ? 's' : ''}',
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                                        Text(
+                                          t.team.name,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(fontWeight: FontWeight.w600),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${t.memberCount} membre${t.memberCount != 1 ? 's' : ''}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(color: cs.onSurfaceVariant),
+                                        ),
                                       ],
                                     ),
                                   ),
-                                  const Icon(Icons.fingerprint, color: Color(0xFF2563EB)),
-                                  const SizedBox(width: 4),
-                                  Text('Pointage', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: const Color(0xFF2563EB))),
+                                  // Quick access to attendance
+                                  OutlinedButton.icon(
+                                    icon: const Icon(Icons.fingerprint, size: 14),
+                                    label: const Text('Pointage',
+                                        style: TextStyle(fontSize: 12)),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
+                                      side: BorderSide(
+                                          color: AppColors.primary.withValues(alpha: 0.4)),
+                                    ),
+                                    onPressed: () =>
+                                        context.push('/teams/${t.team.id}/attendance'),
+                                  ),
                                 ],
                               ),
                             ),
@@ -94,12 +131,26 @@ class _TeamsPageState extends State<TeamsPage> {
                       },
                     ),
             ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.group_add_outlined),
+        label: const Text('Nouvelle équipe'),
+        onPressed: () async {
+          final result = await context.push('/teams/new');
+          if (result != null) {
+            _load();
+            // Navigate to the new team's detail page
+            if (result is String && mounted) {
+              context.push('/teams/$result');
+            }
+          }
+        },
+      ),
     );
   }
 }
 
-class _TeamWithCount {
+class _TeamRow {
   final Team team;
   final int memberCount;
-  _TeamWithCount({required this.team, required this.memberCount});
+  _TeamRow({required this.team, required this.memberCount});
 }
