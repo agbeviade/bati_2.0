@@ -21,6 +21,7 @@ import '../../features/portal/presentation/portal_quotes_page.dart';
 import '../../features/portal/presentation/portal_invoices_page.dart';
 import '../../features/reports/presentation/reports_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
+import '../../features/metres/presentation/metres_page.dart';
 import '../shell/app_shell.dart';
 import '../shell/client_shell.dart';
 
@@ -96,6 +97,7 @@ GoRouter buildRouter() => GoRouter(
               ],
             ),
             GoRoute(path: '/attendance', builder: (_, $) => const AttendancePage(teamId: null)),
+            GoRoute(path: '/metres', builder: (_, $) => const MetresPage()),
             GoRoute(
               path: '/quotes',
               builder: (_, $) => const QuotesPage(),
