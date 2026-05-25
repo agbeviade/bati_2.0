@@ -12,10 +12,11 @@ import '../../features/teams/presentation/attendance_page.dart';
 import '../../features/quotes/presentation/quotes_page.dart';
 import '../../features/quotes/presentation/quote_detail_page.dart';
 import '../../features/quotes/presentation/quote_ai_page.dart';
+import '../../features/quotes/presentation/quote_form_page.dart';
 import '../../features/invoices/presentation/invoices_page.dart';
 import '../../features/invoices/presentation/invoice_detail_page.dart';
 import '../../features/invoices/presentation/invoice_form_page.dart';
-import '../../shared/models/models.dart' show Invoice;
+import '../../shared/models/models.dart' show Invoice, Quote;
 import '../../features/materials/presentation/materials_page.dart';
 import '../../features/materials/presentation/movement_form_page.dart';
 import '../../features/notifications/presentation/notifications_page.dart';
@@ -105,9 +106,16 @@ GoRouter buildRouter() => GoRouter(
               builder: (_, $) => const QuotesPage(),
               routes: [
                 GoRoute(path: 'ai', builder: (_, $) => const QuoteAiPage()),
+                GoRoute(path: 'new', builder: (_, $) => const QuoteFormPage()),
                 GoRoute(
                   path: ':id',
                   builder: (_, state) => QuoteDetailPage(id: state.pathParameters['id']!),
+                  routes: [
+                    GoRoute(
+                      path: 'edit',
+                      builder: (_, state) => QuoteFormPage(quote: state.extra as Quote?),
+                    ),
+                  ],
                 ),
               ],
             ),

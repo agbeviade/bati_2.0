@@ -110,7 +110,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
             .select('id')
             .eq('company_id', companyId)
             .count();
-        final count = countResult.count ?? 0;
+        final count = countResult.count;
         final year = DateTime.now().year;
         final invoiceNumber = 'FAC-$year-${(count + 1).toString().padLeft(3, '0')}';
 

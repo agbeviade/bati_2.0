@@ -239,11 +239,15 @@ class Quote {
   final String quoteNumber;
   final String? clientName;
   final String? projectType;
+  final double? surfaceM2;
   final double subtotal;
   final double taxRate;
+  final double marginPct;
   final double total;
   final QuoteStatus status;
   final String? validUntil;
+  final String? notes;
+  final String? projectId;
   final String? pdfUrl;
   final DateTime createdAt;
 
@@ -252,11 +256,15 @@ class Quote {
     required this.quoteNumber,
     this.clientName,
     this.projectType,
+    this.surfaceM2,
     required this.subtotal,
     required this.taxRate,
+    required this.marginPct,
     required this.total,
     required this.status,
     this.validUntil,
+    this.notes,
+    this.projectId,
     this.pdfUrl,
     required this.createdAt,
   });
@@ -266,11 +274,15 @@ class Quote {
         quoteNumber: j['quote_number'] as String,
         clientName: j['client_name'] as String?,
         projectType: j['project_type'] as String?,
+        surfaceM2: (j['surface_m2'] as num?)?.toDouble(),
         subtotal: (j['subtotal'] as num?)?.toDouble() ?? 0,
         taxRate: (j['tax_rate'] as num?)?.toDouble() ?? 0,
+        marginPct: (j['margin_pct'] as num?)?.toDouble() ?? 0,
         total: (j['total'] as num?)?.toDouble() ?? 0,
         status: quoteStatusFromString(j['status'] as String? ?? 'draft'),
         validUntil: j['valid_until'] as String?,
+        notes: j['notes'] as String?,
+        projectId: j['project_id'] as String?,
         pdfUrl: j['pdf_url'] as String?,
         createdAt: DateTime.parse(j['created_at'] as String),
       );

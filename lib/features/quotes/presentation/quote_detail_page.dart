@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/widgets/status_badge.dart';
@@ -44,6 +45,55 @@ class _QuoteDetailPageState extends State<QuoteDetailPage> {
     }
   }
 
+  Future<void> _updateStatus(QuoteStatus status) async {
+    try {
+      final s = switch (status) {
+        QuoteStatus.draft => 'draft',
+        QuoteStatus.sent => 'sent',
+        QuoteStatus.approved => 'approved',
+        QuoteStatus.rejected => 'rejected',
+        QuoteStatus.expired => 'expired',
+      };
+      await Supabase.instance.client.from('quotes').update({'status': s}).eq('id', widget.id);
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e'), backgroundColor: AppColors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer le devis ?'),
+        content: const Text('Cette action est irréversible. Les lignes associées seront également supprimées.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await Supabase.instance.client.from('quotes').delete().eq('id', widget.id);
+      if (mounted) context.pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e'), backgroundColor: AppColors.red),
+        );
+      }
+    }
+  }
+
   Future<void> _shareAsPdf() async {
     if (_quote == null) return;
     setState(() => _exporting = true);
@@ -60,7 +110,8 @@ class _QuoteDetailPageState extends State<QuoteDetailPage> {
     }
   }
 
-  String _fmt(double v) => '${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]} ')} XOF';
+  String _fmt(double v) =>
+      '${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]} ')} XOF';
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +120,6 @@ class _QuoteDetailPageState extends State<QuoteDetailPage> {
     if (_quote == null) return Scaffold(appBar: AppBar(), body: const Center(child: Text('Devis introuvable')));
     final q = _quote!;
 
-    // Grouper par catégorie
     final Map<String, List<Map<String, dynamic>>> byCategory = {};
     for (final item in _items) {
       final cat = item['category'] as String? ?? 'other';
@@ -99,6 +149,20 @@ class _QuoteDetailPageState extends State<QuoteDetailPage> {
                   tooltip: 'Partager PDF',
                   onPressed: _shareAsPdf,
                 ),
+          PopupMenuButton<String>(
+            onSelected: (v) async {
+              if (v == 'edit') {
+                final result = await context.push('/quotes/${widget.id}/edit', extra: q);
+                if (result == true) _load();
+              } else if (v == 'delete') {
+                await _delete();
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Modifier'), dense: true)),
+              const PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline, color: Colors.red), title: Text('Supprimer', style: TextStyle(color: Colors.red)), dense: true)),
+            ],
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -106,7 +170,7 @@ class _QuoteDetailPageState extends State<QuoteDetailPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Header
+            // ── Header ──────────────────────────────────────────
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -115,13 +179,23 @@ class _QuoteDetailPageState extends State<QuoteDetailPage> {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: Text(q.clientName ?? 'Client inconnu', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold))),
+                        Expanded(
+                          child: Text(
+                            q.clientName ?? 'Client inconnu',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
                         QuoteStatusBadge(status: q.status),
                       ],
                     ),
                     if (q.projectType != null) ...[
                       const SizedBox(height: 4),
                       Text(q.projectType!, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                    ],
+                    if (q.surfaceM2 != null) ...[
+                      const SizedBox(height: 2),
+                      Text('Surface : ${q.surfaceM2!.toStringAsFixed(0)} m²',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                     ],
                     const Divider(height: 24),
                     Row(
@@ -132,14 +206,37 @@ class _QuoteDetailPageState extends State<QuoteDetailPage> {
                         _AmountRow(label: 'TTC', value: _fmt(q.total), bold: true, color: cs.primary),
                       ],
                     ),
-                    if (q.validUntil != null) ...[
+                    if (q.marginPct > 0) ...[
                       const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.trending_up_outlined, size: 14, color: cs.onSurfaceVariant),
+                          const SizedBox(width: 4),
+                          Text('Marge : ${(q.marginPct * 100).toStringAsFixed(0)}%',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                        ],
+                      ),
+                    ],
+                    if (q.validUntil != null) ...[
+                      const SizedBox(height: 4),
                       Row(
                         children: [
                           Icon(Icons.event_outlined, size: 14, color: cs.onSurfaceVariant),
                           const SizedBox(width: 4),
-                          Text('Valide jusqu\'au ${q.validUntil}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                          Text('Valide jusqu\'au ${q.validUntil}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                         ],
+                      ),
+                    ],
+                    if (q.notes != null && q.notes!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(q.notes!, style: Theme.of(context).textTheme.bodySmall),
                       ),
                     ],
                   ],
@@ -147,18 +244,30 @@ class _QuoteDetailPageState extends State<QuoteDetailPage> {
               ),
             ),
 
-            // Lignes par catégorie
+            // ── Actions de statut ────────────────────────────────
+            const SizedBox(height: 12),
+            _StatusActionsRow(status: q.status, onUpdate: _updateStatus),
+
+            // ── Lignes par catégorie ─────────────────────────────
             if (_items.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text('Détail (${_items.length} ligne${_items.length > 1 ? 's' : ''})',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Text('Détail (${_items.length} ligne${_items.length > 1 ? 's' : ''})',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                  const Spacer(),
+                  Text(_fmt(q.total),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+                ],
+              ),
               const SizedBox(height: 8),
               ...byCategory.entries.map((entry) => _CategorySection(
-                category: _categoryLabel(entry.key),
-                items: entry.value,
-                fmt: _fmt,
-              )),
+                    category: _categoryLabel(entry.key),
+                    items: entry.value,
+                    fmt: _fmt,
+                  )),
             ],
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -174,6 +283,89 @@ class _QuoteDetailPageState extends State<QuoteDetailPage> {
       };
 }
 
+// ── Status actions ──────────────────────────────────────────────────────────
+
+class _StatusActionsRow extends StatelessWidget {
+  final QuoteStatus status;
+  final Future<void> Function(QuoteStatus) onUpdate;
+
+  const _StatusActionsRow({required this.status, required this.onUpdate});
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = <Widget>[];
+
+    switch (status) {
+      case QuoteStatus.draft:
+        actions.add(_ActionBtn(
+          label: 'Marquer envoyé',
+          icon: Icons.send_outlined,
+          color: Colors.blue,
+          onTap: () => onUpdate(QuoteStatus.sent),
+        ));
+      case QuoteStatus.sent:
+        actions.add(_ActionBtn(
+          label: 'Approuvé',
+          icon: Icons.check_circle_outline,
+          color: Colors.green,
+          onTap: () => onUpdate(QuoteStatus.approved),
+        ));
+        actions.add(_ActionBtn(
+          label: 'Refusé',
+          icon: Icons.cancel_outlined,
+          color: AppColors.red,
+          onTap: () => onUpdate(QuoteStatus.rejected),
+        ));
+      case QuoteStatus.approved:
+        actions.add(_ActionBtn(
+          label: 'Remettre en brouillon',
+          icon: Icons.undo_outlined,
+          color: Colors.grey,
+          onTap: () => onUpdate(QuoteStatus.draft),
+        ));
+      case QuoteStatus.rejected:
+        actions.add(_ActionBtn(
+          label: 'Réouvrir',
+          icon: Icons.refresh_outlined,
+          color: Colors.orange,
+          onTap: () => onUpdate(QuoteStatus.draft),
+        ));
+      case QuoteStatus.expired:
+        actions.add(_ActionBtn(
+          label: 'Réouvrir',
+          icon: Icons.refresh_outlined,
+          color: Colors.orange,
+          onTap: () => onUpdate(QuoteStatus.draft),
+        ));
+    }
+
+    if (actions.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(spacing: 8, children: actions);
+  }
+}
+
+class _ActionBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionBtn({required this.label, required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(foregroundColor: color, side: BorderSide(color: color.withValues(alpha: 0.5))),
+      onPressed: onTap,
+    );
+  }
+}
+
+// ── Amount row ──────────────────────────────────────────────────────────────
+
 class _AmountRow extends StatelessWidget {
   final String label;
   final String value;
@@ -186,12 +378,22 @@ class _AmountRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        Text(value, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: bold ? FontWeight.bold : FontWeight.w500, color: color)),
+        Text(label,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        Text(value,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(fontWeight: bold ? FontWeight.bold : FontWeight.w500, color: color)),
       ],
     );
   }
 }
+
+// ── Category section ────────────────────────────────────────────────────────
 
 class _CategorySection extends StatelessWidget {
   final String category;
@@ -207,7 +409,11 @@ class _CategorySection extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Text(category.toUpperCase(), style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant, letterSpacing: 1)),
+          child: Text(category.toUpperCase(),
+              style: Theme.of(context)
+                  .textTheme
+                  .labelSmall
+                  ?.copyWith(color: cs.onSurfaceVariant, letterSpacing: 1)),
         ),
         Card(
           margin: const EdgeInsets.only(bottom: 10),
@@ -219,8 +425,10 @@ class _CategorySection extends StatelessWidget {
               final total = (item['total_price'] as num?)?.toDouble() ?? qty * unitPrice;
               return ListTile(
                 dense: true,
-                title: Text(item['description'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-                subtitle: Text('$qty $unit × ${fmt(unitPrice)}', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                title: Text(item['description'] as String? ?? '',
+                    style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                subtitle: Text('$qty $unit × ${fmt(unitPrice)}',
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
                 trailing: Text(fmt(total), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
               );
             }).toList(),

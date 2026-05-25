@@ -6,7 +6,6 @@ import '../../../shared/models/models.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../core/services/pdf_service.dart';
 import '../../../core/theme/app_theme.dart';
-import 'invoice_form_page.dart';
 
 class InvoiceDetailPage extends StatefulWidget {
   final String id;
@@ -54,7 +53,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
           .eq('id', widget.id)
           .single();
       setState(() {
-        _invoice = Invoice.fromJson(data as Map<String, dynamic>);
+        _invoice = Invoice.fromJson(data);
         _loading = false;
       });
       _loadPayments();
