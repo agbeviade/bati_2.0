@@ -27,7 +27,7 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final index = _currentIndex(context);
     final location = GoRouterState.of(context).matchedLocation;
-    final isMoreSection = ['/quotes', '/materials', '/reports', '/notifications', '/settings', '/teams', '/attendance']
+    final isMoreSection = ['/quotes', '/materials', '/reports', '/notifications', '/settings', '/teams', '/attendance', '/clients']
         .any((p) => location.startsWith(p));
 
     return Scaffold(
@@ -128,10 +128,11 @@ class _MoreSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [
       _MoreItem(icon: Icons.description_outlined, label: 'Devis', path: '/quotes', color: AppColors.violet),
+      _MoreItem(icon: Icons.people_outline, label: 'Clients', path: '/clients', color: AppColors.cyan),
       _MoreItem(icon: Icons.inventory_2_outlined, label: 'Matériaux', path: '/materials', color: AppColors.orange),
-      _MoreItem(icon: Icons.groups_outlined, label: 'Équipes', path: '/teams', color: AppColors.cyan),
-      _MoreItem(icon: Icons.fingerprint_outlined, label: 'Pointage', path: '/attendance', color: AppColors.primary),
-      _MoreItem(icon: Icons.bar_chart_outlined, label: 'Rapports', path: '/reports', color: AppColors.green),
+      _MoreItem(icon: Icons.groups_outlined, label: 'Équipes', path: '/teams', color: AppColors.primary),
+      _MoreItem(icon: Icons.fingerprint_outlined, label: 'Pointage', path: '/attendance', color: AppColors.green),
+      _MoreItem(icon: Icons.bar_chart_outlined, label: 'Rapports', path: '/reports', color: AppColors.violet),
       _MoreItem(icon: Icons.notifications_outlined, label: 'Alertes', path: '/notifications', color: AppColors.red),
       _MoreItem(icon: Icons.settings_outlined, label: 'Paramètres', path: '/settings', color: AppColors.textSecondary),
     ];

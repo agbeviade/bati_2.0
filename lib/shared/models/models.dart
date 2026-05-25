@@ -62,6 +62,7 @@ class AppUser {
   final String? companyId;
   final UserRole role;
   final String? fullName;
+  final String? email;
   final String? phone;
   final String? specialty;
   final double? dailyRate;
@@ -72,6 +73,7 @@ class AppUser {
     this.companyId,
     required this.role,
     this.fullName,
+    this.email,
     this.phone,
     this.specialty,
     this.dailyRate,
@@ -83,6 +85,7 @@ class AppUser {
         companyId: j['company_id'] as String?,
         role: userRoleFromString(j['role'] as String? ?? 'worker'),
         fullName: j['full_name'] as String?,
+        email: j['email'] as String?,
         phone: j['phone'] as String?,
         specialty: j['specialty'] as String?,
         dailyRate: (j['daily_rate'] as num?)?.toDouble(),

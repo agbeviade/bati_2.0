@@ -25,6 +25,9 @@ import '../../features/portal/presentation/portal_invoices_page.dart';
 import '../../features/reports/presentation/reports_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/metres/presentation/metres_page.dart';
+import '../../features/clients/presentation/clients_page.dart';
+import '../../features/clients/presentation/client_form_page.dart';
+import '../../features/clients/presentation/client_detail_page.dart';
 import '../shell/app_shell.dart';
 import '../shell/client_shell.dart';
 
@@ -152,6 +155,17 @@ GoRouter buildRouter() => GoRouter(
                       materialName: extra?['materialName'],
                     );
                   },
+                ),
+              ],
+            ),
+            GoRoute(
+              path: '/clients',
+              builder: (_, $) => const ClientsPage(),
+              routes: [
+                GoRoute(path: 'new', builder: (_, $) => const ClientFormPage()),
+                GoRoute(
+                  path: ':id',
+                  builder: (_, state) => ClientDetailPage(id: state.pathParameters['id']!),
                 ),
               ],
             ),
