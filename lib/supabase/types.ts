@@ -256,6 +256,37 @@ export type Attendance = {
   created_at: string;
 };
 
+// -- Métrés --------------------------------------------------
+
+export type OuvrageType = {
+  id: string;
+  company_id: string;
+  designation: string;
+  type_geometrie: string;
+  unite_principale: string;
+  recette: import("@/lib/calcul-ouvrage").ComposantRecette[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectOuvrage = {
+  id: string;
+  project_id: string;
+  company_id: string;
+  type_id: string | null;
+  designation: string;
+  type_geometrie: string;
+  dimensions: Record<string, number>;
+  vides_deduits: import("@/lib/calcul-ouvrage").VideDeduit[];
+  quantite_brute: number;
+  quantite_nette: number;
+  unite_principale: string;
+  recette: import("@/lib/calcul-ouvrage").ComposantRecette[];
+  recette_calculee: import("@/lib/calcul-ouvrage").ComposantRecetteCalcule[];
+  created_at: string;
+  updated_at: string;
+};
+
 // -- Database ------------------------------------------------
 
 export type Database = {
@@ -367,6 +398,18 @@ export type Database = {
         Row: ProjectExpense;
         Insert: { id?: string; project_id: string; category: ExpenseCategory; amount: number; description?: string | null; receipt_url?: string | null; spent_at?: string; created_by?: string | null; created_at?: string };
         Update: Partial<Omit<ProjectExpense, "id">>;
+        Relationships: [];
+      };
+      ouvrage_types: {
+        Row: OuvrageType;
+        Insert: { id?: string; company_id: string; designation: string; type_geometrie: string; unite_principale?: string; recette?: Json; created_at?: string; updated_at?: string };
+        Update: Partial<Omit<OuvrageType, "id">>;
+        Relationships: [];
+      };
+      project_ouvrages: {
+        Row: ProjectOuvrage;
+        Insert: { id?: string; project_id: string; company_id: string; type_id?: string | null; designation: string; type_geometrie: string; dimensions?: Json; vides_deduits?: Json; quantite_brute?: number; quantite_nette?: number; unite_principale?: string; recette?: Json; recette_calculee?: Json; created_at?: string; updated_at?: string };
+        Update: { designation?: string; type_geometrie?: string; dimensions?: Json; vides_deduits?: Json; quantite_brute?: number; quantite_nette?: number; unite_principale?: string; recette?: Json; recette_calculee?: Json; type_id?: string | null; updated_at?: string };
         Relationships: [];
       };
     };

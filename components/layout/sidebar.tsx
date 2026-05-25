@@ -13,6 +13,7 @@ import {
   Bell,
   Settings,
   BarChart3,
+  Ruler,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ const items = [
   { href: "/projects", label: "Chantiers", icon: HardHat },
   { href: "/quotes", label: "Devis", icon: FileText },
   { href: "/materials", label: "Matériaux", icon: Package },
+  { href: "/metres", label: "Métrés", icon: Ruler },
   { href: "/teams", label: "Équipes", icon: Users },
   { href: "/clients", label: "Clients", icon: UserCircle },
   { href: "/invoices", label: "Factures", icon: Receipt },

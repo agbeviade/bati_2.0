@@ -1,0 +1,558 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import {
+  calculerOuvrage,
+  estTypeVolume,
+  getUnitePrincipale,
+  LABELS_GEOMETRIE,
+  ICONES_GEOMETRIE,
+  CHAMPS_PAR_TYPE,
+  type TypeGeometrie,
+  type DimensionsOuvrage,
+  type VideDeduit,
+  type ComposantRecette,
+} from "@/lib/calcul-ouvrage";
+import { createOuvrage, updateOuvrage, saveOuvrageType } from "@/app/(dashboard)/metres/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Plus, Trash2, Save, BookOpen } from "lucide-react";
+import type { ProjectOuvrage, OuvrageType } from "@/lib/supabase/types";
+
+// ---------------------------------------------------------------------------
+// Types locaux (incluent une clé React pour la liste)
+// ---------------------------------------------------------------------------
+
+interface LocalVide extends Omit<VideDeduit, "id" | "surface"> {
+  _key: string;
+}
+
+interface LocalComposant extends ComposantRecette {
+  _key: string;
+}
+
+interface Props {
+  projects: { id: string; name: string }[];
+  materials: { id: string; name: string; unit: string; unit_cost: number }[];
+  ouvrageTypes: OuvrageType[];
+  initialProjectId?: string;
+  initialData?: ProjectOuvrage;
+}
+
+// ---------------------------------------------------------------------------
+// Composant
+// ---------------------------------------------------------------------------
+
+export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectId, initialData }: Props) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [savedType, setSavedType] = useState(false);
+
+  // --- État du formulaire ---
+  const [designation, setDesignation] = useState(initialData?.designation ?? "");
+  const [projectId, setProjectId] = useState(initialProjectId ?? initialData?.project_id ?? "");
+  const [type, setType] = useState<TypeGeometrie>(
+    (initialData?.type_geometrie as TypeGeometrie) ?? "surface_l_h"
+  );
+  const [dimensions, setDimensions] = useState<DimensionsOuvrage>(
+    (initialData?.dimensions as DimensionsOuvrage) ?? {}
+  );
+  const [vides, setVides] = useState<LocalVide[]>(
+    initialData?.vides_deduits?.map((v) => ({ _key: v.id, nom: v.nom, largeur: v.largeur, hauteur: v.hauteur })) ?? []
+  );
+  const [recette, setRecette] = useState<LocalComposant[]>(
+    initialData?.recette?.map((c, i) => ({ ...c, _key: `${c.materiau_id}-${i}` })) ?? []
+  );
+
+  // --- Calcul en temps réel (synchrone, pas de useEffect) ---
+  const computed = calculerOuvrage({
+    id: initialData?.id ?? "",
+    designation,
+    type_geometrie: type,
+    dimensions,
+    vides_deduits: vides.map((v) => ({
+      id: v._key,
+      nom: v.nom,
+      largeur: Number(v.largeur) || 0,
+      hauteur: Number(v.hauteur) || 0,
+      surface: (Number(v.largeur) || 0) * (Number(v.hauteur) || 0),
+    })),
+    unite_principale: getUnitePrincipale(type),
+    recette,
+  });
+
+  // --- Handlers dimensions ---
+  function setDim(key: keyof DimensionsOuvrage, value: string) {
+    setDimensions((prev) => ({ ...prev, [key]: value === "" ? undefined : Number(value) }));
+  }
+
+  // --- Handlers vides ---
+  function addVide() {
+    setVides((prev) => [...prev, { _key: crypto.randomUUID(), nom: "", largeur: 0, hauteur: 0 }]);
+  }
+  function updateVide(key: string, field: keyof LocalVide, value: string) {
+    setVides((prev) =>
+      prev.map((v) =>
+        v._key === key
+          ? { ...v, [field]: field === "nom" ? value : Number(value) || 0 }
+          : v
+      )
+    );
+  }
+  function removeVide(key: string) {
+    setVides((prev) => prev.filter((v) => v._key !== key));
+  }
+
+  // --- Handlers recette ---
+  function addComposant() {
+    const mat = materials[0];
+    if (!mat) return;
+    setRecette((prev) => [
+      ...prev,
+      {
+        _key: crypto.randomUUID(),
+        materiau_id: mat.id,
+        materiau_nom: mat.name,
+        unite: mat.unit,
+        coefficient: 0,
+        taux_perte: 0,
+        type: "materiau",
+      },
+    ]);
+  }
+  function updateComposant(key: string, field: string, value: string) {
+    setRecette((prev) =>
+      prev.map((c) => {
+        if (c._key !== key) return c;
+        if (field === "materiau_id") {
+          const mat = materials.find((m) => m.id === value);
+          if (!mat) return c;
+          return { ...c, materiau_id: mat.id, materiau_nom: mat.name, unite: mat.unit };
+        }
+        if (field === "type") return { ...c, type: value as "materiau" | "main_oeuvre" };
+        return { ...c, [field]: Number(value) || 0 };
+      })
+    );
+  }
+  function removeComposant(key: string) {
+    setRecette((prev) => prev.filter((c) => c._key !== key));
+  }
+
+  // --- Appliquer un type/recette sauvegardé ---
+  function applyOuvrageType(typeId: string) {
+    const ot = ouvrageTypes.find((t) => t.id === typeId);
+    if (!ot) return;
+    setType(ot.type_geometrie as TypeGeometrie);
+    setDesignation(ot.designation);
+    setRecette(ot.recette.map((c, i) => ({ ...c, _key: `${c.materiau_id}-${i}` })));
+  }
+
+  // --- Sauvegarde recette comme modèle ---
+  function handleSaveType() {
+    startTransition(async () => {
+      const res = await saveOuvrageType({
+        designation,
+        type_geometrie: type,
+        unite_principale: computed.unite_principale,
+        recette,
+      });
+      if (res?.error) setServerError(res.error);
+      else setSavedType(true);
+    });
+  }
+
+  // --- Soumission ---
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setServerError(null);
+
+    const payload = {
+      project_id: projectId,
+      designation,
+      type_geometrie: type,
+      dimensions,
+      vides_deduits: computed.vides_deduits,
+      quantite_brute: computed.quantite_brute,
+      quantite_nette: computed.quantite_nette,
+      unite_principale: computed.unite_principale,
+      recette,
+      recette_calculee: computed.recette_calculee,
+    };
+
+    startTransition(async () => {
+      const res = initialData
+        ? await updateOuvrage(initialData.id, payload)
+        : await createOuvrage(payload);
+      if (res?.error) setServerError(res.error);
+    });
+  }
+
+  const unite = computed.unite_principale;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {serverError && (
+        <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md text-sm">
+          {serverError}
+        </div>
+      )}
+
+      {/* ---- Infos générales ---- */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Informations générales</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Désignation *</Label>
+            <Input
+              value={designation}
+              onChange={(e) => setDesignation(e.target.value)}
+              placeholder="ex: Mur en agglos 15cm, Dalle de sol..."
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Chantier</Label>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">— Sans chantier —</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Appliquer un modèle */}
+          {ouvrageTypes.length > 0 && (
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Appliquer un modèle de recette</Label>
+              <div className="flex gap-2">
+                <select
+                  className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  defaultValue=""
+                  onChange={(e) => e.target.value && applyOuvrageType(e.target.value)}
+                >
+                  <option value="">— Choisir un modèle —</option>
+                  {ouvrageTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.designation}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ---- Type de géométrie ---- */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Type de géométrie</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            {(Object.keys(LABELS_GEOMETRIE) as TypeGeometrie[]).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => {
+                  setType(t);
+                  setDimensions({});
+                  setVides([]);
+                }}
+                className={cn(
+                  "flex flex-col items-center gap-1 p-3 rounded-lg border text-xs transition-colors",
+                  type === t
+                    ? "border-primary bg-primary/10 text-primary font-semibold"
+                    : "border-border hover:border-primary/50 hover:bg-accent text-muted-foreground"
+                )}
+              >
+                <span className="text-lg">{ICONES_GEOMETRIE[t]}</span>
+                <span className="text-center leading-tight">{LABELS_GEOMETRIE[t]}</span>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ---- Dimensions + Résultat ---- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Dimensions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {CHAMPS_PAR_TYPE[type].map((champ) => (
+              <div key={champ.key} className="space-y-1.5">
+                <Label>{champ.label}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step={champ.step ?? "0.01"}
+                  placeholder={champ.placeholder}
+                  value={dimensions[champ.key] ?? ""}
+                  onChange={(e) => setDim(champ.key, e.target.value)}
+                />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Résumé calculé */}
+        <Card className="bg-muted/30">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              Résultat calculé
+              <Badge variant="outline" className="font-mono text-xs">{unite}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between items-center py-2 border-b">
+              <span className="text-sm text-muted-foreground">Quantité brute</span>
+              <span className="font-mono font-semibold text-lg">
+                {computed.quantite_brute.toFixed(3)} {unite}
+              </span>
+            </div>
+            {!estTypeVolume(type) && vides.length > 0 && (
+              <div className="flex justify-between items-center py-2 border-b text-destructive/80">
+                <span className="text-sm">− Vides déduits</span>
+                <span className="font-mono">
+                  {computed.vides_deduits.reduce((s, v) => s + v.largeur * v.hauteur, 0).toFixed(3)} m²
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between items-center py-2">
+              <span className="text-sm font-medium">Quantité nette</span>
+              <span className="font-mono font-bold text-xl text-primary">
+                {computed.quantite_nette.toFixed(3)} {unite}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ---- Vides déduits (surface seulement) ---- */}
+      {!estTypeVolume(type) && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Vides déduits</CardTitle>
+              <Button type="button" variant="outline" size="sm" onClick={addVide}>
+                <Plus className="h-4 w-4 mr-1" />
+                Ajouter
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {vides.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Aucun vide — cliquez sur &quot;Ajouter&quot; pour déduire une porte, fenêtre, portail...
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
+                  <span className="col-span-5">Désignation</span>
+                  <span className="col-span-3">Largeur (m)</span>
+                  <span className="col-span-3">Hauteur (m)</span>
+                  <span className="col-span-1" />
+                </div>
+                {vides.map((v) => (
+                  <div key={v._key} className="grid grid-cols-12 gap-2 items-center">
+                    <Input
+                      className="col-span-5 h-8 text-sm"
+                      placeholder="ex: Porte principale"
+                      value={v.nom}
+                      onChange={(e) => updateVide(v._key, "nom", e.target.value)}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="col-span-3 h-8 text-sm"
+                      placeholder="0.90"
+                      value={v.largeur || ""}
+                      onChange={(e) => updateVide(v._key, "largeur", e.target.value)}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="col-span-3 h-8 text-sm"
+                      placeholder="2.10"
+                      value={v.hauteur || ""}
+                      onChange={(e) => updateVide(v._key, "hauteur", e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="col-span-1 h-8 w-8 text-destructive"
+                      onClick={() => removeVide(v._key)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ---- Recette matériaux ---- */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Recette matériaux</CardTitle>
+            <Button type="button" variant="outline" size="sm" onClick={addComposant} disabled={materials.length === 0}>
+              <Plus className="h-4 w-4 mr-1" />
+              Ajouter
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {recette.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Aucun matériau — cliquez sur &quot;Ajouter&quot; pour définir la recette
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
+                <span className="col-span-4">Matériau</span>
+                <span className="col-span-2">Unité</span>
+                <span className="col-span-2">Coeff.</span>
+                <span className="col-span-2">Perte %</span>
+                <span className="col-span-1">Type</span>
+                <span className="col-span-1" />
+              </div>
+              {recette.map((c) => (
+                <div key={c._key} className="grid grid-cols-12 gap-2 items-center">
+                  <select
+                    className="col-span-4 h-8 rounded-md border border-input bg-background px-2 text-sm"
+                    value={c.materiau_id}
+                    onChange={(e) => updateComposant(c._key, "materiau_id", e.target.value)}
+                  >
+                    {materials.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="col-span-2 text-sm text-muted-foreground px-1">{c.unite}</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    className="col-span-2 h-8 text-sm"
+                    placeholder="0.00"
+                    value={c.coefficient || ""}
+                    onChange={(e) => updateComposant(c._key, "coefficient", e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    className="col-span-2 h-8 text-sm"
+                    placeholder="5"
+                    value={c.taux_perte ? c.taux_perte * 100 : ""}
+                    onChange={(e) =>
+                      updateComposant(c._key, "taux_perte", String(Number(e.target.value) / 100))
+                    }
+                  />
+                  <select
+                    className="col-span-1 h-8 rounded-md border border-input bg-background px-1 text-xs"
+                    value={c.type}
+                    onChange={(e) => updateComposant(c._key, "type", e.target.value)}
+                  >
+                    <option value="materiau">Mat.</option>
+                    <option value="main_oeuvre">MO</option>
+                  </select>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="col-span-1 h-8 w-8 text-destructive"
+                    onClick={() => removeComposant(c._key)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ---- Récapitulatif ---- */}
+      {computed.recette_calculee.length > 0 && computed.quantite_nette > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-base text-primary">
+              Récapitulatif des besoins
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {computed.recette_calculee.map((c) => (
+                <div key={c.materiau_id} className="py-2.5 grid grid-cols-3 gap-2 text-sm">
+                  <div className="font-medium">{c.materiau_nom}</div>
+                  <div className="text-center text-muted-foreground">
+                    Besoin net : <span className="font-mono text-foreground">{c.quantite_nette.toFixed(3)} {c.unite}</span>
+                  </div>
+                  <div className="text-right">
+                    À commander :{" "}
+                    <span className="font-mono font-semibold text-primary">
+                      {c.quantite_commande.toFixed(3)} {c.unite}
+                    </span>
+                    {c.taux_perte > 0 && (
+                      <span className="text-xs text-muted-foreground ml-1">
+                        (+{(c.taux_perte * 100).toFixed(0)}%)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ---- Actions ---- */}
+      <div className="flex items-center gap-3 justify-between">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleSaveType}
+          disabled={isPending || !designation || recette.length === 0}
+        >
+          <BookOpen className="h-4 w-4 mr-2" />
+          {savedType ? "Modèle sauvegardé ✓" : "Sauvegarder comme modèle"}
+        </Button>
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={() => router.push("/metres")} disabled={isPending}>
+            Annuler
+          </Button>
+          <Button type="submit" disabled={isPending || !designation || !projectId}>
+            <Save className="h-4 w-4 mr-2" />
+            {isPending ? "Sauvegarde..." : initialData ? "Mettre à jour" : "Enregistrer l'ouvrage"}
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+}

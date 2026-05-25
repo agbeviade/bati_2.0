@@ -1,0 +1,46 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { redirect, notFound } from "next/navigation";
+import { OuvrageForm } from "@/components/metres/ouvrage-form";
+
+interface Props {
+  params: Promise<{ id: string }>;
+}
+
+export default async function EditOuvragePage({ params }: Props) {
+  const { id } = await params;
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const admin = createAdminClient();
+  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  if (!profile?.company_id) redirect("/onboarding");
+
+  const [{ data: ouvrage }, { data: projects }, { data: materials }, { data: ouvrageTypes }] = await Promise.all([
+    admin.from("project_ouvrages").select("*").eq("id", id).eq("company_id", profile.company_id).single(),
+    admin.from("projects").select("id, name").eq("company_id", profile.company_id).order("name"),
+    admin.from("materials").select("id, name, unit, unit_cost").eq("company_id", profile.company_id).order("name"),
+    admin.from("ouvrage_types").select("*").eq("company_id", profile.company_id).order("designation"),
+  ]);
+
+  if (!ouvrage) notFound();
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Modifier l&apos;ouvrage</h1>
+        <p className="text-muted-foreground text-sm">
+          Les quantités se recalculent en temps réel à chaque modification
+        </p>
+      </div>
+      <OuvrageForm
+        projects={projects ?? []}
+        materials={materials ?? []}
+        ouvrageTypes={ouvrageTypes ?? []}
+        initialData={ouvrage}
+      />
+    </div>
+  );
+}
