@@ -5,11 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { id: "overview",  label: "Vue générale" },
-  { id: "expenses",  label: "Dépenses" },
-  { id: "photos",    label: "Photos" },
-  { id: "team",      label: "Équipe" },
-  { id: "documents", label: "Documents" },
+  { id: "overview",   label: "Vue générale" },
+  { id: "materials",  label: "Matériaux" },
+  { id: "expenses",   label: "Dépenses" },
+  { id: "photos",     label: "Photos" },
+  { id: "team",       label: "Équipe" },
+  { id: "documents",  label: "Documents" },
 ];
 
 export function ProjectTabs({ projectId }: { projectId: string }) {

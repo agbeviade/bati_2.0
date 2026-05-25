@@ -10,10 +10,11 @@ import { OverviewTab } from "@/components/projects/tabs/overview-tab";
 import { ExpensesTab } from "@/components/projects/tabs/expenses-tab";
 import { PhotosTab } from "@/components/projects/tabs/photos-tab";
 import { TeamTab } from "@/components/projects/tabs/team-tab";
-import type { Project, Task, ProjectExpense, ProjectAssignment, User } from "@/lib/supabase/types";
+import { MaterialsTab } from "@/components/projects/tabs/materials-tab";
+import type { Project, Task, ProjectExpense, ProjectAssignment, User, Material, StockMovement } from "@/lib/supabase/types";
 import { Suspense } from "react";
 
-type Tab = "overview" | "expenses" | "photos" | "team" | "documents";
+type Tab = "overview" | "materials" | "expenses" | "photos" | "team" | "documents";
 
 export default async function ProjectDetailPage({
   params,
@@ -45,10 +46,46 @@ export default async function ProjectDetailPage({
   let photos: { id: string; storage_path: string; caption: string | null; taken_at: string; signedUrl?: string }[] = [];
   let assignments: { id: string; user_id: string; role_on_project: string | null; start_date: string | null; user: Pick<User, "full_name" | "role" | "avatar_url"> }[] = [];
   let availableUsers: Pick<User, "id" | "full_name" | "role">[] = [];
+  let projectMovements: { id: string; material_id: string; type: string; quantity: number; unit_cost: number | null; notes: string | null; created_at: string; material_name: string; unit: string }[] = [];
+  let allMaterials: Pick<Material, "id" | "name" | "unit" | "stock_qty" | "unit_cost">[] = [];
 
   if (tab === "overview") {
     const { data } = await admin.from("tasks").select("*").eq("project_id", id).order("created_at", { ascending: false });
     tasks = (data ?? []) as Task[];
+  }
+
+  if (tab === "materials") {
+    const [{ data: movData }, { data: matData }] = await Promise.all([
+      admin
+        .from("stock_movements")
+        .select("id, material_id, type, quantity, unit_cost, notes, created_at, materials(name, unit)")
+        .eq("project_id", id)
+        .in("type", ["use", "return"])
+        .order("created_at", { ascending: false }),
+      admin
+        .from("materials")
+        .select("id, name, unit, stock_qty, unit_cost")
+        .eq("company_id", project.company_id)
+        .order("name"),
+    ]);
+
+    projectMovements = ((movData ?? []) as unknown as Array<{
+      id: string; material_id: string; type: string; quantity: number;
+      unit_cost: number | null; notes: string | null; created_at: string;
+      materials: { name: string; unit: string } | null;
+    }>).map(m => ({
+      id: m.id,
+      material_id: m.material_id,
+      type: m.type,
+      quantity: m.quantity,
+      unit_cost: m.unit_cost,
+      notes: m.notes,
+      created_at: m.created_at,
+      material_name: m.materials?.name ?? "Matériau inconnu",
+      unit: m.materials?.unit ?? "u",
+    }));
+
+    allMaterials = (matData ?? []) as Pick<Material, "id" | "name" | "unit" | "stock_qty" | "unit_cost">[];
   }
 
   if (tab === "expenses") {
@@ -149,6 +186,14 @@ export default async function ProjectDetailPage({
       {/* Contenu */}
       {tab === "overview" && (
         <OverviewTab project={project} tasks={tasks} currency={currency} />
+      )}
+      {tab === "materials" && (
+        <MaterialsTab
+          projectId={id}
+          movements={projectMovements}
+          materials={allMaterials}
+          currency={currency}
+        />
       )}
       {tab === "expenses" && (
         <ExpensesTab projectId={id} expenses={expenses} currency={currency} />

@@ -5,12 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MovementSection } from "@/components/materials/movement-section";
+import { PurchaseSection } from "@/components/materials/purchase-section";
 import { deleteMaterial, updateMaterial } from "@/app/(dashboard)/materials/actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DeleteButton } from "@/components/ui/delete-button";
-import type { Material, StockMovement, Project } from "@/lib/supabase/types";
+import type { Material, StockMovement } from "@/lib/supabase/types";
 import type { CategoryRow } from "@/components/materials/category-manager";
 
 const UNITS = ["u", "kg", "t", "m", "m²", "m³", "L", "ml", "sac", "barre", "planche", "rouleau", "boîte"];
@@ -42,36 +42,16 @@ export default async function MaterialDetailPage({
   const categories = (categoriesData ?? []) as CategoryRow[];
   const categoryLabel = categories.find((c) => c.slug === mat.category)?.label ?? mat.category;
 
+  // Mouvements d'achat et d'ajustement uniquement (les sorties chantier se gèrent depuis le chantier)
   const { data: movData } = await admin
     .from("stock_movements")
-    .select("id, material_id, project_id, type, quantity, unit_cost, notes, created_at")
+    .select("id, material_id, type, quantity, unit_cost, notes, created_at")
     .eq("material_id", id)
+    .in("type", ["purchase", "adjustment"])
     .order("created_at", { ascending: false })
     .limit(50);
 
-  const rawMovements = (movData ?? []) as Pick<StockMovement, "id" | "material_id" | "project_id" | "type" | "quantity" | "unit_cost" | "notes" | "created_at">[];
-
-  const projectIds = [...new Set(rawMovements.map(m => m.project_id).filter(Boolean) as string[])];
-  const projectNames: Record<string, string> = {};
-  if (projectIds.length > 0) {
-    const { data: projData } = await admin.from("projects").select("id, name").in("id", projectIds);
-    for (const p of (projData ?? []) as Pick<Project, "id" | "name">[]) {
-      projectNames[p.id] = p.name;
-    }
-  }
-
-  const movements = rawMovements.map(m => ({
-    ...m,
-    created_by: null,
-    project_name: m.project_id ? (projectNames[m.project_id] ?? null) : null,
-  }));
-
-  const { data: projectsData } = await admin
-    .from("projects")
-    .select("id, name")
-    .eq("company_id", mat.company_id)
-    .in("status", ["planned", "in_progress"]);
-  const projects = (projectsData ?? []) as Pick<Project, "id" | "name">[];
+  const movements = (movData ?? []) as Pick<StockMovement, "id" | "material_id" | "type" | "quantity" | "unit_cost" | "notes" | "created_at">[];
 
   const stockValue = mat.stock_qty * mat.unit_cost;
 
@@ -172,12 +152,11 @@ export default async function MaterialDetailPage({
         </Card>
       )}
 
-      {/* Movements */}
-      <MovementSection
+      {/* Achats & ajustements (les sorties se font depuis le chantier) */}
+      <PurchaseSection
         materialId={id}
         unit={mat.unit}
         movements={movements}
-        projects={projects}
       />
     </div>
   );
