@@ -274,26 +274,8 @@ class _HeroHeader extends StatelessWidget {
             ],
           ),
         ),
-        title: Text(
-          '${greeting.split(',').first}, $name',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
-        ),
-        titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
         collapseMode: CollapseMode.parallax,
       ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: IconButton(
-            icon: Badge(
-              isLabelVisible: overdueCount > 0,
-              label: Text('$overdueCount'),
-              child: const Icon(Icons.notifications_outlined, color: Colors.white),
-            ),
-            onPressed: onNotifTap,
-          ),
-        ),
-      ],
     );
   }
 
@@ -358,7 +340,7 @@ class _KpiRow extends StatelessWidget {
                 label: 'Factures en retard',
                 value: '$overdueInvoices',
                 icon: Icons.warning_amber_rounded,
-                gradient: overdueInvoices > 0 ? AppColors.gradientRed : AppColors.gradientGreen,
+                gradient: overdueInvoices > 0 ? AppColors.gradientRed : AppColors.gradientOrange,
                 onTap: onInvoicesTap,
               ),
             ),
@@ -379,7 +361,7 @@ class _KpiRow extends StatelessWidget {
   }
 
   String _fmt(double v) {
-    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000000) { final m = v / 1000000; return '${m == m.roundToDouble() ? m.toStringAsFixed(0) : m.toStringAsFixed(1)}M'; }
     if (v >= 1000) return '${(v / 1000).toStringAsFixed(0)}K';
     return v.toStringAsFixed(0);
   }
@@ -675,7 +657,7 @@ class _BudgetRow extends StatelessWidget {
   const _BudgetRow({required this.budget, required this.spent});
 
   String _fmt(double v) {
-    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000000) { final m = v / 1000000; return '${m == m.roundToDouble() ? m.toStringAsFixed(0) : m.toStringAsFixed(1)}M'; }
     if (v >= 1000) return '${(v / 1000).toStringAsFixed(0)}K';
     return v.toStringAsFixed(0);
   }

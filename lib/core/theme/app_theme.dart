@@ -128,7 +128,6 @@ class AppTheme {
         backgroundColor: AppColors.orange,
         foregroundColor: Colors.white,
         elevation: 4,
-        shape: CircleBorder(),
       ),
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
