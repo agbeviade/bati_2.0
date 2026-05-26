@@ -30,15 +30,15 @@ export default async function MetresPage() {
   ]);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Métrés</h1>
           <p className="text-muted-foreground text-sm">
             Calcul automatique des quantités de matériaux par ouvrage
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="sm:flex-shrink-0">
           <Link href="/metres/new">
             <Plus className="h-4 w-4 mr-2" />
             Nouvel ouvrage

@@ -109,14 +109,14 @@ export default async function ReportsPage() {
   const totalHours = (allAttendance ?? []).reduce((s, a) => s + ((a as { hours_worked: number }).hours_worked ?? 0), 0);
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 w-full max-w-4xl">
       <div>
         <h2 className="text-2xl font-bold">Rapports</h2>
         <p className="text-muted-foreground">Analyse de l'activité — année {thisYear}.</p>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: "Facturé", value: formatAmount(totalInvoiced, currency), sub: "Total cumulé" },
           { label: "Encaissé", value: formatAmount(totalCollected, currency), sub: "Factures payées" },
@@ -126,7 +126,7 @@ export default async function ReportsPage() {
           <Card key={kpi.label}>
             <CardContent className="pt-4">
               <p className="text-xs text-muted-foreground">{kpi.label}</p>
-              <p className="text-xl font-bold mt-0.5">{kpi.value}</p>
+              <p className="text-base sm:text-xl font-bold mt-0.5 truncate">{kpi.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{kpi.sub}</p>
             </CardContent>
           </Card>
@@ -152,7 +152,7 @@ export default async function ReportsPage() {
                     />
                     {/* Encaissé */}
                     <div
-                      className="bg-green-500 rounded-sm flex-shrink-0"
+                      className="bg-success rounded-sm flex-shrink-0"
                       style={{ width: `${(monthlyPaid[i] / maxRevenue) * 100}%`, minWidth: monthlyPaid[i] > 0 ? 2 : 0 }}
                     />
                   </div>
@@ -164,7 +164,7 @@ export default async function ReportsPage() {
             </div>
             <div className="flex gap-4 mt-4 text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-primary/20" />Facturé</div>
-              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-green-500" />Encaissé</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-success" />Encaissé</div>
             </div>
           </CardContent>
         </Card>
@@ -180,12 +180,14 @@ export default async function ReportsPage() {
             ) : (
               <div className="space-y-2">
                 {topProjects.map(([projectId, amount]) => (
-                  <div key={projectId} className="flex items-center gap-2 text-sm">
-                    <Link href={`/projects/${projectId}`} className="w-32 text-xs truncate hover:underline flex-shrink-0">
+                  <div key={projectId} className="flex items-center gap-2 text-sm min-w-0">
+                    <Link href={`/projects/${projectId}`} className="w-20 sm:w-32 text-xs truncate hover:underline flex-shrink-0">
                       {projectNames[projectId] ?? "—"}
                     </Link>
-                    <div className="flex-1 bg-orange-200 rounded-sm h-5" style={{ maxWidth: `${(amount / maxExpense) * 100}%`, minWidth: 4 }} />
-                    <span className="text-xs text-muted-foreground w-24 text-right flex-shrink-0">{formatAmount(amount, currency)}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="bg-brand-orange/30 rounded-sm h-5" style={{ width: `${(amount / maxExpense) * 100}%`, minWidth: 4 }} />
+                    </div>
+                    <span className="text-xs text-muted-foreground w-16 sm:w-24 text-right flex-shrink-0">{formatAmount(amount, currency)}</span>
                   </div>
                 ))}
               </div>
@@ -205,10 +207,12 @@ export default async function ReportsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {topWorkers.map(([uid, hours]) => (
-                <div key={uid} className="flex items-center gap-3">
-                  <span className="text-sm font-medium w-32 truncate flex-shrink-0">{userNames[uid] ?? "—"}</span>
-                  <div className="flex-1 bg-blue-200 rounded-sm h-4" style={{ maxWidth: `${(hours / maxHours) * 100}%`, minWidth: 4 }} />
-                  <span className="text-xs text-muted-foreground w-12 text-right flex-shrink-0">{fmtHours(hours)}</span>
+                <div key={uid} className="flex items-center gap-3 min-w-0">
+                  <span className="text-sm font-medium w-24 sm:w-32 truncate flex-shrink-0">{userNames[uid] ?? "—"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="bg-primary/20 rounded-sm h-4" style={{ width: `${(hours / maxHours) * 100}%`, minWidth: 4 }} />
+                  </div>
+                  <span className="text-xs text-muted-foreground w-10 sm:w-12 text-right flex-shrink-0">{fmtHours(hours)}</span>
                 </div>
               ))}
             </div>

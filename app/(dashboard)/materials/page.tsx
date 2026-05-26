@@ -36,7 +36,7 @@ export default async function MaterialsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">Matériaux</h2>
           <p className="text-muted-foreground">
@@ -45,7 +45,7 @@ export default async function MaterialsPage() {
               : `${materials.length} référence${materials.length > 1 ? "s" : ""}`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <CategoryManager categories={categories} />
           <Button asChild>
             <Link href="/materials/new">

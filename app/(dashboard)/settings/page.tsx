@@ -27,6 +27,7 @@ export default async function SettingsPage() {
     .eq("id", profile.company_id)
     .single();
 
+  if (!companyData) redirect("/onboarding");
   const company = companyData as Pick<Company, "id" | "name" | "address" | "phone" | "email" | "currency" | "plan" | "subscription_status" | "header_url" | "footer_url">;
 
   return (
