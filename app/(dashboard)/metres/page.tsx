@@ -1,62 +1,21 @@
-import Link from "next/link";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { OuvragesList } from "@/components/metres/ouvrages-list";
-import { GenerateQuoteButton } from "@/components/metres/generate-quote-button";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { DeboursesCalculator } from "@/components/metres/debourses-calculator";
 
 export default async function MetresPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
-  if (!profile?.company_id) redirect("/onboarding");
-
-  const [{ data: ouvrages }, { data: projects }] = await Promise.all([
-    admin
-      .from("project_ouvrages")
-      .select("*")
-      .eq("company_id", profile.company_id)
-      .order("created_at", { ascending: false }),
-    admin
-      .from("projects")
-      .select("id, name")
-      .eq("company_id", profile.company_id)
-      .order("name"),
-  ]);
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Métrés</h1>
-          <p className="text-muted-foreground text-sm">
-            Calcul automatique des quantités de matériaux par ouvrage
-          </p>
-        </div>
-        <Button asChild className="sm:flex-shrink-0">
-          <Link href="/metres/new">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvel ouvrage
-          </Link>
-        </Button>
+    <div className="space-y-6 max-w-3xl">
+      <div>
+        <h1 className="text-2xl font-bold">Calculateur de déboursés secs</h1>
+        <p className="text-muted-foreground text-sm">
+          Saisissez vos données étape par étape — les quantités sont calculées automatiquement.
+        </p>
       </div>
-
-      {(ouvrages ?? []).length > 0 && (
-        <GenerateQuoteButton
-          ouvrages={ouvrages ?? []}
-          projects={projects ?? []}
-        />
-      )}
-
-      <OuvragesList
-        ouvrages={ouvrages ?? []}
-        projects={projects ?? []}
-      />
+      <DeboursesCalculator />
     </div>
   );
 }
