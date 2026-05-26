@@ -77,24 +77,22 @@ export default async function MaterialDetailPage({
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3">
         <Card>
-          <CardContent className="pt-4 text-center">
-            <div className="text-2xl font-bold">
-              {mat.stock_qty.toLocaleString("fr-FR")}
-            </div>
+          <CardContent className="pt-4 text-center px-2">
+            <div className="text-lg sm:text-2xl font-bold truncate">{mat.stock_qty.toLocaleString("fr-FR")}</div>
             <p className="text-xs text-muted-foreground">Stock ({mat.unit})</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4 text-center">
-            <div className="text-2xl font-bold">{mat.unit_cost.toLocaleString("fr-FR")}</div>
+          <CardContent className="pt-4 text-center px-2">
+            <div className="text-lg sm:text-2xl font-bold truncate">{mat.unit_cost.toLocaleString("fr-FR")}</div>
             <p className="text-xs text-muted-foreground">Prix / {mat.unit}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4 text-center">
-            <div className="text-2xl font-bold">{stockValue.toLocaleString("fr-FR")}</div>
+          <CardContent className="pt-4 text-center px-2">
+            <div className="text-lg sm:text-2xl font-bold truncate">{stockValue.toLocaleString("fr-FR")}</div>
             <p className="text-xs text-muted-foreground">Valeur stock</p>
           </CardContent>
         </Card>

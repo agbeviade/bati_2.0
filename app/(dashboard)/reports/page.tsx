@@ -116,7 +116,7 @@ export default async function ReportsPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: "Facturé", value: formatAmount(totalInvoiced, currency), sub: "Total cumulé" },
           { label: "Encaissé", value: formatAmount(totalCollected, currency), sub: "Factures payées" },

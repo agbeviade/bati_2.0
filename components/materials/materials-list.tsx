@@ -54,17 +54,17 @@ export function MaterialsList({
       renderItem={(m) => (
         <Link href={`/materials/${m.id}`} className="block group">
           <Card className="transition-shadow group-hover:shadow-md">
-            <CardContent className="py-4 flex items-center gap-4">
-              <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-2 items-center">
+            <CardContent className="py-3 px-4">
+              <div className="flex items-center justify-between gap-3 min-w-0">
                 <div className="min-w-0">
-                  <p className="font-medium text-sm">{m.name}</p>
+                  <p className="font-medium text-sm truncate">{m.name}</p>
                   <p className="text-xs text-muted-foreground">{labelMap[m.category] ?? m.category}</p>
                 </div>
-                <div className="text-sm font-semibold">
-                  {m.stock_qty.toLocaleString("fr-FR")} {m.unit}
-                </div>
-                <div className="text-sm text-muted-foreground text-right">
-                  {m.unit_cost > 0 ? `${m.unit_cost.toLocaleString("fr-FR")} FCFA / ${m.unit}` : "Prix non défini"}
+                <div className="flex-shrink-0 text-right">
+                  <p className="text-sm font-semibold">{m.stock_qty.toLocaleString("fr-FR")} {m.unit}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {m.unit_cost > 0 ? `${m.unit_cost.toLocaleString("fr-FR")} / ${m.unit}` : "Prix non défini"}
+                  </p>
                 </div>
               </div>
             </CardContent>

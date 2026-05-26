@@ -93,21 +93,21 @@ export function OuvragesList({ ouvrages, projects }: Props) {
                       {projectMap[ouvrage.project_id] ?? "—"}
                     </p>
                   )}
-                  <div className="flex gap-4 text-sm">
-                    <span className="text-muted-foreground">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                    <span className="text-muted-foreground whitespace-nowrap">
                       Brut :{" "}
                       <span className="font-medium text-foreground">
                         {ouvrage.quantite_brute.toFixed(2)} {ouvrage.unite_principale}
                       </span>
                     </span>
-                    <span className="text-muted-foreground">
+                    <span className="text-muted-foreground whitespace-nowrap">
                       Net :{" "}
                       <span className="font-medium text-foreground">
                         {ouvrage.quantite_nette.toFixed(2)} {ouvrage.unite_principale}
                       </span>
                     </span>
                     {ouvrage.recette_calculee?.length > 0 && (
-                      <span className="text-muted-foreground">
+                      <span className="text-muted-foreground whitespace-nowrap">
                         {ouvrage.recette_calculee.length} matériau
                         {ouvrage.recette_calculee.length > 1 ? "x" : ""}
                       </span>
