@@ -3,14 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import type { QuoteStatus, QuoteItemCategory } from "@/lib/supabase/types";
 
-async function getUser() {
+async function getProfile() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  return user;
+  const { data: profile } = await supabase
+    .from("users").select("company_id").eq("id", user.id).single();
+  if (!profile?.company_id) redirect("/onboarding");
+  return { user, companyId: profile.company_id as string, supabase };
 }
 
 function nextQuoteNumber(count: number): string {
@@ -38,28 +40,19 @@ export async function createQuote(data: {
   project_id: string;
   items: QuoteItemInput[];
 }) {
-  const user = await getUser();
-  const admin = createAdminClient();
+  const { user, companyId, supabase } = await getProfile();
 
-  const { data: profile } = await admin
-    .from("users")
-    .select("company_id")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.company_id) redirect("/onboarding");
-
-  const { count } = await admin
+  const { count } = await supabase
     .from("quotes")
     .select("id", { count: "exact", head: true })
-    .eq("company_id", profile.company_id);
+    .eq("company_id", companyId);
 
   const quote_number = nextQuoteNumber(count ?? 0);
 
-  const { data: quote, error: quoteError } = await admin
+  const { data: quote, error: quoteError } = await supabase
     .from("quotes")
     .insert({
-      company_id: profile.company_id,
+      company_id: companyId,
       quote_number,
       client_name: data.client_name || null,
       project_type: data.project_type || null,
@@ -80,7 +73,7 @@ export async function createQuote(data: {
   }
 
   if (data.items.length > 0) {
-    const { error: itemsError } = await admin.from("quote_items").insert(
+    const { error: itemsError } = await supabase.from("quote_items").insert(
       data.items.map((item) => ({
         quote_id: quote.id,
         category: item.category,
@@ -91,45 +84,34 @@ export async function createQuote(data: {
         sort_order: item.sort_order,
       }))
     );
-    if (itemsError) {
-      console.error("[createQuote items]", itemsError);
-    }
+    if (itemsError) console.error("[createQuote items]", itemsError);
   }
 
   revalidatePath("/quotes");
+  revalidatePath("/dashboard");
   redirect(`/quotes/${quote.id}`);
 }
 
 export async function updateQuoteStatus(id: string, status: QuoteStatus) {
-  await getUser();
-  const admin = createAdminClient();
-
-  const { error } = await admin.from("quotes").update({ status }).eq("id", id);
+  const { supabase } = await getProfile();
+  const { error } = await supabase.from("quotes").update({ status }).eq("id", id);
   if (error) return { error: error.message };
-
   revalidatePath(`/quotes/${id}`);
   revalidatePath("/quotes");
+  revalidatePath("/dashboard");
 }
 
 export async function deleteQuote(id: string) {
-  await getUser();
-  const admin = createAdminClient();
-
-  await admin.from("quotes").delete().eq("id", id);
-
+  const { supabase } = await getProfile();
+  await supabase.from("quotes").delete().eq("id", id);
   revalidatePath("/quotes");
+  revalidatePath("/dashboard");
   redirect("/quotes");
 }
 
 export async function addQuoteItem(quoteId: string, item: QuoteItemInput) {
-  await getUser();
-  const admin = createAdminClient();
-
-  const { error } = await admin.from("quote_items").insert({
-    quote_id: quoteId,
-    ...item,
-  });
-
+  const { supabase } = await getProfile();
+  const { error } = await supabase.from("quote_items").insert({ quote_id: quoteId, ...item });
   if (error) return { error: error.message };
   revalidatePath(`/quotes/${quoteId}`);
 }
@@ -143,10 +125,8 @@ export async function updateQuoteMeta(id: string, data: {
   margin_pct: string;
   notes: string;
 }) {
-  await getUser();
-  const admin = createAdminClient();
-
-  const { error } = await admin.from("quotes").update({
+  const { supabase } = await getProfile();
+  const { error } = await supabase.from("quotes").update({
     client_name: data.client_name || null,
     project_type: data.project_type || null,
     surface_m2: data.surface_m2 ? Number(data.surface_m2) : null,
@@ -155,16 +135,13 @@ export async function updateQuoteMeta(id: string, data: {
     margin_pct: Number(data.margin_pct) || 0,
     notes: data.notes || null,
   }).eq("id", id);
-
   if (error) return { error: error.message };
   revalidatePath(`/quotes/${id}`);
   revalidatePath("/quotes");
 }
 
 export async function deleteQuoteItem(itemId: string, quoteId: string) {
-  await getUser();
-  const admin = createAdminClient();
-
-  await admin.from("quote_items").delete().eq("id", itemId);
+  const { supabase } = await getProfile();
+  await supabase.from("quote_items").delete().eq("id", itemId);
   revalidatePath(`/quotes/${quoteId}`);
 }

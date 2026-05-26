@@ -24,8 +24,8 @@ type Movement = {
 };
 
 const MOVE_TYPES = {
-  use:    { label: "Sortie chantier",  icon: ArrowUp,    color: "text-red-600",  bg: "bg-red-50" },
-  return: { label: "Retour au stock",  icon: RotateCcw,  color: "text-blue-600", bg: "bg-blue-50" },
+  use:    { label: "Sortie chantier",  icon: ArrowUp,   color: "text-destructive", bg: "bg-destructive/10" },
+  return: { label: "Retour au stock",  icon: RotateCcw, color: "text-primary",     bg: "bg-primary/10" },
 } as const;
 
 function fmtDate(iso: string) {

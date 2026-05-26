@@ -35,7 +35,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 border-r bg-card flex flex-col h-screen sticky top-0">
+    <aside className="hidden lg:flex w-64 border-r bg-card flex-col h-screen sticky top-0">
       <div className="p-6 border-b">
         <Link href="/dashboard" className="font-bold text-xl">
           BatiFlow

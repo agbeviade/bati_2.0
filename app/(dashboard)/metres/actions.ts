@@ -1,23 +1,21 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { TypeGeometrie, DimensionsOuvrage, VideDeduit, ComposantRecette, ComposantRecetteCalcule } from "@/lib/calcul-ouvrage";
 import type { Json } from "@/lib/supabase/types";
 
-async function getContext() {
+async function getProfile() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
-  return { userId: user.id, companyId: profile.company_id, admin };
+  return { userId: user.id, companyId: profile.company_id as string, supabase };
 }
 
-// Supabase attend Json pour les colonnes jsonb — on cast via unknown
 function toJson<T>(v: T): Json {
   return v as unknown as Json;
 }
@@ -35,9 +33,9 @@ export async function createOuvrage(data: {
   recette_calculee: ComposantRecetteCalcule[];
   type_id?: string;
 }) {
-  const { companyId, admin } = await getContext();
+  const { companyId, supabase } = await getProfile();
 
-  const { error } = await admin.from("project_ouvrages").insert({
+  const { error } = await supabase.from("project_ouvrages").insert({
     company_id: companyId,
     project_id: data.project_id,
     type_id: data.type_id ?? null,
@@ -69,9 +67,9 @@ export async function updateOuvrage(id: string, data: {
   recette: ComposantRecette[];
   recette_calculee: ComposantRecetteCalcule[];
 }) {
-  const { admin } = await getContext();
+  const { supabase } = await getProfile();
 
-  const { error } = await admin.from("project_ouvrages").update({
+  const { error } = await supabase.from("project_ouvrages").update({
     designation: data.designation,
     type_geometrie: data.type_geometrie,
     dimensions: toJson(data.dimensions),
@@ -90,8 +88,8 @@ export async function updateOuvrage(id: string, data: {
 }
 
 export async function deleteOuvrage(id: string) {
-  const { admin } = await getContext();
-  const { error } = await admin.from("project_ouvrages").delete().eq("id", id);
+  const { supabase } = await getProfile();
+  const { error } = await supabase.from("project_ouvrages").delete().eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/metres");
 }
@@ -102,9 +100,9 @@ export async function saveOuvrageType(data: {
   unite_principale: string;
   recette: ComposantRecette[];
 }) {
-  const { companyId, admin } = await getContext();
+  const { companyId, supabase } = await getProfile();
 
-  const { error } = await admin.from("ouvrage_types").insert({
+  const { error } = await supabase.from("ouvrage_types").insert({
     company_id: companyId,
     designation: data.designation,
     type_geometrie: data.type_geometrie,

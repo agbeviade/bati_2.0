@@ -102,7 +102,7 @@ export function ProfileForm({ profile }: { profile: Pick<User, "full_name" | "ph
                 pwFormRef.current?.reset();
               });
             }}
-            className="grid grid-cols-2 gap-3"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-3"
           >
             <div className="space-y-1.5">
               <Label htmlFor="password">Nouveau mot de passe</Label>
@@ -112,7 +112,7 @@ export function ProfileForm({ profile }: { profile: Pick<User, "full_name" | "ph
               <Label htmlFor="confirm">Confirmer</Label>
               <Input id="confirm" name="confirm" type="password" minLength={6} required placeholder="••••••••" />
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Button type="submit" size="sm" variant="outline" disabled={isPwPending}>
                 {isPwPending ? "Modification..." : "Changer le mot de passe"}
               </Button>
@@ -131,7 +131,7 @@ export function CompanyForm({ company }: { company: Pick<Company, "id" | "name" 
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
-      const result = await updateCompany(company.id, fd);
+      const result = await updateCompany(fd);
       if (result?.error) { toast.error(result.error); return; }
       toast.success("Entreprise mise à jour.");
     });

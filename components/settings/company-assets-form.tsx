@@ -84,7 +84,7 @@ function AssetUploader({
     fd.append("file", file);
 
     startUpload(async () => {
-      const res = await uploadCompanyAsset(companyId, fd, type);
+      const res = await uploadCompanyAsset(fd, type);
       if (res.error) {
         toast.error(res.error);
       } else {
@@ -97,7 +97,7 @@ function AssetUploader({
 
   function handleRemove() {
     startRemove(async () => {
-      const res = await removeCompanyAsset(companyId, type);
+      const res = await removeCompanyAsset(type);
       if (res.error) {
         toast.error(res.error);
       } else {

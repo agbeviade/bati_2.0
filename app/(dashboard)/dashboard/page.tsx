@@ -116,7 +116,7 @@ export default async function DashboardPage() {
       icon: BadgeCheck,
       hint: caThisMonth === 0 ? "Aucune facture payée ce mois" : "Factures payées en " + now.toLocaleDateString("fr-FR", { month: "long" }),
       href: "/invoices",
-      color: caThisMonth > 0 ? "text-green-600" : "",
+      color: caThisMonth > 0 ? "text-success" : "",
     },
     {
       label: "Factures impayées",
@@ -124,7 +124,7 @@ export default async function DashboardPage() {
       icon: Clock,
       hint: unpaidCount === 0 ? "Aucune facture en attente" : `${unpaidCount} facture${unpaidCount > 1 ? "s" : ""} en attente`,
       href: "/invoices",
-      color: unpaidCount > 0 ? "text-orange-600" : "",
+      color: unpaidCount > 0 ? "text-brand-orange" : "",
     },
     {
       label: "Devis en attente",
@@ -132,7 +132,7 @@ export default async function DashboardPage() {
       icon: FileText,
       hint: pendingQuotesCount === 0 ? "Aucun devis envoyé non traité" : `devis envoyé${pendingQuotesCount > 1 ? "s" : ""} sans réponse`,
       href: "/quotes",
-      color: pendingQuotesCount > 0 ? "text-blue-600" : "",
+      color: pendingQuotesCount > 0 ? "text-primary" : "",
     },
   ];
 

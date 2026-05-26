@@ -167,6 +167,14 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const MAX_SIZE = 3 * 1024 * 1024; // 3 MB
+    if (file.size > MAX_SIZE) {
+      setServerError(`Image trop lourde (${(file.size / 1024 / 1024).toFixed(1)} Mo). Maximum : 3 Mo.`);
+      e.target.value = "";
+      return;
+    }
+
     setAiLoading("photo");
 
     const reader = new FileReader();
@@ -437,7 +445,8 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
                 Aucun vide — cliquez sur &quot;Ajouter&quot; pour déduire une porte, fenêtre, portail...
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="overflow-x-auto">
+              <div className="space-y-2 min-w-[420px]">
                 <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
                   <span className="col-span-5">Désignation</span>
                   <span className="col-span-3">Largeur (m)</span>
@@ -482,6 +491,7 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
                   </div>
                 ))}
               </div>
+            </div>
             )}
           </CardContent>
         </Card>
@@ -520,7 +530,8 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
               Aucun matériau — cliquez sur &quot;Ajouter&quot; pour définir la recette
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="overflow-x-auto">
+            <div className="space-y-2 min-w-[520px]">
               <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
                 <span className="col-span-4">Matériau</span>
                 <span className="col-span-2">Unité</span>
@@ -583,6 +594,7 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
                   </Button>
                 </div>
               ))}
+            </div>
             </div>
           )}
         </CardContent>

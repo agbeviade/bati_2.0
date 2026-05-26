@@ -14,8 +14,8 @@ import type { StockMovement } from "@/lib/supabase/types";
 type Movement = Pick<StockMovement, "id" | "material_id" | "type" | "quantity" | "unit_cost" | "notes" | "created_at">;
 
 const TYPES = {
-  purchase:   { label: "Achat / Entrée",   icon: ArrowDown,        color: "text-green-600", bg: "bg-green-50" },
-  adjustment: { label: "Correction stock", icon: SlidersHorizontal, color: "text-orange-600", bg: "bg-orange-50" },
+  purchase:   { label: "Achat / Entrée",   icon: ArrowDown,        color: "text-success",      bg: "bg-success/10" },
+  adjustment: { label: "Correction stock", icon: SlidersHorizontal, color: "text-brand-orange", bg: "bg-brand-orange/10" },
 } as const;
 
 function fmtDate(iso: string) {

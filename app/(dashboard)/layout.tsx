@@ -40,7 +40,7 @@ export default async function DashboardLayout({
           email={user.email!}
           fullName={typedProfile?.full_name}
         />
-        <main className="flex-1 p-6 bg-muted/30">{children}</main>
+        <main className="flex-1 p-4 lg:p-6 bg-muted/30 min-w-0">{children}</main>
       </div>
       <Toaster />
     </div>
