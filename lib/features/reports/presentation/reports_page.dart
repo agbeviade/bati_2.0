@@ -173,7 +173,7 @@ class _ReportsPageState extends State<ReportsPage> {
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Row(
                             children: [
-                              SizedBox(width: 32, child: Text(m.month, style: Theme.of(context).textTheme.bodySmall)),
+                              SizedBox(width: 32, child: Text(m.month, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis)),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Stack(
@@ -277,7 +277,7 @@ class _BarRow extends StatelessWidget {
           Row(
             children: [
               Expanded(child: Text(item.name, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
-              Text(fmt(item.value), style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text(fmt(item.value), style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600), textAlign: TextAlign.right),
             ],
           ),
           const SizedBox(height: 3),

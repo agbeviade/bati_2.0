@@ -717,7 +717,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                             ),
                           ])),
                           Text('${_fmtNum(row['cost'] as double)} ${widget.currency}',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                              textAlign: TextAlign.right),
                         ]),
                       );
                     }),
@@ -857,6 +858,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                             ' · ${_fmtShortDate(m.createdAt)}'
                             '${m.notes != null ? ' · ${m.notes}' : ''}',
                             style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                             Container(
@@ -1115,6 +1118,8 @@ class _ExpensesTabState extends State<_ExpensesTab> {
                           subtitle: Text(
                             '$catLabel${e.spentAt != null ? ' · ${_fmtDateStr(e.spentAt!)}' : ''}${e.notes != null ? ' · ${e.notes}' : ''}',
                             style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                             Text('${_fmtNum(e.amount)} ${widget.currency}',

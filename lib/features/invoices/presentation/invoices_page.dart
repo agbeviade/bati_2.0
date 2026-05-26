@@ -271,12 +271,12 @@ class _InvoiceTile extends StatelessWidget {
                 ),
               ),
               if (inv.dueDate != null)
-                Row(children: [
+                Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.event, size: 14, color: inv.isOverdue ? AppColors.red : cs.onSurfaceVariant),
                   const SizedBox(width: 4),
-                  Text(inv.dueDate!, style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  Flexible(child: Text(inv.dueDate!, style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: inv.isOverdue ? AppColors.red : cs.onSurfaceVariant,
-                  )),
+                  ), overflow: TextOverflow.ellipsis)),
                 ]),
             ]),
           ]),

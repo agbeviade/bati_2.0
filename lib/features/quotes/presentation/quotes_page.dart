@@ -278,11 +278,13 @@ class _QuoteTile extends StatelessWidget {
                           .titleMedium
                           ?.copyWith(fontWeight: FontWeight.bold, color: cs.primary)),
                   if (q.validUntil != null)
-                    Text('Val. ${q.validUntil}',
+                    Flexible(child: Text('Val. ${q.validUntil}',
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
-                            ?.copyWith(color: cs.onSurfaceVariant)),
+                            ?.copyWith(color: cs.onSurfaceVariant),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right)),
                 ],
               ),
             ],
