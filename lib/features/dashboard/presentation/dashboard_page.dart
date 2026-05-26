@@ -40,7 +40,7 @@ class _DashboardPageState extends State<DashboardPage> {
         client.from('projects').select('id').eq('status', 'in_progress'),
         client.from('invoices').select('id').inFilter('status', ['sent', 'overdue']).lt('due_date', now.toIso8601String()),
         client.from('invoices').select('amount').eq('status', 'paid').gte('created_at', firstOfMonth),
-        client.from('projects').select('id, name, status, progress_pct, budget, spent').order('created_at', ascending: false).limit(4),
+        client.from('projects').select('id, company_id, name, status, progress_pct, budget, spent').order('created_at', ascending: false).limit(4),
         client.from('project_ouvrages').select('id'),
         if (uid != null) client.from('users').select('full_name').eq('id', uid).maybeSingle(),
       ]);
