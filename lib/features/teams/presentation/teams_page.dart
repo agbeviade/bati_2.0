@@ -135,14 +135,11 @@ class _TeamsPageState extends State<TeamsPage> {
         icon: const Icon(Icons.group_add_outlined),
         label: const Text('Nouvelle équipe'),
         onPressed: () async {
+          final router = GoRouter.of(context);
           final result = await context.push('/teams/new');
-          if (result != null) {
-            _load();
-            // Navigate to the new team's detail page
-            if (result is String && mounted) {
-              context.push('/teams/$result');
-            }
-          }
+          if (result != null) _load();
+          if (!mounted || result is! String) return;
+          router.push('/teams/$result');
         },
       ),
     );

@@ -383,7 +383,6 @@ class _OuvrageCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onEdit,
-        onLongPress: onDelete,
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
@@ -457,7 +456,31 @@ class _OuvrageCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(width: 4),
-              Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 16),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, color: AppColors.textSecondary, size: 18),
+                onSelected: (v) {
+                  if (v == 'edit') onEdit();
+                  if (v == 'delete') onDelete();
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Modifier'),
+                      dense: true,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(Icons.delete_outline, color: Colors.red),
+                      title: Text('Supprimer', style: TextStyle(color: Colors.red)),
+                      dense: true,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

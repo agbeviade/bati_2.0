@@ -206,7 +206,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
               )
             else
               DropdownButtonFormField<String>(
-                value: _selectedProjectId,
+                initialValue: _selectedProjectId,
                 decoration: _deco(icon: Icons.construction_outlined),
                 items: [
                   const DropdownMenuItem<String>(value: null, child: Text('Aucun')),

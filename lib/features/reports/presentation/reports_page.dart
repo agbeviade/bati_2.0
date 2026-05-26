@@ -13,7 +13,7 @@ class _ReportsPageState extends State<ReportsPage> {
   double _totalInvoiced = 0;
   double _totalCollected = 0;
   int _totalHours = 0;
-  int _activeProjects = 0; // ignore: unused_field
+  int _activeProjects = 0;
   List<_MonthRevenue> _monthlyRevenue = [];
   List<_TopItem> _topProjects = [];
   List<_TopItem> _topWorkers = [];
@@ -90,8 +90,7 @@ class _ReportsPageState extends State<ReportsPage> {
           workerMap[uid] = _TopItem(name: name, value: h);
         }
       }
-      final topWorkers = workerMap.values.toList()..sort((a, b) => b.value.compareTo(a.value));
-      topWorkers.take(5).toList();
+      final topWorkers = (workerMap.values.toList()..sort((a, b) => b.value.compareTo(a.value))).take(5).toList();
       final maxW = topWorkers.isEmpty ? 1.0 : topWorkers.first.value;
       for (final w in topWorkers) { w.pct = maxW > 0 ? w.value / maxW : 0; }
 
@@ -145,6 +144,19 @@ class _ReportsPageState extends State<ReportsPage> {
                       _KpiCard(label: 'Encaissé', value: '${_fmt(_totalCollected)} XOF', icon: Icons.account_balance_wallet, color: const Color(0xFF16A34A)),
                       _KpiCard(label: 'Taux encaissement', value: '${_collectionRate.toStringAsFixed(1)}%', icon: Icons.pie_chart_outline, color: const Color(0xFF7C3AED)),
                       _KpiCard(label: 'Heures travaillées', value: '${_totalHours}h', icon: Icons.access_time, color: const Color(0xFFEA580C)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _KpiCard(
+                          label: 'Chantiers en cours',
+                          value: '$_activeProjects',
+                          icon: Icons.construction_outlined,
+                          color: const Color(0xFF0891B2),
+                        ),
+                      ),
                     ],
                   ),
 

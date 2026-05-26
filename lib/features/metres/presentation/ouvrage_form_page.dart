@@ -188,7 +188,7 @@ class _OuvrageFormPageState extends State<OuvrageFormPage> {
 
   String _geoType = 'surface_l_h';
   String? _projectId;
-  List<_Vide> _vides = [];
+  final List<_Vide> _vides = [];
   List<Map<String, dynamic>> _projects = [];
   bool _saving = false;
   bool _loadingProjects = true;
@@ -379,7 +379,7 @@ class _OuvrageFormPageState extends State<OuvrageFormPage> {
             _loadingProjects
                 ? const LinearProgressIndicator()
                 : DropdownButtonFormField<String>(
-                    value: _projectId,
+                    initialValue: _projectId,
                     decoration: const InputDecoration(
                       labelText: 'Chantier *',
                       prefixIcon: Icon(Icons.construction_outlined),
@@ -404,7 +404,7 @@ class _OuvrageFormPageState extends State<OuvrageFormPage> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _kTypes.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, i) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   final t = _kTypes[i];
                   final selected = _geoType == t;

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -219,7 +218,7 @@ class _QuoteAiPageState extends State<QuoteAiPage> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _projectType,
+                    initialValue: _projectType,
                     decoration: const InputDecoration(labelText: 'Type de projet'),
                     items: _projectTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
                     onChanged: (v) => setState(() => _projectType = v ?? _projectType),

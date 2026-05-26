@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -62,11 +63,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
       // Pointages ouverts > 12h
       for (final att in (results[2] as List)) {
         final checkIn = DateTime.parse(att['check_in'] as String).toLocal();
-        final hours = DateTime.now().difference(checkIn).inHours;
         alerts.add(_Alert(
           level: _AlertLevel.info,
           icon: Icons.access_time,
-          title: 'Pointage ouvert depuis ${hours}h',
+          title: 'Pointage ouvert ${timeago.format(checkIn, locale: 'fr')}',
           subtitle: 'Entrée le ${checkIn.day}/${checkIn.month} à ${checkIn.hour}:${checkIn.minute.toString().padLeft(2, '0')}',
           route: '/attendance',
         ));
@@ -159,7 +159,7 @@ class _AlertTile extends StatelessWidget {
       _AlertLevel.info => (const Color(0xFFDBEAFE), const Color(0xFF1D4ED8)),
     };
     return GestureDetector(
-      onTap: alert.route != null ? () => context.go(alert.route!) : null,
+      onTap: alert.route != null ? () => context.push(alert.route!) : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),

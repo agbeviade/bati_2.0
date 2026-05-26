@@ -20,6 +20,8 @@ import '../../features/invoices/presentation/invoice_detail_page.dart';
 import '../../features/invoices/presentation/invoice_form_page.dart';
 import '../../shared/models/models.dart' show Invoice, Quote, Team;
 import '../../features/materials/presentation/materials_page.dart';
+import '../../features/materials/presentation/material_form_page.dart';
+import '../../features/materials/presentation/material_detail_page.dart';
 import '../../features/materials/presentation/movement_form_page.dart';
 import '../../features/notifications/presentation/notifications_page.dart';
 import '../../features/portal/presentation/portal_quotes_page.dart';
@@ -37,32 +39,54 @@ import '../shell/client_shell.dart';
 final _rootKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
 
-GoRouter buildRouter() => GoRouter(
+String? _cachedRole;
+String? _cachedUid;
+
+GoRouter buildRouter() {
+  // Clear role cache on every sign-in so a role change on the backend
+  // is picked up at the next session without killing the app.
+  Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    if (data.event == AuthChangeEvent.signedIn ||
+        data.event == AuthChangeEvent.tokenRefreshed) {
+      _cachedRole = null;
+      _cachedUid = null;
+    }
+  });
+
+  return GoRouter(
       navigatorKey: _rootKey,
       initialLocation: '/dashboard',
       redirect: (context, state) async {
         final session = Supabase.instance.client.auth.currentSession;
         final isAuth = session != null;
+        if (!isAuth) { _cachedRole = null; _cachedUid = null; }
         final loc = state.matchedLocation;
         final isAuthRoute = loc.startsWith('/login') || loc.startsWith('/signup');
         final isPortal = loc.startsWith('/portal');
 
         if (!isAuth && !isAuthRoute) return '/login';
         if (isAuth && isAuthRoute) {
-          // Vérifie le role pour rediriger clients vers le portail
+          final uid = session.user.id;
           try {
-            final uid = session.user.id;
-            final data = await Supabase.instance.client.from('users').select('role').eq('id', uid).single();
-            if ((data['role'] as String?) == 'client') return '/portal/quotes';
+            if (_cachedUid != uid) {
+              final data = await Supabase.instance.client.from('users').select('role').eq('id', uid).single();
+              _cachedRole = data['role'] as String?;
+              _cachedUid = uid;
+            }
+            if (_cachedRole == 'client') return '/portal/quotes';
           } catch (_) {}
           return '/dashboard';
         }
         // Client qui essaie d'accéder au dashboard → portail
         if (isAuth && !isPortal && !isAuthRoute) {
+          final uid = session.user.id;
           try {
-            final uid = session.user.id;
-            final data = await Supabase.instance.client.from('users').select('role').eq('id', uid).single();
-            if ((data['role'] as String?) == 'client') return '/portal/quotes';
+            if (_cachedUid != uid) {
+              final data = await Supabase.instance.client.from('users').select('role').eq('id', uid).single();
+              _cachedRole = data['role'] as String?;
+              _cachedUid = uid;
+            }
+            if (_cachedRole == 'client') return '/portal/quotes';
           } catch (_) {}
         }
         return null;
@@ -167,6 +191,7 @@ GoRouter buildRouter() => GoRouter(
               path: '/materials',
               builder: (_, $) => const MaterialsPage(),
               routes: [
+                GoRoute(path: 'new', builder: (_, $) => const MaterialFormPage()),
                 GoRoute(
                   path: 'movement',
                   builder: (_, state) {
@@ -176,6 +201,11 @@ GoRouter buildRouter() => GoRouter(
                       materialName: extra?['materialName'],
                     );
                   },
+                ),
+                GoRoute(
+                  path: ':id',
+                  builder: (_, state) =>
+                      MaterialDetailPage(id: state.pathParameters['id']!),
                 ),
               ],
             ),
@@ -206,6 +236,7 @@ GoRouter buildRouter() => GoRouter(
         ),
       ],
     );
+  }
 
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {

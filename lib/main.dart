@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/supabase/supabase_config.dart';
@@ -8,6 +9,7 @@ import 'core/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  timeago.setLocaleMessages('fr', timeago.FrMessages());
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   await NotificationService().init();
   runApp(const ProviderScope(child: BatiFlowApp()));

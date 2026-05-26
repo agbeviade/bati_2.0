@@ -469,7 +469,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
                           const Text('Méthode', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 4),
                           DropdownButtonFormField<PaymentMethod>(
-                            value: _payMethod,
+                            initialValue: _payMethod,
                             decoration: _payDeco(),
                             items: PaymentMethod.values.map((m) => DropdownMenuItem<PaymentMethod>(
                               value: m,

@@ -67,11 +67,14 @@ class _MaterialsPageState extends State<MaterialsPage> {
       appBar: AppBar(title: const Text('Matériaux & Stock')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          final done = await context.push('/materials/movement');
-          if (done == true) _load();
+          final router = GoRouter.of(context);
+          final result = await context.push('/materials/new');
+          if (!mounted) return;
+          if (result is String) router.push('/materials/$result');
+          if (result != null) _load();
         },
-        icon: const Icon(Icons.add_shopping_cart_outlined),
-        label: const Text('Achat / Ajustement'),
+        icon: const Icon(Icons.add_outlined),
+        label: const Text('Nouveau matériau'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -137,7 +140,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
                           ? const EmptyState(
                               icon: Icons.inventory_2_outlined,
                               title: 'Aucun matériau',
-                              subtitle: 'Ajoutez des matériaux depuis la version web',
+                              subtitle: 'Créez votre premier matériau',
                             )
                           : Center(
                               child: Text('Aucun résultat',
@@ -151,6 +154,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
                             itemBuilder: (_, i) => _MaterialTile(
                               material: filtered[i],
                               categoryLabel: _categoryLabels[filtered[i].category] ?? filtered[i].category,
+                              onReturn: _load,
                             ),
                           ),
                         ),
@@ -195,7 +199,8 @@ class _FilterChip extends StatelessWidget {
 class _MaterialTile extends StatelessWidget {
   final models.Material material;
   final String categoryLabel;
-  const _MaterialTile({required this.material, required this.categoryLabel});
+  final VoidCallback onReturn;
+  const _MaterialTile({required this.material, required this.categoryLabel, required this.onReturn});
 
   @override
   Widget build(BuildContext context) {
@@ -206,15 +211,8 @@ class _MaterialTile extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () async {
-          final done = await context.push(
-            '/materials/movement',
-            extra: {'materialId': m.id, 'materialName': m.name},
-          );
-          if (done == true && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Stock mis à jour')),
-            );
-          }
+          await context.push('/materials/${m.id}');
+          onReturn();
         },
         child: Padding(
           padding: const EdgeInsets.all(12),

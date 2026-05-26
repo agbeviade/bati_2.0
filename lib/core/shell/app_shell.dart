@@ -193,7 +193,7 @@ class _MoreTile extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         Navigator.pop(context);
-        context.go(item.path);
+        context.push(item.path);
       },
       child: Container(
         decoration: BoxDecoration(

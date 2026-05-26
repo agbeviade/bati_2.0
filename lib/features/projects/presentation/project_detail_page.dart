@@ -435,8 +435,8 @@ class _GeneralTab extends StatelessWidget {
     final doneTasks = tasks.where((t) => t['status'] == 'done').length;
 
     Color progressColor = AppColors.primary;
-    if (p.progressPct < 30) progressColor = AppColors.red;
-    else if (p.progressPct < 70) progressColor = const Color(0xFFF59E0B);
+    if (p.progressPct < 30) { progressColor = AppColors.red; }
+    else if (p.progressPct < 70) { progressColor = const Color(0xFFF59E0B); }
 
     return RefreshIndicator(
       onRefresh: onRefreshTasks,
@@ -766,7 +766,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                   if (_showForm) ...[
                     const SizedBox(height: 16),
                     _FormField(label: 'Matériau *', child: DropdownButtonFormField<String>(
-                      value: _selectedMatId.isEmpty ? null : _selectedMatId,
+                      initialValue: _selectedMatId.isEmpty ? null : _selectedMatId,
                       decoration: _inputDeco(),
                       items: widget.allMaterials.map((m) => DropdownMenuItem<String>(
                         value: m.id,
@@ -782,7 +782,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                     const SizedBox(height: 10),
                     Row(children: [
                       Expanded(child: _FormField(label: 'Type *', child: DropdownButtonFormField<String>(
-                        value: _selectedType,
+                        initialValue: _selectedType,
                         decoration: _inputDeco(),
                         items: const [
                           DropdownMenuItem(value: 'use', child: Text('Sortie chantier')),
@@ -1055,7 +1055,7 @@ class _ExpensesTabState extends State<_ExpensesTab> {
                       )),
                       const SizedBox(width: 10),
                       Expanded(child: _FormField(label: 'Catégorie', child: DropdownButtonFormField<String>(
-                        value: _selectedCategory,
+                        initialValue: _selectedCategory,
                         decoration: _inputDeco(),
                         items: _kExpenseCategories.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                         onChanged: (v) => setState(() => _selectedCategory = v ?? 'autre'),
@@ -1301,8 +1301,8 @@ class _PhotosTabState extends State<_PhotosTab> {
                             ? CachedNetworkImage(
                                 imageUrl: photo.signedUrl,
                                 fit: BoxFit.cover,
-                                placeholder: (_, __) => Container(color: const Color(0xFFE2E8F0)),
-                                errorWidget: (_, __, ___) => Container(color: const Color(0xFFE2E8F0), child: const Icon(Icons.broken_image_outlined)),
+                                placeholder: (_, url) => Container(color: const Color(0xFFE2E8F0)),
+                                errorWidget: (_, url, err) => Container(color: const Color(0xFFE2E8F0), child: const Icon(Icons.broken_image_outlined)),
                               )
                             : Container(color: const Color(0xFFE2E8F0), child: const Icon(Icons.image_outlined)),
                       ),
@@ -1454,7 +1454,7 @@ class _TeamTabState extends State<_TeamTab> {
                   if (_showForm && widget.availableUsers.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     _FormField(label: 'Membre *', child: DropdownButtonFormField<String>(
-                      value: _selectedUserId.isEmpty ? null : _selectedUserId,
+                      initialValue: _selectedUserId.isEmpty ? null : _selectedUserId,
                       decoration: _inputDeco(),
                       items: widget.availableUsers.map((u) => DropdownMenuItem<String>(
                         value: u.id,

@@ -126,7 +126,7 @@ class _TeamFormPageState extends State<TeamFormPage> {
             _loadingWorkers
                 ? const LinearProgressIndicator()
                 : DropdownButtonFormField<String>(
-                    value: _leadId,
+                    initialValue: _leadId,
                     decoration: const InputDecoration(
                       labelText: 'Chef d\'équipe',
                       prefixIcon: Icon(Icons.person_outline),

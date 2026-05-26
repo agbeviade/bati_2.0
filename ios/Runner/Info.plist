@@ -10,6 +10,8 @@
 	<string>BatiFlow accède à l'appareil photo pour prendre des photos de chantier.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>BatiFlow accède à vos photos pour les joindre aux rapports de chantier.</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>BatiFlow vous notifie des factures en retard et des devis expirés.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

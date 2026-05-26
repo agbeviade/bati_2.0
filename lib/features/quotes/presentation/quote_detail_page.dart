@@ -419,13 +419,13 @@ class _CategorySection extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 10),
           child: Column(
             children: items.map((item) {
-              final qty = (item['qty'] as num?)?.toDouble() ?? 0;
+              final qty = (item['quantity'] as num?)?.toDouble() ?? 0;
               final unit = item['unit'] as String? ?? 'u';
               final unitPrice = (item['unit_price'] as num?)?.toDouble() ?? 0;
-              final total = (item['total_price'] as num?)?.toDouble() ?? qty * unitPrice;
+              final total = qty * unitPrice;
               return ListTile(
                 dense: true,
-                title: Text(item['description'] as String? ?? '',
+                title: Text(item['label'] as String? ?? '',
                     style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
                 subtitle: Text('$qty $unit × ${fmt(unitPrice)}',
                     style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),

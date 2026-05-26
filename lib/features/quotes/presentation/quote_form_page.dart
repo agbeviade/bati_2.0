@@ -338,7 +338,7 @@ class _QuoteFormPageState extends State<QuoteFormPage> {
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 _FieldLabel('TVA (%)'),
                 DropdownButtonFormField<double>(
-                  value: _taxRate,
+                  initialValue: _taxRate,
                   decoration: _deco(icon: Icons.percent_outlined),
                   items: const [
                     DropdownMenuItem(value: 0, child: Text('0%')),
@@ -353,7 +353,7 @@ class _QuoteFormPageState extends State<QuoteFormPage> {
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 _FieldLabel('Marge (%)'),
                 DropdownButtonFormField<double>(
-                  value: _marginPct,
+                  initialValue: _marginPct,
                   decoration: _deco(icon: Icons.trending_up_outlined),
                   items: const [
                     DropdownMenuItem(value: 0, child: Text('0%')),
@@ -372,7 +372,7 @@ class _QuoteFormPageState extends State<QuoteFormPage> {
 
             _FieldLabel('Chantier lié (optionnel)'),
             DropdownButtonFormField<String>(
-              value: _selectedProjectId,
+              initialValue: _selectedProjectId,
               decoration: _deco(icon: Icons.construction_outlined),
               items: [
                 const DropdownMenuItem<String>(value: null, child: Text('Aucun')),
@@ -506,7 +506,7 @@ class _ItemRowState extends State<_ItemRow> {
           Row(children: [
             Expanded(
               child: DropdownButtonFormField<String>(
-                value: item.category,
+                initialValue: item.category,
                 isDense: true,
                 decoration: InputDecoration(
                   isDense: true,
@@ -568,7 +568,7 @@ class _ItemRowState extends State<_ItemRow> {
             Expanded(
               flex: 2,
               child: DropdownButtonFormField<String>(
-                value: _kUnits.contains(item.unit) ? item.unit : 'u',
+                initialValue: _kUnits.contains(item.unit) ? item.unit : 'u',
                 isDense: true,
                 decoration: InputDecoration(
                   labelText: 'Unité',
@@ -633,7 +633,7 @@ class _SectionHeader extends StatelessWidget {
       Icon(icon, size: 18, color: AppColors.primary),
       const SizedBox(width: 8),
       Expanded(child: Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600))),
-      if (action != null) action!,
+      ?action,
     ]);
   }
 }

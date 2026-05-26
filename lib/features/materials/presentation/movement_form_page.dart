@@ -125,8 +125,7 @@ class _MovementFormPageState extends State<MovementFormPage> {
             ),
             if (widget.materialId == null)
               DropdownButtonFormField<String>(
-                // ignore: deprecated_member_use
-                value: _materialId,
+                initialValue: _materialId,
                 decoration: const InputDecoration(labelText: 'Matériau *', prefixIcon: Icon(Icons.inventory_2_outlined)),
                 items: _materials.map((m) => DropdownMenuItem(
                   value: m['id'] as String,
@@ -160,8 +159,7 @@ class _MovementFormPageState extends State<MovementFormPage> {
             ],
             const SizedBox(height: 12),
             DropdownButtonFormField<models.MovementType>(
-              // ignore: deprecated_member_use
-              value: _type,
+              initialValue: _type,
               decoration: const InputDecoration(labelText: 'Type de mouvement', prefixIcon: Icon(Icons.swap_vert)),
               items: [models.MovementType.purchase, models.MovementType.adjustment]
                   .map((t) => DropdownMenuItem(value: t, child: Text(_typeLabel(t))))

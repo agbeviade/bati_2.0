@@ -2,83 +2,104 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class NotificationService {
-  static final NotificationService _instance = NotificationService._();
+  static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
-  NotificationService._();
+  NotificationService._internal();
 
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
   Future<void> init() async {
-    if (_initialized) return;
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
     await _plugin.initialize(
       const InitializationSettings(android: android, iOS: ios),
     );
     _initialized = true;
+
+    await _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+    await _plugin
+        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: false);
   }
 
-  Future<void> show(int id, String title, String body, {String? payload}) async {
-    const android = AndroidNotificationDetails(
-      'batiflow_alerts',
-      'Alertes BatiFlow',
-      channelDescription: 'Alertes chantiers, factures et stock',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-    const ios = DarwinNotificationDetails();
-    await _plugin.show(id, title, body, const NotificationDetails(android: android, iOS: ios), payload: payload);
-  }
-
-  /// Vérifie les alertes et affiche une notification pour chacune.
+  /// Vérifie les alertes actives et pousse une notification système si besoin.
+  /// Appelé depuis DashboardPage.initState().
   Future<void> checkAndNotify() async {
-    final client = Supabase.instance.client;
-    final user = client.auth.currentUser;
-    if (user == null) return;
+    if (!_initialized) return;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
 
     try {
-      final now = DateTime.now().toIso8601String();
-      final monthStart = DateTime.now().subtract(const Duration(days: 1)).toIso8601String();
-
+      final now = DateTime.now().toUtc().toIso8601String();
       final results = await Future.wait<dynamic>([
-        // Factures en retard
-        client.from('invoices').select('id').inFilter('status', ['sent', 'overdue']).lt('due_date', now),
-        // Devis expirés
-        client.from('quotes').select('id').eq('status', 'sent').lt('valid_until', now),
-        // Pointages ouverts depuis plus de 12h
-        client.from('attendance').select('id').isFilter('check_out', null).lt('check_in', monthStart),
+        Supabase.instance.client
+            .from('invoices')
+            .select('id')
+            .inFilter('status', ['sent', 'overdue'])
+            .lt('due_date', now)
+            .count(),
+        Supabase.instance.client
+            .from('quotes')
+            .select('id')
+            .eq('status', 'sent')
+            .lt('valid_until', now.substring(0, 10))
+            .count(),
       ]);
 
-      int notifId = 100;
+      final overdueInvoices = (results[0]).count as int;
+      final expiredQuotes = (results[1]).count as int;
 
-      final overdueInvoices = (results[0] as List).length;
       if (overdueInvoices > 0) {
-        await show(notifId++, 'Factures en retard',
-            '$overdueInvoices facture${overdueInvoices > 1 ? 's' : ''} en attente de paiement',
-            payload: '/invoices');
+        await _show(
+          id: 1001,
+          title: 'Factures en retard',
+          body: '$overdueInvoices facture${overdueInvoices > 1 ? 's' : ''} '
+              '${overdueInvoices > 1 ? 'dépassées' : 'dépassée'}',
+          channelId: 'invoices',
+          channelName: 'Factures',
+        );
       }
 
-      final expiredQuotes = (results[1] as List).length;
       if (expiredQuotes > 0) {
-        await show(notifId++, 'Devis expirés',
-            '$expiredQuotes devis ont dépassé leur date de validité',
-            payload: '/quotes');
+        await _show(
+          id: 1002,
+          title: 'Devis expirés',
+          body: '$expiredQuotes devis ${expiredQuotes > 1 ? 'expirés' : 'expiré'} sans réponse',
+          channelId: 'quotes',
+          channelName: 'Devis',
+        );
       }
+    } catch (_) {}
+  }
 
-
-      final openAttendance = (results[2] as List).length;
-      if (openAttendance > 0) {
-        await show(notifId++, 'Pointage ouvert',
-            '$openAttendance pointage${openAttendance > 1 ? 's' : ''} ouvert${openAttendance > 1 ? 's' : ''} depuis plus de 24h',
-            payload: '/attendance');
-      }
-    } catch (_) {
-      // Silencieux — l'app fonctionne même sans notifications
-    }
+  Future<void> _show({
+    required int id,
+    required String title,
+    required String body,
+    required String channelId,
+    required String channelName,
+  }) async {
+    await _plugin.show(
+      id,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          channelId,
+          channelName,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: const DarwinNotificationDetails(),
+      ),
+    );
   }
 }

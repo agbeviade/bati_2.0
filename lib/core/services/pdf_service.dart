@@ -96,9 +96,6 @@ class PdfService {
     final fontBold = await PdfGoogleFonts.interBold();
     final fontSemiBold = await PdfGoogleFonts.interSemiBold();
 
-    final baseStyle = pw.TextStyle(font: font, fontSize: 9, color: _grey900);
-    final boldStyle = pw.TextStyle(font: fontBold, fontSize: 9, color: _grey900);
-
     // Group by category
     final grouped = <String, List<Map<String, dynamic>>>{};
     for (final item in items) {
@@ -482,10 +479,10 @@ class PdfService {
         ...items.asMap().entries.map((entry) {
           final i = entry.key;
           final item = entry.value;
-          final qty = (item['qty'] as num?)?.toDouble() ?? 0;
+          final qty = (item['quantity'] as num?)?.toDouble() ?? 0;
           final unit = item['unit'] as String? ?? 'u';
           final unitPrice = (item['unit_price'] as num?)?.toDouble() ?? 0;
-          final total = (item['total_price'] as num?)?.toDouble() ?? qty * unitPrice;
+          final total = qty * unitPrice;
           final bg = i % 2 == 0 ? PdfColors.white : _grey100;
 
           return pw.Container(
@@ -496,7 +493,7 @@ class PdfService {
                 pw.Expanded(
                   flex: 4,
                   child: pw.Text(
-                    item['description'] as String? ?? '',
+                    item['label'] as String? ?? '',
                     style: pw.TextStyle(font: font, fontSize: 8.5, color: _grey900),
                   ),
                 ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Shell minimal pour les utilisateurs de role 'client'.
 /// Seules les pages Devis et Factures sont accessibles.
