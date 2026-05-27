@@ -22,28 +22,28 @@ export function OverviewTab({ project, tasks, currency }: { project: Project; ta
   return (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card><CardContent className="pt-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1"><Wallet className="h-4 w-4" /><span className="text-xs">Budget</span></div>
-          <p className="font-semibold">{project.budget ? fmt(project.budget, currency) : "—"}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card><CardContent className="pt-4 pb-4">
+          <div className="flex items-center gap-1.5 text-muted-foreground mb-1"><Wallet className="h-3.5 w-3.5 shrink-0" /><span className="text-xs truncate">Budget</span></div>
+          <p className="font-semibold text-sm break-words leading-tight">{project.budget ? fmt(project.budget, currency) : "—"}</p>
         </CardContent></Card>
-        <Card><CardContent className="pt-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1"><Wallet className="h-4 w-4" /><span className="text-xs">Dépensé</span></div>
-          <p className="font-semibold">{fmt(project.spent, currency)}</p>
+        <Card><CardContent className="pt-4 pb-4">
+          <div className="flex items-center gap-1.5 text-muted-foreground mb-1"><Wallet className="h-3.5 w-3.5 shrink-0" /><span className="text-xs truncate">Dépensé</span></div>
+          <p className="font-semibold text-sm break-words leading-tight">{fmt(project.spent, currency)}</p>
         </CardContent></Card>
-        <Card><CardContent className="pt-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1"><Calendar className="h-4 w-4" /><span className="text-xs">Début</span></div>
-          <p className="font-semibold text-sm">{fmtDate(project.start_date)}</p>
+        <Card><CardContent className="pt-4 pb-4">
+          <div className="flex items-center gap-1.5 text-muted-foreground mb-1"><Calendar className="h-3.5 w-3.5 shrink-0" /><span className="text-xs truncate">Début</span></div>
+          <p className="font-semibold text-sm break-words leading-tight">{fmtDate(project.start_date)}</p>
         </CardContent></Card>
-        <Card><CardContent className="pt-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1"><Calendar className="h-4 w-4" /><span className="text-xs">Fin prévue</span></div>
-          <p className="font-semibold text-sm">{fmtDate(project.end_date)}</p>
+        <Card><CardContent className="pt-4 pb-4">
+          <div className="flex items-center gap-1.5 text-muted-foreground mb-1"><Calendar className="h-3.5 w-3.5 shrink-0" /><span className="text-xs truncate">Fin prévue</span></div>
+          <p className="font-semibold text-sm break-words leading-tight">{fmtDate(project.end_date)}</p>
         </CardContent></Card>
       </div>
 
       {project.description && (
         <Card><CardContent className="pt-4">
-          <p className="text-sm text-muted-foreground whitespace-pre-line">{project.description}</p>
+          <p className="text-sm text-muted-foreground whitespace-pre-line break-words">{project.description}</p>
         </CardContent></Card>
       )}
 

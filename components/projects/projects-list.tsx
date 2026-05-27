@@ -78,9 +78,9 @@ export function ProjectsList({ projects, currency }: { projects: ProjectRow[]; c
                 </div>
               </div>
               {project.budget !== null && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Budget</span>
-                  <span className="font-medium">{formatAmount(project.budget, currency)}</span>
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-muted-foreground shrink-0">Budget</span>
+                  <span className="font-medium text-right break-words min-w-0">{formatAmount(project.budget, currency)}</span>
                 </div>
               )}
               {(project.start_date || project.end_date) && (
