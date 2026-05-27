@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Sparkles, ChevronDown, ChevronUp, Calculator } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { createQuote, type QuoteItemInput } from "../actions";
 import { Button } from "@/components/ui/button";
@@ -12,14 +12,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
-import { loadModel } from "@/app/(dashboard)/metres/actions";
-import { computeRecap, RECAP_LABELS, RECAP_UNITS, RECAP_TO_MATERIAL, type AllInputs } from "@/lib/debourses-calc";
+import { generateQuoteFromDebourseModel } from "@/app/(dashboard)/metres/actions";
 
 type ItemCategory = "material" | "labor" | "transport" | "equipment" | "other";
 
 const CATEGORIES: { value: ItemCategory; label: string }[] = [
   { value: "material",  label: "Matériaux" },
-  { value: "labor",     label: "Main d'œuvre" },
+  { value: "labor",     label: "Main d'oeuvre" },
   { value: "transport", label: "Transport" },
   { value: "equipment", label: "Équipement" },
   { value: "other",     label: "Autre" },
@@ -55,12 +54,8 @@ export default function NewQuotePage() {
   const [aiOpen, setAiOpen] = useState(false);
   const [aiDesc, setAiDesc] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-
-  // Modeles debourses
-  const [modelOpen, setModelOpen] = useState(false);
   const [models, setModels] = useState<{ id: string; name: string }[]>([]);
   const [selectedModelId, setSelectedModelId] = useState("");
-  const [modelLoading, setModelLoading] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -82,78 +77,50 @@ export default function NewQuotePage() {
     setItems(prev => prev.filter(i => i.id !== id));
   }
 
-  async function handleGenerateFromModel() {
-    if (!selectedModelId) { toast.error("Selectionnez un modele."); return; }
-    setModelLoading(true);
-    try {
-      const rawInputs = await loadModel(selectedModelId);
-      if (!rawInputs) { toast.error("Modele introuvable."); return; }
-
-      const inputs = rawInputs as unknown as AllInputs;
-      const recap = computeRecap(inputs);
-
-      // Charger les prix depuis la DB
-      const supabase = createClient();
-      const matNames = [...new Set(Object.values(RECAP_TO_MATERIAL))];
-      const { data: mats } = await supabase
-        .from("materials").select("name, unit_cost").in("name", matNames);
-      const priceMap: Record<string, number> = {};
-      (mats ?? []).forEach(m => { priceMap[m.name] = m.unit_cost ?? 0; });
-
-      // Generer les lignes
-      const lines: LineItem[] = (Object.keys(recap) as (keyof typeof recap)[])
-        .filter(key => recap[key] > 0)
-        .map(key => {
-          const matName = RECAP_TO_MATERIAL[key];
-          const price = priceMap[matName] ?? 0;
-          return {
-            id: crypto.randomUUID(),
-            category: "material" as const,
-            label: RECAP_LABELS[key],
-            quantity: String(recap[key]),
-            unit: RECAP_UNITS[key],
-            unit_price: String(price),
-          };
-        });
-
-      setItems(lines);
-      setModelOpen(false);
-      toast.success(`${lines.length} lignes generees depuis le modele.`);
-    } finally {
-      setModelLoading(false);
-    }
-  }
-
   async function handleGenerateAI(formEl: HTMLFormElement | null) {
-    if (aiDesc.trim().length < 10) {
-      toast.error("Décrivez le chantier (min 10 caractères).");
+    if (!selectedModelId && aiDesc.trim().length < 10) {
+      toast.error("Sélectionnez un modèle ou décrivez le chantier (min 10 caractères).");
       return;
     }
     setAiLoading(true);
     try {
-      const supabase = createClient();
-      const surface = formEl ? (formEl.elements.namedItem("surface_m2") as HTMLInputElement)?.value : "";
-      const projectType = formEl ? (formEl.elements.namedItem("project_type") as HTMLInputElement)?.value : "";
-      const { data, error } = await supabase.functions.invoke("generate-quote", {
-        body: {
-          description: aiDesc,
-          surface_m2: surface ? Number(surface) : undefined,
-          project_type: projectType || undefined,
-        },
-      });
-      if (error || data?.error) {
-        toast.error(data?.error ?? error?.message ?? "Erreur IA.");
-        return;
+      let generated: LineItem[] = [];
+
+      if (selectedModelId) {
+        const result = await generateQuoteFromDebourseModel(selectedModelId, aiDesc);
+        if (result.error) { toast.error(result.error); return; }
+        generated = result.items.map(it => ({
+          id: crypto.randomUUID(),
+          category: it.category,
+          label: it.label,
+          quantity: String(it.quantity),
+          unit: it.unit,
+          unit_price: String(it.unit_price),
+        }));
+      } else {
+        const supabase = createClient();
+        const surface = formEl ? (formEl.elements.namedItem("surface_m2") as HTMLInputElement)?.value : "";
+        const projectType = formEl ? (formEl.elements.namedItem("project_type") as HTMLInputElement)?.value : "";
+        const { data, error } = await supabase.functions.invoke("generate-quote", {
+          body: {
+            description: aiDesc,
+            surface_m2: surface ? Number(surface) : undefined,
+            project_type: projectType || undefined,
+          },
+        });
+        if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Erreur IA."); return; }
+        generated = ((data.items ?? []) as { category: ItemCategory; label: string; quantity: number; unit: string; unit_price: number }[])
+          .map(it => ({
+            id: crypto.randomUUID(),
+            category: it.category,
+            label: it.label,
+            quantity: String(it.quantity),
+            unit: it.unit,
+            unit_price: String(it.unit_price),
+          }));
       }
-      const generated = (data.items ?? []) as { category: ItemCategory; label: string; quantity: number; unit: string; unit_price: number }[];
-      setItems(generated.map(it => ({
-        id: crypto.randomUUID(),
-        category: it.category,
-        label: it.label,
-        quantity: String(it.quantity),
-        unit: it.unit,
-        unit_price: String(it.unit_price),
-      })));
+
+      setItems(generated);
       setAiOpen(false);
       toast.success(`${generated.length} lignes générées par l'IA.`);
     } finally {
@@ -209,50 +176,7 @@ export default function NewQuotePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6" id="quote-form">
-        {/* Bloc modele debourses */}
-        <Card className="border-dashed border-blue-300 bg-blue-50/40">
-          <CardHeader className="py-3 px-4">
-            <button type="button" className="flex items-center gap-2 w-full text-left"
-              onClick={() => setModelOpen(v => !v)}>
-              <Calculator className="h-4 w-4 text-blue-500" />
-              <span className="font-semibold text-sm text-blue-800">Generer depuis un modele de debourses</span>
-              <span className="ml-auto">
-                {modelOpen ? <ChevronUp className="h-4 w-4 text-blue-400" /> : <ChevronDown className="h-4 w-4 text-blue-400" />}
-              </span>
-            </button>
-          </CardHeader>
-          {modelOpen && (
-            <CardContent className="pt-0 pb-4 px-4 space-y-3">
-              {models.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Aucun modele sauvegarde. Rendez-vous dans <Link href="/metres" className="underline">Metres</Link> pour en creer un.
-                </p>
-              ) : (
-                <>
-                  <p className="text-xs text-muted-foreground">
-                    Selectionnez un modele de debourses — les quantites et prix des materiaux seront importes automatiquement.
-                  </p>
-                  <select
-                    value={selectedModelId}
-                    onChange={e => setSelectedModelId(e.target.value)}
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="">-- Choisir un modele --</option>
-                    {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
-                  <Button type="button" size="sm" disabled={modelLoading || !selectedModelId}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    onClick={handleGenerateFromModel}>
-                    <Calculator className="h-3.5 w-3.5 mr-1.5" />
-                    {modelLoading ? "Generation en cours..." : "Generer les lignes"}
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          )}
-        </Card>
-
-        {/* Bloc IA */}
+        {/* Génération IA avec modèle optionnel */}
         <Card className="border-dashed border-purple-300 bg-purple-50/40">
           <CardHeader className="py-3 px-4">
             <button
@@ -262,7 +186,6 @@ export default function NewQuotePage() {
             >
               <Sparkles className="h-4 w-4 text-purple-500" />
               <span className="font-semibold text-sm text-purple-800">Générer avec l&apos;IA</span>
-              <span className="text-xs text-purple-500 ml-1">(Groq / LLaMA)</span>
               <span className="ml-auto">
                 {aiOpen ? <ChevronUp className="h-4 w-4 text-purple-400" /> : <ChevronDown className="h-4 w-4 text-purple-400" />}
               </span>
@@ -270,17 +193,39 @@ export default function NewQuotePage() {
           </CardHeader>
           {aiOpen && (
             <CardContent className="pt-0 pb-4 px-4 space-y-3">
-              <p className="text-xs text-muted-foreground">
-                Décrivez le chantier et l&apos;IA proposera automatiquement les lignes du devis.
-                Remplissez d&apos;abord le type de projet et la surface pour un meilleur résultat.
-              </p>
-              <textarea
-                value={aiDesc}
-                onChange={e => setAiDesc(e.target.value)}
-                rows={3}
-                placeholder="Ex : Construction d'une villa R+1 de 180m², fondations, gros œuvre, toiture en zinc, plomberie et électricité incluses."
-                className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-              />
+              {models.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-purple-700">
+                    Modèle de débours secs <span className="font-normal text-muted-foreground">(optionnel — recommandé)</span>
+                  </p>
+                  <select
+                    value={selectedModelId}
+                    onChange={e => setSelectedModelId(e.target.value)}
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="">-- Sans modèle (description libre) --</option>
+                    {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                  {selectedModelId && (
+                    <p className="text-xs text-muted-foreground">
+                      L&apos;IA utilisera les quantités calculées du modèle et estimera les prix du marché ivoirien.
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-purple-700">
+                  Description du chantier
+                  {selectedModelId ? <span className="font-normal text-muted-foreground"> (optionnel)</span> : <span className="text-red-500"> *</span>}
+                </p>
+                <textarea
+                  value={aiDesc}
+                  onChange={e => setAiDesc(e.target.value)}
+                  rows={3}
+                  placeholder="Ex : Construction d'une villa R+1 de 180m², fondations, gros oeuvre, toiture en zinc..."
+                  className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+                />
+              </div>
               <Button
                 type="button"
                 size="sm"
@@ -312,7 +257,7 @@ export default function NewQuotePage() {
               <Input id="surface_m2" name="surface_m2" type="number" min="0" step="0.5" placeholder="150" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="valid_until">Valide jusqu'au</Label>
+              <Label htmlFor="valid_until">Valide jusqu&apos;au</Label>
               <Input id="valid_until" name="valid_until" type="date" />
             </div>
             <div className="space-y-2 md:col-span-2">
@@ -338,7 +283,6 @@ export default function NewQuotePage() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
-            {/* En-tête colonnes */}
             <div className="hidden md:grid grid-cols-[1fr_2fr_80px_80px_110px_110px_36px] gap-2 text-xs text-muted-foreground px-1">
               <span>Catégorie</span>
               <span>Description</span>
@@ -399,7 +343,6 @@ export default function NewQuotePage() {
 
             <Separator />
 
-            {/* Totaux */}
             <div className="flex flex-col items-end gap-2 pt-2">
               <div className="w-full max-w-xs space-y-2">
                 <div className="flex items-center justify-between text-sm">

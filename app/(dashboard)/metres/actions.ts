@@ -135,6 +135,36 @@ export async function deleteModel(id: string) {
   revalidatePath("/metres");
 }
 
+export async function generateQuoteFromDebourseModel(
+  modelId: string,
+  description: string
+): Promise<{
+  items: Array<{
+    category: "material" | "labor" | "transport" | "equipment" | "other";
+    label: string;
+    quantity: number;
+    unit: string;
+    unit_price: number;
+    total: number;
+  }>;
+  notes: string;
+  error?: string;
+}> {
+  const { supabase } = await getProfile();
+  const { data } = await supabase
+    .from("debourses_models").select("inputs").eq("id", modelId).single();
+  if (!data?.inputs) return { items: [], notes: "", error: "Modele introuvable." };
+
+  const { computeRecap, RECAP_LABELS, RECAP_UNITS } = await import("@/lib/debourses-calc");
+  const recap = computeRecap(data.inputs as unknown as Parameters<typeof computeRecap>[0]);
+  const lignes = (Object.keys(recap) as (keyof typeof recap)[])
+    .filter(k => recap[k] > 0)
+    .map(k => ({ label: RECAP_LABELS[k], quantity: recap[k], unit: RECAP_UNITS[k] }));
+
+  const { genererDevisDepuisDebourses } = await import("./ai-actions");
+  return genererDevisDepuisDebourses(lignes, description);
+}
+
 export async function saveOuvrageType(data: {
   designation: string;
   type_geometrie: TypeGeometrie;

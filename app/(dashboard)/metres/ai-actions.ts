@@ -306,6 +306,81 @@ Catégories valides : "material", "labor", "transport", "equipment", "other"`,
 }
 
 // ---------------------------------------------------------------------------
+// Feature 5 — Generation de devis depuis les debours secs
+// ---------------------------------------------------------------------------
+
+export async function genererDevisDepuisDebourses(
+  lignes: Array<{ label: string; quantity: number; unit: string }>,
+  description: string
+): Promise<{
+  items: Array<{
+    category: "material" | "labor" | "transport" | "equipment" | "other";
+    label: string;
+    quantity: number;
+    unit: string;
+    unit_price: number;
+    total: number;
+  }>;
+  notes: string;
+  error?: string;
+}> {
+  try {
+    const ai = getAI();
+
+    const lignesJson = lignes
+      .map(l => `- ${l.label} : ${l.quantity} ${l.unit}`)
+      .join("\n");
+
+    const response = await ai.messages.create({
+      model: AI_MODEL,
+      max_tokens: 8192,
+      system: `Tu es un expert en devis BTP Côte d'Ivoire (Bordereau des Prix BTP CI 2024).
+Tu connais les prix du marché ivoirien. Tu reponds UNIQUEMENT en JSON valide.`,
+      messages: [
+        {
+          role: "user",
+          content: `Génère un devis COMPLET pour ce projet BTP.
+
+Description : ${description || "Construction BTP en Côte d'Ivoire"}
+
+Quantités de matériaux calculées par le calculateur de débours secs :
+${lignesJson}
+
+INSTRUCTIONS :
+1. Reprends TOUTES les lignes matériaux ci-dessus avec leurs quantités EXACTES (ne modifie pas les quantités)
+2. Attribue un prix unitaire réaliste en FCFA (marché ivoirien 2024) à chaque matériau
+3. Ajoute des lignes de main d'œuvre adaptées (maçon, ferrailleur, manœuvre, coffreur)
+4. Ajoute le transport si nécessaire
+5. Chaque catégorie : "material", "labor", "transport", "equipment", "other"
+
+Réponds UNIQUEMENT avec ce JSON :
+{
+  "items": [
+    {
+      "category": "material",
+      "label": "Ciment beton",
+      "quantity": 641,
+      "unit": "sac",
+      "unit_price": 5000,
+      "total": 3205000
+    }
+  ],
+  "notes": "Devis basé sur calcul de débours secs. Prix selon marché ivoirien 2024."
+}`,
+        },
+      ],
+    });
+
+    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const json = extractJson(text);
+    const result = JSON.parse(json);
+    return { items: result.items ?? [], notes: result.notes ?? "" };
+  } catch (e) {
+    return { items: [], notes: "", error: String(e) };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Utilitaires
 // ---------------------------------------------------------------------------
 
