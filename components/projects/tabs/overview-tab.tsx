@@ -42,8 +42,8 @@ export function OverviewTab({ project, tasks, currency }: { project: Project; ta
       </div>
 
       {project.description && (
-        <Card><CardContent className="pt-4">
-          <p className="text-sm text-muted-foreground whitespace-pre-line break-words">{project.description}</p>
+        <Card className="overflow-hidden"><CardContent className="pt-4">
+          <p className="text-sm text-muted-foreground whitespace-pre-line overflow-wrap-anywhere" style={{ overflowWrap: "anywhere" }}>{project.description}</p>
         </CardContent></Card>
       )}
 

@@ -74,7 +74,7 @@ export function Topbar({ email, fullName }: TopbarProps) {
 
   return (
     <>
-      <header className="h-16 border-b bg-card sticky top-0 z-30 flex items-center justify-between px-4 lg:px-6">
+      <header className="h-16 border-b bg-card sticky top-0 z-30 flex items-center justify-between px-4 lg:px-6 overflow-hidden">
         <div className="flex items-center gap-3">
           <button
             className="lg:hidden p-2 rounded-md hover:bg-accent transition-colors"
