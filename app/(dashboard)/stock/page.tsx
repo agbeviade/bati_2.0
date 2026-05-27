@@ -155,15 +155,15 @@ export default async function StockPage() {
             <Card key={ps.projectId}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <CardTitle className="text-base truncate">
-                      <Link href={`/projects/${ps.projectId}?tab=materials`} className="hover:underline underline-offset-2">
-                        {ps.projectName}
-                      </Link>
-                    </CardTitle>
+                  <CardTitle className="text-base truncate min-w-0 flex-1">
+                    <Link href={`/projects/${ps.projectId}?tab=materials`} className="hover:underline underline-offset-2">
+                      {ps.projectName}
+                    </Link>
+                  </CardTitle>
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <StatusBadge status={ps.status as import("@/lib/supabase/types").ProjectStatus} />
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">{ps.totalItems} matériau{ps.totalItems > 1 ? "x" : ""}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground flex-shrink-0">{ps.totalItems} matériau{ps.totalItems > 1 ? "x" : ""}</span>
                 </div>
               </CardHeader>
               <CardContent>
