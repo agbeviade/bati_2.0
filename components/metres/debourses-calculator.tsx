@@ -21,7 +21,7 @@ interface Step8Inputs { larg: number; ht: number; dosage: number; n_barres: numb
 interface Step9Inputs { larg: number; ht: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
 interface Step10Inputs { larg: number; }
 interface Step11Inputs { larg_dall: number; ep: number; dosage: number; }
-interface Step12Inputs { n_barres: number; ht: number; np: number; esp: number; long_etrier: number; dosage: number; sect_b: number; sect_h: number; }
+interface Step12Inputs { n_barres: number; np: number; esp: number; long_etrier: number; dosage: number; sect_b: number; sect_h: number; }
 interface Step13Inputs { larg: number; ht: number; np: number; esp_etr: number; long_etrier: number; dosage: number; }
 interface Step14Inputs { esp: number; }
 interface Step15Inputs { larg_dall: number; ep: number; dosage: number; }
@@ -60,7 +60,7 @@ const DEFAULTS: AllInputs = {
   s9: { larg: 0.25, ht: 0.25, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 0.85 },
   s10: { larg: 0 },
   s11: { larg_dall: 0, ep: 0.05, dosage: 350 },
-  s12: { n_barres: 4, ht: 0.4, np: 0, esp: 0.15, long_etrier: 1.2, dosage: 350, sect_b: 0.25, sect_h: 0.35 },
+  s12: { n_barres: 4, np: 0, esp: 0.15, long_etrier: 1.2, dosage: 350, sect_b: 0.25, sect_h: 0.35 },
   s13: { larg: 0.25, ht: 0.35, np: 0, esp_etr: 0.15, long_etrier: 1.0, dosage: 350 },
   s14: { esp: 0.5 },
   s15: { larg_dall: 0, ep: 0.05, dosage: 350 },
@@ -236,8 +236,9 @@ export function DeboursesCalculator() {
   const s12 = inputs.s12;
   const s12_vb  = s12.sect_b * s12.sect_h * g.lin * s12.np;
   const s12_cim = cim(s12_vb, s12.dosage);
-  const s12_ha12 = s12.n_barres * s12.ht * s12.np / 12 / 9;
-  const s12_ha6  = (s12.ht * s12.np) / s12.esp * s12.long_etrier / 12 / 36;
+  // longueur des barres = lin (portée), pas ht (hauteur de section)
+  const s12_ha12 = s12.n_barres * g.lin * s12.np / 12 / 9;
+  const s12_ha6  = (g.lin * s12.np) / s12.esp * s12.long_etrier / 12 / 36;
 
   // ── Step 13 ─ Nervures ────────────────────────────────────────────────────
   const s13 = inputs.s13;
@@ -258,11 +259,14 @@ export function DeboursesCalculator() {
   const s15_cim  = cim(s15_vb, s15.dosage);
 
   // ── Recapitulatif ─────────────────────────────────────────────────────────
-  const allVb = [s1_vb, s2_vb, s3_vb, s4_vb, s6_vb, s8_vb, s9_vb, s11_vb, s12_vb, s13_vb, s15_vb];
+  const vb_0525 = [s1_vb, s2_vb, s3_vb, s11_vb, s15_vb];   // proprete, semelles, paillasses, compression, dalle
+  const vb_1525 = [s4_vb, s6_vb, s8_vb, s9_vb, s12_vb, s13_vb]; // poteaux, chainages, poutres, nervures
   const allCim = [s1_cim, s2_cim, s3_cim, s4_cim, s6_cim, s8_cim, s9_cim, s11_cim, s12_cim, s13_cim, s15_cim];
   const tot_cim = allCim.reduce((a, b) => a + b, 0);
-  const tot_sbl = allVb.reduce((a, b) => a + sbl(b), 0);
-  const tot_grv = allVb.reduce((a, b) => a + grv(b), 0);
+  const allVb = [...vb_0525, ...vb_1525];
+  const tot_sbl   = allVb.reduce((a, b) => a + sbl(b), 0);
+  const tot_grv_0525 = vb_0525.reduce((a, b) => a + grv(b), 0);
+  const tot_grv_1525 = vb_1525.reduce((a, b) => a + grv(b), 0);
   const tot_briques = s5_briques + s7_briques;
   const tot_ha6  = s2_ha6 + s3_ha6 + s6_ha6 + s8_ha6 + s9_ha6 + s12_ha6 + s13_ha6 + s14_ha6_trans;
   const tot_ha8  = s14_ha8_long;
@@ -483,7 +487,6 @@ export function DeboursesCalculator() {
             <NumInput label="Section b" unit="m" defaultValue={s12.sect_b} onChange={v => upd("s12", "sect_b", v)} />
             <NumInput label="Section h" unit="m" defaultValue={s12.sect_h} onChange={v => upd("s12", "sect_h", v)} />
             <NumInput label="Nbre HA12" defaultValue={s12.n_barres} onChange={v => upd("s12", "n_barres", v)} step="1" />
-            <NumInput label="Hauteur" unit="m" defaultValue={s12.ht} onChange={v => upd("s12", "ht", v)} />
             <NumInput label="Dosage" unit="kg/m3" defaultValue={s12.dosage} onChange={v => upd("s12", "dosage", v)} step="1" />
             <NumInput label="Esp. etriers" unit="m" defaultValue={s12.esp} onChange={v => upd("s12", "esp", v)} />
             <NumInput label="Long. etrier" unit="m" defaultValue={s12.long_etrier} onChange={v => upd("s12", "long_etrier", v)} />
@@ -560,8 +563,10 @@ export function DeboursesCalculator() {
               <ResultRow label="Sacs (50 kg)" value={`${fmtI(sacs(tot_cim))} sacs`} />
               <ResultRow label="Sable" value={`${fmt(tot_sbl)} m3`} />
               <ResultRow label="Voyages sable (6 m3)" value={`${fmtI(tot_sbl / 6)} voyages`} />
-              <ResultRow label="Gravier 05/25" value={`${fmt(tot_grv)} m3`} />
-              <ResultRow label="Voyages gravier (20 t)" value={`${fmtI(tot_grv * 1.5 / 20)} voyages`} />
+              <ResultRow label="Gravier 05/25" value={`${fmt(tot_grv_0525)} m3`} />
+              <ResultRow label="Voyages 05/25 (20 t)" value={`${fmtI(tot_grv_0525 * 1.5 / 20)} voyages`} />
+              <ResultRow label="Gravier 15/25" value={`${fmt(tot_grv_1525)} m3`} />
+              <ResultRow label="Voyages 15/25 (25 t)" value={`${fmtI(tot_grv_1525 * 1.5 / 25)} voyages`} />
             </div>
             <div>
               <p className="text-xs font-semibold uppercase text-muted-foreground mb-1 mt-2">Maconnerie &amp; coffrage</p>
