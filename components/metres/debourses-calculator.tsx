@@ -11,11 +11,18 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface GlobalInputs {
   lin: number;
-  long_barre: number;   // longueur d'une barre (m)
-  botte_ha6: number;    // barres par botte HA6
-  botte_ha8: number;    // barres par botte HA8
-  botte_ha10: number;   // barres par botte HA10
-  botte_ha12: number;   // barres par botte HA12
+  long_barre: number;
+  botte_ha6: number;
+  botte_ha8: number;
+  botte_ha10: number;
+  botte_ha12: number;
+  briques_m2: number;     // briques par m²
+  hourdis_m2: number;     // hourdis par m²
+  coffrage_ratio: number; // ml de linéaire par planche (coffrage paillasse)
+  camion_sable: number;   // m³ par voyage sable
+  camion_g0525: number;   // tonnes par voyage gravier 05/25
+  camion_g1525: number;   // tonnes par voyage gravier 15/25
+  densite_gravier: number; // t/m³
 }
 interface Step1Inputs { larg: number; ep: number; dosage: number; }
 interface Step2Inputs { larg: number; ht: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
@@ -55,7 +62,11 @@ function fmtI(n: number) { return isFinite(n) && !isNaN(n) ? Math.ceil(n).toStri
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
 const DEFAULTS: AllInputs = {
-  global: { lin: 0, long_barre: 12, botte_ha6: 36, botte_ha8: 21, botte_ha10: 13, botte_ha12: 9 },
+  global: {
+    lin: 0, long_barre: 12, botte_ha6: 36, botte_ha8: 21, botte_ha10: 13, botte_ha12: 9,
+    briques_m2: 12, hourdis_m2: 10, coffrage_ratio: 4,
+    camion_sable: 6, camion_g0525: 20, camion_g1525: 25, densite_gravier: 1.5,
+  },
   s1: { larg: 0.5, ep: 0.1, dosage: 250 },
   s2: { larg: 0.5, ht: 0.4, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 0.85 },
   s3: { larg: 1.0, ep: 0.15, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 1.35 },
@@ -176,6 +187,9 @@ export function DeboursesCalculator() {
   const B8  = g.botte_ha8;
   const B10 = g.botte_ha10;
   const B12 = g.botte_ha12;
+  const BPM2 = g.briques_m2;
+  const HPM2 = g.hourdis_m2;
+  const CR   = g.coffrage_ratio;
 
   // ── Step 1 ─ Beton proprete ───────────────────────────────────────────────
   const s1 = inputs.s1;
@@ -195,8 +209,8 @@ export function DeboursesCalculator() {
   const s3_cim = cim(s3_vb, s3.dosage);
   const s3_ha10 = g.lin * s3.n_barres / LB / B10;
   const s3_ha6  = (g.lin / s3.esp) * s3.long_traverse / LB / B6;
-  const s3_pl30 = (g.lin / 4) * 2;
-  const s3_pl20 = g.lin / 4;
+  const s3_pl30 = (g.lin / CR) * 2;
+  const s3_pl20 = g.lin / CR;
 
   // ── Step 4 ─ Poteaux ──────────────────────────────────────────────────────
   const s4 = inputs.s4;
@@ -207,7 +221,7 @@ export function DeboursesCalculator() {
 
   // ── Step 5 ─ Murs 15 plein ────────────────────────────────────────────────
   const s5 = inputs.s5;
-  const s5_briques = g.lin * s5.ht_murs * 12;
+  const s5_briques = g.lin * s5.ht_murs * BPM2;
 
   // ── Step 6 ─ Chainage bas ─────────────────────────────────────────────────
   const s6 = inputs.s6;
@@ -218,7 +232,7 @@ export function DeboursesCalculator() {
 
   // ── Step 7 ─ Murs 15 creux ────────────────────────────────────────────────
   const s7 = inputs.s7;
-  const s7_briques = g.lin * s7.ht_murs * 12;
+  const s7_briques = g.lin * s7.ht_murs * BPM2;
 
   // ── Step 8 ─ Chainage haut RDC ────────────────────────────────────────────
   const s8 = inputs.s8;
@@ -236,7 +250,7 @@ export function DeboursesCalculator() {
 
   // ── Step 10 ─ Hourdis ────────────────────────────────────────────────────
   const s10 = inputs.s10;
-  const s10_hourdis = g.lin * s10.larg * 10;
+  const s10_hourdis = g.lin * s10.larg * HPM2;
   const s10_n_nerv  = s10.larg > 0 ? Math.floor(s10.larg / 0.5) : 0;
 
   // ── Step 11 ─ Beton compression ──────────────────────────────────────────
@@ -312,6 +326,30 @@ export function DeboursesCalculator() {
                 onChange={v => upd("global", "botte_ha10", v)} step="1" min="1" />
               <NumInput label="Barres/botte HA12" defaultValue={g.botte_ha12}
                 onChange={v => upd("global", "botte_ha12", v)} step="1" min="1" />
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Maconnerie & hourdis</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <NumInput label="Briques/m2" defaultValue={g.briques_m2}
+                onChange={v => upd("global", "briques_m2", v)} step="1" min="1" />
+              <NumInput label="Hourdis/m2" defaultValue={g.hourdis_m2}
+                onChange={v => upd("global", "hourdis_m2", v)} step="1" min="1" />
+              <NumInput label="Coffrage (ml/planche)" defaultValue={g.coffrage_ratio}
+                onChange={v => upd("global", "coffrage_ratio", v)} step="1" min="1" />
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Transport</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <NumInput label="Camion sable" unit="m3" defaultValue={g.camion_sable}
+                onChange={v => upd("global", "camion_sable", v)} step="1" min="1" />
+              <NumInput label="Camion gravier 05/25" unit="t" defaultValue={g.camion_g0525}
+                onChange={v => upd("global", "camion_g0525", v)} step="1" min="1" />
+              <NumInput label="Camion gravier 15/25" unit="t" defaultValue={g.camion_g1525}
+                onChange={v => upd("global", "camion_g1525", v)} step="1" min="1" />
+              <NumInput label="Densite gravier" unit="t/m3" defaultValue={g.densite_gravier}
+                onChange={v => upd("global", "densite_gravier", v)} step="0.1" min="0.1" />
             </div>
           </div>
         </CardContent>
@@ -588,11 +626,11 @@ export function DeboursesCalculator() {
               <ResultRow label="Ciment total" value={`${fmt(tot_cim)} kg = ${fmt(tot_cim / 1000)} t`} />
               <ResultRow label="Sacs (50 kg)" value={`${fmtI(sacs(tot_cim))} sacs`} />
               <ResultRow label="Sable" value={`${fmt(tot_sbl)} m3`} />
-              <ResultRow label="Voyages sable (6 m3)" value={`${fmtI(tot_sbl / 6)} voyages`} />
+              <ResultRow label={`Voyages sable (${g.camion_sable} m3)`} value={`${fmtI(tot_sbl / g.camion_sable)} voyages`} />
               <ResultRow label="Gravier 05/25" value={`${fmt(tot_grv_0525)} m3`} />
-              <ResultRow label="Voyages 05/25 (20 t)" value={`${fmtI(tot_grv_0525 * 1.5 / 20)} voyages`} />
+              <ResultRow label={`Voyages 05/25 (${g.camion_g0525} t)`} value={`${fmtI(tot_grv_0525 * g.densite_gravier / g.camion_g0525)} voyages`} />
               <ResultRow label="Gravier 15/25" value={`${fmt(tot_grv_1525)} m3`} />
-              <ResultRow label="Voyages 15/25 (25 t)" value={`${fmtI(tot_grv_1525 * 1.5 / 25)} voyages`} />
+              <ResultRow label={`Voyages 15/25 (${g.camion_g1525} t)`} value={`${fmtI(tot_grv_1525 * g.densite_gravier / g.camion_g1525)} voyages`} />
             </div>
             <div>
               <p className="text-xs font-semibold uppercase text-muted-foreground mb-1 mt-2">Maconnerie &amp; coffrage</p>
