@@ -27,7 +27,7 @@ interface GlobalInputs {
 }
 interface Step1Inputs { larg: number; ep: number; dosage: number; }
 interface Step2Inputs { larg: number; ht: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
-interface Step3Inputs { larg: number; ep: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
+interface Step3Inputs { long: number; larg: number; prof: number; np: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
 interface Step4Inputs { n_barres: number; ht: number; np: number; esp: number; long_etrier: number; dosage: number; sect_b: number; sect_h: number; }
 interface Step5Inputs { ht_murs: number; }
 interface Step6Inputs { larg: number; ht: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
@@ -70,7 +70,7 @@ const DEFAULTS: AllInputs = {
   },
   s1: { larg: 0.5, ep: 0.1, dosage: 250 },
   s2: { larg: 0.5, ht: 0.4, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 0.85 },
-  s3: { larg: 1.0, ep: 0.15, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 1.35 },
+  s3: { long: 0.8, larg: 0.8, prof: 0.4, np: 0, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 1.35 },
   s4: { n_barres: 4, ht: 3.0, np: 0, esp: 0.15, long_etrier: 1.5, dosage: 350, sect_b: 0.25, sect_h: 0.25 },
   s5: { ht_murs: 1.0 },
   s6: { larg: 0.25, ht: 0.25, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 0.85 },
@@ -207,7 +207,7 @@ export function DeboursesCalculator() {
 
   // â”€â”€ Step 3 â”€ Paillasses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s3 = inputs.s3;
-  const s3_vb = vb(g.lin, s3.larg, s3.ep);
+  const s3_vb  = s3.long * s3.larg * s3.prof * s3.np;
   const s3_cim = cim(s3_vb, s3.dosage);
   const s3_ha10 = g.lin * s3.n_barres / LB / B10;
   const s3_ha6  = (g.lin / s3.esp) * s3.long_traverse / LB / B6;
@@ -396,10 +396,12 @@ export function DeboursesCalculator() {
           </ResultBlock>
         </StepCard>
 
-        <StepCard num={3} title="Paillasses">
+        <StepCard num={3} title="Paillasses (plots isoles)">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <NumInput label="Nbre paillasses" defaultValue={s3.np} onChange={v => upd("s3", "np", v)} step="1" />
+            <NumInput label="Longueur" unit="m" defaultValue={s3.long} onChange={v => upd("s3", "long", v)} />
             <NumInput label="Largeur" unit="m" defaultValue={s3.larg} onChange={v => upd("s3", "larg", v)} />
-            <NumInput label="Epaisseur" unit="m" defaultValue={s3.ep} onChange={v => upd("s3", "ep", v)} />
+            <NumInput label="Profondeur" unit="m" defaultValue={s3.prof} onChange={v => upd("s3", "prof", v)} />
             <NumInput label="Dosage" unit="kg/m3" defaultValue={s3.dosage} onChange={v => upd("s3", "dosage", v)} step="1" />
             <NumInput label="Nbre barres HA10" defaultValue={s3.n_barres} onChange={v => upd("s3", "n_barres", v)} step="1" min="1" />
             <NumInput label="Esp. traverses" unit="m" defaultValue={s3.esp} onChange={v => upd("s3", "esp", v)} />
