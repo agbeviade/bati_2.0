@@ -41,8 +41,6 @@ export default async function MaterialDetailPage({
   const categories = (categoriesData ?? []) as CategoryRow[];
   const categoryLabel = categories.find((c) => c.slug === mat.category)?.label ?? mat.category;
 
-  const stockValue = mat.stock_qty * mat.unit_cost;
-
   const updateWithId = updateMaterial.bind(null, id);
   const deleteWithId = deleteMaterial.bind(null, id);
 
@@ -64,27 +62,15 @@ export default async function MaterialDetailPage({
         </Button>
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card>
-          <CardContent className="pt-4 text-center px-2">
-            <div className="text-lg sm:text-2xl font-bold truncate">{mat.stock_qty.toLocaleString("fr-FR")}</div>
-            <p className="text-xs text-muted-foreground">Stock ({mat.unit})</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 text-center px-2">
-            <div className="text-lg sm:text-2xl font-bold truncate">{mat.unit_cost.toLocaleString("fr-FR")}</div>
-            <p className="text-xs text-muted-foreground">Prix / {mat.unit}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 text-center px-2">
-            <div className="text-lg sm:text-2xl font-bold truncate">{stockValue.toLocaleString("fr-FR")}</div>
-            <p className="text-xs text-muted-foreground">Valeur stock</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Prix de référence */}
+      <Card>
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm text-muted-foreground">Prix unitaire de référence</span>
+            <span className="font-bold">{mat.unit_cost.toLocaleString("fr-FR")} / {mat.unit}</span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Edit form */}
       {edit === "1" && (

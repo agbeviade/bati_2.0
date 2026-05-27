@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition, useState, useRef, useEffect } from "react";
-import { Trash2, Plus, ArrowDown, ArrowUp, Package, PackageX, Printer, Search, X } from "lucide-react";
+import { Trash2, ArrowDown, ArrowUp, PackageX, Printer, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { addProjectEntry, addProjectExit, deleteProjectMovement } from "@/app/(dashboard)/projects/[id]/stock-actions";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,21 @@ type Movement = {
   unit: string;
 };
 
-type CatalogMaterial = Pick<Material, "id" | "name" | "unit" | "unit_cost" | "stock_qty">;
+// Catalog: reference price only — stock is per-project, not global
+type CatalogMaterial = Pick<Material, "id" | "name" | "unit" | "unit_cost">;
+
+// Per-project stock computed from movements
+type ProjectStock = Record<string, number>; // materialId → net qty
+
+function computeProjectStock(movements: Movement[]): ProjectStock {
+  return movements.reduce<ProjectStock>((acc, m) => {
+    const id = m.material_id;
+    const prev = acc[id] ?? 0;
+    if (m.type === "purchase" || m.type === "return") acc[id] = prev + m.quantity;
+    else if (m.type === "use") acc[id] = prev - m.quantity;
+    return acc;
+  }, {});
+}
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
@@ -81,13 +95,15 @@ ${total !== null ? `<div class="total"><span>TOTAL</span><span>${fmt(total, data
   if (win) { win.document.write(html); win.document.close(); }
 }
 
-// Combobox de recherche matériau
+// Combobox de recherche matériau — affiche le stock du chantier (calculé localement)
 function MaterialSearch({
   materials,
+  projectStock,
   selected,
   onSelect,
 }: {
   materials: CatalogMaterial[];
+  projectStock: ProjectStock;
   selected: CatalogMaterial | null;
   onSelect: (m: CatalogMaterial | null) => void;
 }) {
@@ -130,22 +146,27 @@ function MaterialSearch({
       </div>
       {open && filtered.length > 0 && !selected && (
         <div className="absolute z-50 w-full mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
-          {filtered.map(m => (
-            <button
-              key={m.id}
-              type="button"
-              className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center justify-between gap-2"
-              onMouseDown={e => { e.preventDefault(); onSelect(m); setQuery(""); setOpen(false); }}
-            >
-              <div className="min-w-0">
-                <p className="truncate">{m.name}</p>
-                <p className="text-xs text-muted-foreground">{fmtNum(m.unit_cost)} / {m.unit}</p>
-              </div>
-              <span className={`text-xs font-medium flex-shrink-0 px-1.5 py-0.5 rounded ${m.stock_qty <= 0 ? "bg-red-100 text-red-700" : m.stock_qty < 10 ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}`}>
-                {fmtNum(m.stock_qty)} {m.unit}
-              </span>
-            </button>
-          ))}
+          {filtered.map(m => {
+            const qty = projectStock[m.id] ?? 0;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center justify-between gap-2"
+                onMouseDown={e => { e.preventDefault(); onSelect(m); setQuery(""); setOpen(false); }}
+              >
+                <div className="min-w-0">
+                  <p className="truncate">{m.name}</p>
+                  <p className="text-xs text-muted-foreground">{fmtNum(m.unit_cost)} / {m.unit}</p>
+                </div>
+                {qty > 0 && (
+                  <span className={`text-xs font-medium flex-shrink-0 px-1.5 py-0.5 rounded ${qty < 10 ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}`}>
+                    {fmtNum(qty)} {m.unit}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -170,14 +191,17 @@ export function MaterialsTab({
   const [selectedMat, setSelectedMat] = useState<CatalogMaterial | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // État formulaire entrée
+  // Formulaire entrée
   const [entryQty, setEntryQty] = useState("");
   const [entryPrice, setEntryPrice] = useState("");
   const [entryNotes, setEntryNotes] = useState("");
 
-  // État formulaire sortie
+  // Formulaire sortie
   const [exitQty, setExitQty] = useState("");
   const [exitJustif, setExitJustif] = useState("");
+
+  // Stock calculé depuis les mouvements de CE chantier uniquement
+  const projectStock = computeProjectStock(movements);
 
   const totalEntries = movements
     .filter(m => m.type === "purchase")
@@ -212,6 +236,11 @@ export function MaterialsTab({
     const qty = parseFloat(exitQty);
     if (!qty || qty <= 0) { toast.error("Quantité invalide."); return; }
     if (!exitJustif.trim()) { toast.error("La justification est obligatoire."); return; }
+    const currentStock = projectStock[selectedMat.id] ?? 0;
+    if (qty > currentStock) {
+      toast.error(`Stock insuffisant dans ce chantier : ${fmtNum(currentStock)} ${selectedMat.unit} disponible.`);
+      return;
+    }
     startTransition(async () => {
       const res = await addProjectExit(projectId, selectedMat.id, qty, exitJustif);
       if (res?.error) { toast.error(res.error); return; }
@@ -229,9 +258,11 @@ export function MaterialsTab({
     });
   }
 
+  const selectedProjectQty = selectedMat ? (projectStock[selectedMat.id] ?? 0) : null;
+
   return (
     <div className="space-y-4">
-      {/* Résumé */}
+      {/* Résumé coût total */}
       {totalEntries > 0 && (
         <Card>
           <CardContent className="py-3 px-4">
@@ -245,23 +276,11 @@ export function MaterialsTab({
 
       {/* Boutons actions */}
       <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant={mode === "entry" ? "default" : "outline"}
-          onClick={() => openMode("entry")}
-          disabled={materials.length === 0}
-        >
-          <ArrowDown className="h-3.5 w-3.5 mr-1.5" />
-          Entrée
+        <Button size="sm" variant={mode === "entry" ? "default" : "outline"} onClick={() => openMode("entry")} disabled={materials.length === 0}>
+          <ArrowDown className="h-3.5 w-3.5 mr-1.5" />Entrée
         </Button>
-        <Button
-          size="sm"
-          variant={mode === "exit" ? "destructive" : "outline"}
-          onClick={() => openMode("exit")}
-          disabled={materials.length === 0}
-        >
-          <ArrowUp className="h-3.5 w-3.5 mr-1.5" />
-          Sortie
+        <Button size="sm" variant={mode === "exit" ? "destructive" : "outline"} onClick={() => openMode("exit")} disabled={materials.length === 0}>
+          <ArrowUp className="h-3.5 w-3.5 mr-1.5" />Sortie
         </Button>
       </div>
 
@@ -270,29 +289,24 @@ export function MaterialsTab({
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              <ArrowDown className="h-4 w-4 text-green-600" />
-              Nouvelle entrée — Achat
+              <ArrowDown className="h-4 w-4 text-green-600" />Nouvelle entrée — Achat
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleEntry} className="space-y-3">
               <div className="space-y-1.5">
                 <Label>Matériau *</Label>
-                <MaterialSearch materials={materials} selected={selectedMat} onSelect={setSelectedMat} />
-                {selectedMat && (
+                <MaterialSearch materials={materials} projectStock={projectStock} selected={selectedMat} onSelect={setSelectedMat} />
+                {selectedMat && selectedProjectQty !== null && selectedProjectQty > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Stock actuel : <span className={`font-semibold ${selectedMat.stock_qty <= 0 ? "text-destructive" : "text-foreground"}`}>{fmtNum(selectedMat.stock_qty)} {selectedMat.unit}</span>
+                    Déjà en stock sur ce chantier : <span className="font-semibold text-foreground">{fmtNum(selectedProjectQty)} {selectedMat.unit}</span>
                   </p>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Quantité{selectedMat ? ` (${selectedMat.unit})` : ""} *</Label>
-                  <Input
-                    type="number" min="0.001" step="0.001"
-                    value={entryQty} onChange={e => setEntryQty(e.target.value)}
-                    placeholder="0"
-                  />
+                  <Input type="number" min="0.001" step="0.001" value={entryQty} onChange={e => setEntryQty(e.target.value)} placeholder="0" />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Prix unitaire ({currency}) *</Label>
@@ -311,15 +325,10 @@ export function MaterialsTab({
               )}
               <div className="space-y-1.5">
                 <Label>Notes (fournisseur, bon de livraison...)</Label>
-                <Input
-                  value={entryNotes} onChange={e => setEntryNotes(e.target.value)}
-                  placeholder="Optionnel"
-                />
+                <Input value={entryNotes} onChange={e => setEntryNotes(e.target.value)} placeholder="Optionnel" />
               </div>
               <div className="flex gap-2">
-                <Button type="submit" size="sm" disabled={isPending}>
-                  {isPending ? "Enregistrement..." : "Enregistrer"}
-                </Button>
+                <Button type="submit" size="sm" disabled={isPending}>{isPending ? "Enregistrement..." : "Enregistrer"}</Button>
                 <Button type="button" size="sm" variant="ghost" onClick={() => setMode(null)}>Annuler</Button>
               </div>
             </form>
@@ -332,42 +341,34 @@ export function MaterialsTab({
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              <ArrowUp className="h-4 w-4 text-destructive" />
-              Nouvelle sortie — Utilisation
+              <ArrowUp className="h-4 w-4 text-destructive" />Nouvelle sortie — Utilisation
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleExit} className="space-y-3">
               <div className="space-y-1.5">
                 <Label>Matériau *</Label>
-                <MaterialSearch materials={materials} selected={selectedMat} onSelect={setSelectedMat} />
+                <MaterialSearch materials={materials} projectStock={projectStock} selected={selectedMat} onSelect={setSelectedMat} />
                 {selectedMat && (
                   <p className="text-xs text-muted-foreground">
-                    Stock disponible : <span className={`font-semibold ${selectedMat.stock_qty <= 0 ? "text-destructive" : selectedMat.stock_qty < 10 ? "text-orange-600" : "text-foreground"}`}>{fmtNum(selectedMat.stock_qty)} {selectedMat.unit}</span>
-                    {selectedMat.stock_qty <= 0 && <span className="text-destructive ml-1">⚠ Stock épuisé</span>}
+                    Stock disponible sur ce chantier :{" "}
+                    <span className={`font-semibold ${(selectedProjectQty ?? 0) <= 0 ? "text-destructive" : (selectedProjectQty ?? 0) < 10 ? "text-orange-600" : "text-foreground"}`}>
+                      {fmtNum(selectedProjectQty ?? 0)} {selectedMat.unit}
+                    </span>
+                    {(selectedProjectQty ?? 0) <= 0 && <span className="text-destructive ml-1">⚠ Aucun stock sur ce chantier</span>}
                   </p>
                 )}
               </div>
               <div className="space-y-1.5">
                 <Label>Quantité{selectedMat ? ` (${selectedMat.unit})` : ""} *</Label>
-                <Input
-                  type="number" min="0.001" step="0.001"
-                  value={exitQty} onChange={e => setExitQty(e.target.value)}
-                  placeholder="0"
-                />
+                <Input type="number" min="0.001" step="0.001" value={exitQty} onChange={e => setExitQty(e.target.value)} placeholder="0" />
               </div>
               <div className="space-y-1.5">
                 <Label>Justification *</Label>
-                <Input
-                  value={exitJustif} onChange={e => setExitJustif(e.target.value)}
-                  placeholder="Ex : fondations nord, dalle RDC..."
-                  required
-                />
+                <Input value={exitJustif} onChange={e => setExitJustif(e.target.value)} placeholder="Ex : fondations nord, dalle RDC..." required />
               </div>
               <div className="flex gap-2">
-                <Button type="submit" size="sm" variant="destructive" disabled={isPending}>
-                  {isPending ? "Enregistrement..." : "Enregistrer"}
-                </Button>
+                <Button type="submit" size="sm" variant="destructive" disabled={isPending}>{isPending ? "Enregistrement..." : "Enregistrer"}</Button>
                 <Button type="button" size="sm" variant="ghost" onClick={() => setMode(null)}>Annuler</Button>
               </div>
             </form>
@@ -375,12 +376,10 @@ export function MaterialsTab({
         </Card>
       )}
 
-      {/* Catalogue vide */}
       {materials.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
           <PackageX className="h-8 w-8 opacity-40" />
           <p className="text-sm">Aucun matériau dans le catalogue.</p>
-          <p className="text-xs">Ajoutez d'abord des matériaux dans le module Matériaux.</p>
         </div>
       )}
 
@@ -400,10 +399,7 @@ export function MaterialsTab({
                   <li key={m.id}>
                     <div className="flex items-center gap-3 py-2.5">
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${isEntry ? "bg-green-100" : "bg-red-100"}`}>
-                        {isEntry
-                          ? <ArrowDown className="h-3.5 w-3.5 text-green-700" />
-                          : <ArrowUp className="h-3.5 w-3.5 text-red-700" />
-                        }
+                        {isEntry ? <ArrowDown className="h-3.5 w-3.5 text-green-700" /> : <ArrowUp className="h-3.5 w-3.5 text-red-700" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -421,26 +417,14 @@ export function MaterialsTab({
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
-                          variant="ghost" size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
                           title="Imprimer le reçu"
-                          onClick={() => printReceipt({
-                            type: isEntry ? "entry" : "exit",
-                            projectName,
-                            materialName: m.material_name,
-                            unit: m.unit,
-                            quantity: m.quantity,
-                            unitCost: m.unit_cost ?? undefined,
-                            notes: m.notes,
-                            date: m.created_at,
-                            currency,
-                          })}
+                          onClick={() => printReceipt({ type: isEntry ? "entry" : "exit", projectName, materialName: m.material_name, unit: m.unit, quantity: m.quantity, unitCost: m.unit_cost ?? undefined, notes: m.notes, date: m.created_at, currency })}
                         >
                           <Printer className="h-3.5 w-3.5" />
                         </Button>
                         <Button
-                          variant="ghost" size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
                           disabled={isPending}
                           onClick={() => handleDelete(m)}
                         >
