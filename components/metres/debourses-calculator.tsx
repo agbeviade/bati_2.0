@@ -19,7 +19,7 @@ interface GlobalInputs {
   poids_sac: number;       // kg par sac de ciment
   briques_m2: number;
   hourdis_m2: number;
-  coffrage_ratio: number;
+  long_planche: number;
   hauteur_montee: number;  // hauteur d'une montée de briques (m)
   montes_par_sac: number;  // nombre de montées par sac de ciment
   camion_sable: number;
@@ -36,7 +36,7 @@ interface Step6Inputs { larg: number; ht: number; dosage: number; n_barres: numb
 interface Step7Inputs { ht_murs: number; }
 interface Step8Inputs { larg: number; ht: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
 interface Step9Inputs { larg: number; ht: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
-interface Step10Inputs { larg: number; }
+interface Step10Inputs { long_dall: number; larg: number; }
 interface Step11Inputs { larg_dall: number; ep: number; dosage: number; }
 interface Step12Inputs { n_barres: number; np: number; esp: number; long_etrier: number; dosage: number; sect_b: number; sect_h: number; }
 interface Step13Inputs { larg: number; ht: number; np: number; esp_etr: number; long_etrier: number; dosage: number; }
@@ -67,7 +67,7 @@ const DEFAULTS: AllInputs = {
   global: {
     lin: 0, long_barre: 12, botte_ha6: 36, botte_ha8: 21, botte_ha10: 13, botte_ha12: 9,
     poids_sac: 50,
-    briques_m2: 12, hourdis_m2: 10, coffrage_ratio: 4, hauteur_montee: 0.22, montes_par_sac: 3,
+    briques_m2: 12, hourdis_m2: 10, long_planche: 4, hauteur_montee: 0.22, montes_par_sac: 3,
     camion_sable: 6, camion_g0525: 20, camion_g1525: 25, densite_gravier: 1.5,
   },
   s1: { larg: 0.5, ep: 0.1, dosage: 250 },
@@ -79,7 +79,7 @@ const DEFAULTS: AllInputs = {
   s7: { ht_murs: 3.0 },
   s8: { larg: 0.25, ht: 0.25, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 0.85 },
   s9: { larg: 0.25, ht: 0.25, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 0.85 },
-  s10: { larg: 0 },
+  s10: { long_dall: 0, larg: 0 },
   s11: { larg_dall: 0, ep: 0.05, dosage: 350 },
   s12: { n_barres: 4, np: 0, esp: 0.15, long_etrier: 1.2, dosage: 350, sect_b: 0.25, sect_h: 0.35 },
   s13: { larg: 0.25, ht: 0.35, np: 0, esp_etr: 0.15, long_etrier: 1.0, dosage: 350 },
@@ -193,7 +193,7 @@ export function DeboursesCalculator() {
   const B12 = g.botte_ha12;
   const BPM2 = g.briques_m2;
   const HPM2 = g.hourdis_m2;
-  const CR   = g.coffrage_ratio;
+  const LP   = g.long_planche;
 
   // â”€â”€ Step 1 â”€ Beton proprete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s1 = inputs.s1;
@@ -213,8 +213,8 @@ export function DeboursesCalculator() {
   const s3_cim = cim(s3_vb, s3.dosage);
   const s3_ha10 = g.lin * s3.n_barres / LB / B10;
   const s3_ha6  = (g.lin / s3.esp) * s3.long_traverse / LB / B6;
-  const s3_pl30 = (g.lin / CR) * 2;
-  const s3_pl20 = g.lin / CR;
+  const s3_pl30 = (g.lin / LP) * 2;
+  const s3_pl20 = g.lin / LP;
 
   // â”€â”€ Step 4 â”€ Poteaux â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s4 = inputs.s4;
@@ -235,6 +235,8 @@ export function DeboursesCalculator() {
   const s6_cim = cim(s6_vb, s6.dosage);
   const s6_ha10 = g.lin * s6.n_barres / LB / B10;
   const s6_ha6  = (g.lin / s6.esp) * s6.long_traverse / LB / B6;
+  const s6_pl30 = (g.lin / LP) * 2;
+  const s6_pl20 = g.lin / LP;
 
   // â”€â”€ Step 7 â”€ Murs 15 creux â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s7 = inputs.s7;
@@ -258,12 +260,13 @@ export function DeboursesCalculator() {
 
   // â”€â”€ Step 10 â”€ Hourdis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s10 = inputs.s10;
-  const s10_hourdis = g.lin * s10.larg * HPM2;
+  const s10_surf    = s10.long_dall * s10.larg;
+  const s10_hourdis = s10_surf * HPM2;
   const s10_n_nerv  = s10.larg > 0 ? Math.floor(s10.larg / 0.5) : 0;
 
   // â”€â”€ Step 11 â”€ Beton compression â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s11 = inputs.s11;
-  const s11_vb  = s11.larg_dall * g.lin * s11.ep * 2;
+  const s11_vb  = s11.larg_dall * s10.long_dall * s11.ep * 2;
   const s11_cim = cim(s11_vb, s11.dosage);
 
   // â”€â”€ Step 12 â”€ Poutres â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -282,12 +285,12 @@ export function DeboursesCalculator() {
 
   // â”€â”€ Step 14 â”€ Quadrillage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s14 = inputs.s14;
-  const s14_ha8_long  = g.lin / s14.esp / B8;
+  const s14_ha8_long  = s10.long_dall > 0 ? s10.long_dall / s14.esp / B8 : 0;
   const s14_ha6_trans = s10.larg > 0 ? s10.larg / s14.esp / B6 : 0;
 
   // â”€â”€ Step 15 â”€ Coulage dalle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s15 = inputs.s15;
-  const s15_surf = s15.larg_dall * g.lin;
+  const s15_surf = s15.larg_dall * s10.long_dall;
   const s15_vb   = s15_surf * s15.ep;
   const s15_cim  = cim(s15_vb, s15.dosage);
 
@@ -301,6 +304,8 @@ export function DeboursesCalculator() {
   const tot_grv_0525 = vb_0525.reduce((a, b) => a + grv(b), 0);
   const tot_grv_1525 = vb_1525.reduce((a, b) => a + grv(b), 0);
   const tot_briques = s5_briques + s7_briques;
+  const tot_pl30 = s3_pl30 + s6_pl30;
+  const tot_pl20 = s3_pl20 + s6_pl20;
   const tot_ha6  = s2_ha6 + s3_ha6 + s6_ha6 + s8_ha6 + s9_ha6 + s12_ha6 + s13_ha6 + s14_ha6_trans;
   const tot_ha8  = s14_ha8_long;
   const tot_ha10 = s2_ha10 + s3_ha10 + s6_ha10 + s8_ha10 + s9_ha10 + s13_ha10;
@@ -345,8 +350,8 @@ export function DeboursesCalculator() {
                 onChange={v => upd("global", "briques_m2", v)} step="1" min="1" />
               <NumInput label="Hourdis/m2" defaultValue={g.hourdis_m2}
                 onChange={v => upd("global", "hourdis_m2", v)} step="1" min="1" />
-              <NumInput label="Coffrage (ml/planche)" defaultValue={g.coffrage_ratio}
-                onChange={v => upd("global", "coffrage_ratio", v)} step="1" min="1" />
+              <NumInput label="Long. d'une planche" unit="m" defaultValue={g.long_planche}
+                onChange={v => upd("global", "long_planche", v)} step="0.5" min="1" />
               <NumInput label="Ht. 1 montee brique" unit="m" defaultValue={g.hauteur_montee}
                 onChange={v => upd("global", "hauteur_montee", v)} step="0.01" min="0.01" />
               <NumInput label="Montees / sac ciment" defaultValue={g.montes_par_sac}
@@ -477,6 +482,8 @@ export function DeboursesCalculator() {
             <ResultRow label="Gravier 15/25" value={fmt(grv(s6_vb))} unit="m3" />
             <ResultRow label="HA10" value={`${fmtI(s6_ha10)} bottes`} />
             <ResultRow label="HA6" value={`${fmtI(s6_ha6)} bottes`} />
+            <ResultRow label="Planches larg. 30" value={`${fmtI(s6_pl30)} u`} />
+            <ResultRow label="Planches larg. 20" value={`${fmtI(s6_pl20)} u`} />
           </ResultBlock>
         </StepCard>
 
@@ -542,10 +549,12 @@ export function DeboursesCalculator() {
         </StepCard>
 
         <StepCard num={10} title="Hourdis">
-          <div className="max-w-xs">
+          <div className="grid grid-cols-2 gap-3 max-w-xs">
+            <NumInput label="Longueur dalle" unit="m" defaultValue={s10.long_dall} onChange={v => upd("s10", "long_dall", v)} />
             <NumInput label="Largeur dalle" unit="m" defaultValue={s10.larg} onChange={v => upd("s10", "larg", v)} />
           </div>
           <ResultBlock>
+            <ResultRow label="Surface dalle" value={fmt(s10_surf)} unit="m2" />
             <ResultRow label="Hourdis" value={`${fmtI(s10_hourdis)} u`} />
             <ResultRow label="Nervures potentielles" value={`${s10_n_nerv} (tous les 0.50 m)`} />
           </ResultBlock>
@@ -608,7 +617,7 @@ export function DeboursesCalculator() {
           <div className="max-w-xs">
             <NumInput label="Espacement" unit="m" defaultValue={s14.esp} onChange={v => upd("s14", "esp", v)} />
           </div>
-          <p className="text-xs text-muted-foreground">Longueur dalle = lineaire ; Largeur = etape 10</p>
+          <p className="text-xs text-muted-foreground">Longueur &amp; largeur repris depuis l'etape 10</p>
           <ResultBlock>
             <ResultRow label="HA8 longitudinal" value={`${fmtI(s14_ha8_long)} bottes`} />
             <ResultRow label="HA6 transversal" value={`${fmtI(s14_ha6_trans)} bottes`} />
@@ -655,8 +664,8 @@ export function DeboursesCalculator() {
               <p className="text-xs font-semibold uppercase text-muted-foreground mb-1 mt-2">Maconnerie &amp; coffrage</p>
               <ResultRow label="Briques" value={`${fmtI(tot_briques)} u`} />
               <ResultRow label="Hourdis" value={`${fmtI(s10_hourdis)} u`} />
-              <ResultRow label="Planches larg. 30" value={`${fmtI(s3_pl30)} u`} />
-              <ResultRow label="Planches larg. 20" value={`${fmtI(s3_pl20)} u`} />
+              <ResultRow label="Planches larg. 30" value={`${fmtI(tot_pl30)} u`} />
+              <ResultRow label="Planches larg. 20" value={`${fmtI(tot_pl20)} u`} />
             </div>
             <div className="sm:col-span-2">
               <p className="text-xs font-semibold uppercase text-muted-foreground mb-1 mt-2">Armatures</p>
