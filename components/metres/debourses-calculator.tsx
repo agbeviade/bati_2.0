@@ -367,7 +367,7 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Volume beton" value={fmt(s1_vb)} unit="m3" />
-            <ResultRow label="Ciment" value={`${fmt(s1_cim)} kg  —  ${fmt(t(s1_cim))} t`} />
+            <ResultRow label="Ciment" value={`${fmt(s1_cim)} kg  —  ${fmtI(sacs(s1_cim))} sacs`} />
             <ResultRow label="Sable" value={fmt(sbl(s1_vb))} unit="m3" />
             <ResultRow label="Gravier 05/25" value={fmt(grv(s1_vb))} unit="m3" />
           </ResultBlock>
@@ -384,7 +384,7 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Volume beton" value={fmt(s2_vb)} unit="m3" />
-            <ResultRow label="Ciment" value={`${fmt(s2_cim)} kg  —  ${fmt(t(s2_cim))} t`} />
+            <ResultRow label="Ciment" value={`${fmt(s2_cim)} kg  —  ${fmtI(sacs(s2_cim))} sacs`} />
             <ResultRow label="Sable" value={fmt(sbl(s2_vb))} unit="m3" />
             <ResultRow label="Gravier 05/25" value={fmt(grv(s2_vb))} unit="m3" />
             <ResultRow label="HA10 (barres long.)" value={`${fmtI(s2_ha10)} bottes`} />
@@ -403,7 +403,7 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Volume beton" value={fmt(s3_vb)} unit="m3" />
-            <ResultRow label="Ciment" value={`${fmt(s3_cim)} kg  —  ${fmt(t(s3_cim))} t`} />
+            <ResultRow label="Ciment" value={`${fmt(s3_cim)} kg  —  ${fmtI(sacs(s3_cim))} sacs`} />
             <ResultRow label="Sable" value={fmt(sbl(s3_vb))} unit="m3" />
             <ResultRow label="Gravier 05/25" value={fmt(grv(s3_vb))} unit="m3" />
             <ResultRow label="HA10" value={`${fmtI(s3_ha10)} bottes`} />
@@ -426,7 +426,7 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Volume beton" value={fmt(s4_vb)} unit="m3" />
-            <ResultRow label="Ciment" value={`${fmt(s4_cim)} kg  —  ${fmt(t(s4_cim))} t`} />
+            <ResultRow label="Ciment" value={`${fmt(s4_cim)} kg  —  ${fmtI(sacs(s4_cim))} sacs`} />
             <ResultRow label="Sable" value={fmt(sbl(s4_vb))} unit="m3" />
             <ResultRow label="Gravier 15/25" value={fmt(grv(s4_vb))} unit="m3" />
             <ResultRow label="HA12 (barres long.)" value={`${fmtI(s4_ha12)} bottes`} />
@@ -454,7 +454,7 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Volume beton" value={fmt(s6_vb)} unit="m3" />
-            <ResultRow label="Ciment" value={`${fmt(s6_cim)} kg  —  ${fmt(t(s6_cim))} t`} />
+            <ResultRow label="Ciment" value={`${fmt(s6_cim)} kg  —  ${fmtI(sacs(s6_cim))} sacs`} />
             <ResultRow label="Sable" value={fmt(sbl(s6_vb))} unit="m3" />
             <ResultRow label="Gravier 15/25" value={fmt(grv(s6_vb))} unit="m3" />
             <ResultRow label="HA10" value={`${fmtI(s6_ha10)} bottes`} />
@@ -488,7 +488,7 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Volume beton" value={fmt(s8_vb)} unit="m3" />
-            <ResultRow label="Ciment" value={`${fmt(s8_cim)} kg  —  ${fmt(t(s8_cim))} t`} />
+            <ResultRow label="Ciment" value={`${fmt(s8_cim)} kg  —  ${fmtI(sacs(s8_cim))} sacs`} />
             <ResultRow label="Sable" value={fmt(sbl(s8_vb))} unit="m3" />
             <ResultRow label="Gravier 15/25" value={fmt(grv(s8_vb))} unit="m3" />
             <ResultRow label="HA10" value={`${fmtI(s8_ha10)} bottes`} />
@@ -513,7 +513,7 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Volume beton" value={fmt(s9_vb)} unit="m3" />
-            <ResultRow label="Ciment" value={`${fmt(s9_cim)} kg  —  ${fmt(t(s9_cim))} t`} />
+            <ResultRow label="Ciment" value={`${fmt(s9_cim)} kg  —  ${fmtI(sacs(s9_cim))} sacs`} />
             <ResultRow label="Sable" value={fmt(sbl(s9_vb))} unit="m3" />
             <ResultRow label="Gravier 15/25" value={fmt(grv(s9_vb))} unit="m3" />
             <ResultRow label="HA10" value={`${fmtI(s9_ha10)} bottes`} />
@@ -539,7 +539,7 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Volume beton" value={fmt(s11_vb)} unit="m3" />
-            <ResultRow label="Ciment" value={`${fmt(s11_cim)} kg  —  ${fmt(t(s11_cim))} t`} />
+            <ResultRow label="Ciment" value={`${fmt(s11_cim)} kg  —  ${fmtI(sacs(s11_cim))} sacs`} />
             <ResultRow label="Sable" value={fmt(sbl(s11_vb))} unit="m3" />
             <ResultRow label="Gravier 05/25" value={fmt(grv(s11_vb))} unit="m3" />
           </ResultBlock>
@@ -557,7 +557,7 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Volume beton" value={fmt(s12_vb)} unit="m3" />
-            <ResultRow label="Ciment" value={`${fmt(s12_cim)} kg  —  ${fmt(t(s12_cim))} t`} />
+            <ResultRow label="Ciment" value={`${fmt(s12_cim)} kg  —  ${fmtI(sacs(s12_cim))} sacs`} />
             <ResultRow label="Sable" value={fmt(sbl(s12_vb))} unit="m3" />
             <ResultRow label="Gravier 15/25" value={fmt(grv(s12_vb))} unit="m3" />
             <ResultRow label="HA12" value={`${fmtI(s12_ha12)} bottes`} />
@@ -576,7 +576,7 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Volume beton" value={fmt(s13_vb)} unit="m3" />
-            <ResultRow label="Ciment" value={`${fmt(s13_cim)} kg  —  ${fmt(t(s13_cim))} t`} />
+            <ResultRow label="Ciment" value={`${fmt(s13_cim)} kg  —  ${fmtI(sacs(s13_cim))} sacs`} />
             <ResultRow label="Sable" value={fmt(sbl(s13_vb))} unit="m3" />
             <ResultRow label="Gravier 15/25" value={fmt(grv(s13_vb))} unit="m3" />
             <ResultRow label="HA10 (2 barres)" value={`${fmtI(s13_ha10)} bottes`} />
@@ -604,7 +604,7 @@ export function DeboursesCalculator() {
           <ResultBlock>
             <ResultRow label="Surface dalle" value={fmt(s15_surf)} unit="m2" />
             <ResultRow label="Volume beton" value={fmt(s15_vb)} unit="m3" />
-            <ResultRow label="Ciment" value={`${fmt(s15_cim)} kg  —  ${fmt(t(s15_cim))} t`} />
+            <ResultRow label="Ciment" value={`${fmt(s15_cim)} kg  —  ${fmtI(sacs(s15_cim))} sacs`} />
             <ResultRow label="Sable" value={fmt(sbl(s15_vb))} unit="m3" />
             <ResultRow label="Gravier 05/25" value={fmt(grv(s15_vb))} unit="m3" />
           </ResultBlock>
@@ -623,8 +623,7 @@ export function DeboursesCalculator() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
             <div>
               <p className="text-xs font-semibold uppercase text-muted-foreground mb-1 mt-2">Liant &amp; granulats</p>
-              <ResultRow label="Ciment total" value={`${fmt(tot_cim)} kg = ${fmt(tot_cim / 1000)} t`} />
-              <ResultRow label="Sacs (50 kg)" value={`${fmtI(sacs(tot_cim))} sacs`} />
+              <ResultRow label="Ciment total" value={`${fmt(tot_cim)} kg = ${fmt(tot_cim / 1000)} t  —  ${fmtI(sacs(tot_cim))} sacs`} />
               <ResultRow label="Sable" value={`${fmt(tot_sbl)} m3`} />
               <ResultRow label={`Voyages sable (${g.camion_sable} m3)`} value={`${fmtI(tot_sbl / g.camion_sable)} voyages`} />
               <ResultRow label="Gravier 05/25" value={`${fmt(tot_grv_0525)} m3`} />
