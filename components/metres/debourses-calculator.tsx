@@ -20,6 +20,8 @@ interface GlobalInputs {
   briques_m2: number;
   hourdis_m2: number;
   coffrage_ratio: number;
+  hauteur_montee: number;  // hauteur d'une montée de briques (m)
+  montes_par_sac: number;  // nombre de montées par sac de ciment
   camion_sable: number;
   camion_g0525: number;
   camion_g1525: number;
@@ -65,7 +67,7 @@ const DEFAULTS: AllInputs = {
   global: {
     lin: 0, long_barre: 12, botte_ha6: 36, botte_ha8: 21, botte_ha10: 13, botte_ha12: 9,
     poids_sac: 50,
-    briques_m2: 12, hourdis_m2: 10, coffrage_ratio: 4,
+    briques_m2: 12, hourdis_m2: 10, coffrage_ratio: 4, hauteur_montee: 0.22, montes_par_sac: 3,
     camion_sable: 6, camion_g0525: 20, camion_g1525: 25, densite_gravier: 1.5,
   },
   s1: { larg: 0.5, ep: 0.1, dosage: 250 },
@@ -223,7 +225,9 @@ export function DeboursesCalculator() {
 
   // â”€â”€ Step 5 â”€ Murs 15 plein â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s5 = inputs.s5;
-  const s5_briques = g.lin * s5.ht_murs * BPM2;
+  const s5_briques  = g.lin * s5.ht_murs * BPM2;
+  const s5_montes   = g.hauteur_montee > 0 ? s5.ht_murs / g.hauteur_montee : 0;
+  const s5_sac_mac  = g.montes_par_sac > 0 ? s5_montes / g.montes_par_sac : 0;
 
   // â”€â”€ Step 6 â”€ Chainage bas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s6 = inputs.s6;
@@ -234,7 +238,9 @@ export function DeboursesCalculator() {
 
   // â”€â”€ Step 7 â”€ Murs 15 creux â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s7 = inputs.s7;
-  const s7_briques = g.lin * s7.ht_murs * BPM2;
+  const s7_briques  = g.lin * s7.ht_murs * BPM2;
+  const s7_montes   = g.hauteur_montee > 0 ? s7.ht_murs / g.hauteur_montee : 0;
+  const s7_sac_mac  = g.montes_par_sac > 0 ? s7_montes / g.montes_par_sac : 0;
 
   // â”€â”€ Step 8 â”€ Chainage haut RDC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const s8 = inputs.s8;
@@ -341,6 +347,10 @@ export function DeboursesCalculator() {
                 onChange={v => upd("global", "hourdis_m2", v)} step="1" min="1" />
               <NumInput label="Coffrage (ml/planche)" defaultValue={g.coffrage_ratio}
                 onChange={v => upd("global", "coffrage_ratio", v)} step="1" min="1" />
+              <NumInput label="Ht. 1 montee brique" unit="m" defaultValue={g.hauteur_montee}
+                onChange={v => upd("global", "hauteur_montee", v)} step="0.01" min="0.01" />
+              <NumInput label="Montees / sac ciment" defaultValue={g.montes_par_sac}
+                onChange={v => upd("global", "montes_par_sac", v)} step="1" min="1" />
             </div>
           </div>
           <div>
@@ -446,6 +456,8 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Briques" value={`${fmtI(s5_briques)} u`} />
+            <ResultRow label="Montees" value={`${fmtI(s5_montes)} montees`} />
+            <ResultRow label="Ciment maconnerie" value={`${fmtI(s5_sac_mac)} sacs`} />
           </ResultBlock>
         </StepCard>
 
@@ -480,6 +492,8 @@ export function DeboursesCalculator() {
           </div>
           <ResultBlock>
             <ResultRow label="Briques" value={`${fmtI(s7_briques)} u`} />
+            <ResultRow label="Montees" value={`${fmtI(s7_montes)} montees`} />
+            <ResultRow label="Ciment maconnerie" value={`${fmtI(s7_sac_mac)} sacs`} />
           </ResultBlock>
         </StepCard>
 
