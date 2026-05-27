@@ -23,7 +23,7 @@ type Movement = {
   unit: string;
 };
 
-type CatalogMaterial = Pick<Material, "id" | "name" | "unit" | "unit_cost">;
+type CatalogMaterial = Pick<Material, "id" | "name" | "unit" | "unit_cost" | "stock_qty">;
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
@@ -137,8 +137,13 @@ function MaterialSearch({
               className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center justify-between gap-2"
               onMouseDown={e => { e.preventDefault(); onSelect(m); setQuery(""); setOpen(false); }}
             >
-              <span className="truncate">{m.name}</span>
-              <span className="text-xs text-muted-foreground flex-shrink-0">{fmtNum(m.unit_cost)} / {m.unit}</span>
+              <div className="min-w-0">
+                <p className="truncate">{m.name}</p>
+                <p className="text-xs text-muted-foreground">{fmtNum(m.unit_cost)} / {m.unit}</p>
+              </div>
+              <span className={`text-xs font-medium flex-shrink-0 px-1.5 py-0.5 rounded ${m.stock_qty <= 0 ? "bg-red-100 text-red-700" : m.stock_qty < 10 ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}`}>
+                {fmtNum(m.stock_qty)} {m.unit}
+              </span>
             </button>
           ))}
         </div>
@@ -218,7 +223,7 @@ export function MaterialsTab({
 
   function handleDelete(m: Movement) {
     startTransition(async () => {
-      await deleteProjectMovement(m.id, projectId, m.type, m.quantity, m.unit_cost);
+      await deleteProjectMovement(m.id, projectId, m.material_id, m.type, m.quantity, m.unit_cost);
       setMovements(prev => prev.filter(x => x.id !== m.id));
       toast.success("Mouvement supprimé.");
     });
@@ -274,6 +279,11 @@ export function MaterialsTab({
               <div className="space-y-1.5">
                 <Label>Matériau *</Label>
                 <MaterialSearch materials={materials} selected={selectedMat} onSelect={setSelectedMat} />
+                {selectedMat && (
+                  <p className="text-xs text-muted-foreground">
+                    Stock actuel : <span className={`font-semibold ${selectedMat.stock_qty <= 0 ? "text-destructive" : "text-foreground"}`}>{fmtNum(selectedMat.stock_qty)} {selectedMat.unit}</span>
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -331,6 +341,12 @@ export function MaterialsTab({
               <div className="space-y-1.5">
                 <Label>Matériau *</Label>
                 <MaterialSearch materials={materials} selected={selectedMat} onSelect={setSelectedMat} />
+                {selectedMat && (
+                  <p className="text-xs text-muted-foreground">
+                    Stock disponible : <span className={`font-semibold ${selectedMat.stock_qty <= 0 ? "text-destructive" : selectedMat.stock_qty < 10 ? "text-orange-600" : "text-foreground"}`}>{fmtNum(selectedMat.stock_qty)} {selectedMat.unit}</span>
+                    {selectedMat.stock_qty <= 0 && <span className="text-destructive ml-1">⚠ Stock épuisé</span>}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label>Quantité{selectedMat ? ` (${selectedMat.unit})` : ""} *</Label>

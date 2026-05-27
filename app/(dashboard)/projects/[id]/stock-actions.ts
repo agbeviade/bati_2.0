@@ -15,6 +15,13 @@ async function getProfile() {
   return { user, supabase };
 }
 
+async function adjustStock(admin: ReturnType<typeof createAdminClient>, materialId: string, delta: number) {
+  const { data: mat } = await admin.from("materials").select("stock_qty").eq("id", materialId).single();
+  await admin.from("materials").update({
+    stock_qty: Math.max(0, (mat?.stock_qty ?? 0) + delta),
+  }).eq("id", materialId);
+}
+
 export async function addProjectEntry(
   projectId: string,
   materialId: string,
@@ -41,18 +48,21 @@ export async function addProjectEntry(
 
   if (error) return { error: error.message };
 
-  // Déduire du budget du chantier
-  const totalCost = quantity * unitCost;
-  if (totalCost > 0) {
-    const { data: proj } = await admin
-      .from("projects").select("spent").eq("id", projectId).single();
-    await admin
-      .from("projects")
-      .update({ spent: (proj?.spent ?? 0) + totalCost })
-      .eq("id", projectId);
-  }
+  await Promise.all([
+    // Incrémenter le stock
+    adjustStock(admin, materialId, +quantity),
+    // Déduire du budget du chantier
+    (async () => {
+      const totalCost = quantity * unitCost;
+      if (totalCost > 0) {
+        const { data: proj } = await admin.from("projects").select("spent").eq("id", projectId).single();
+        await admin.from("projects").update({ spent: (proj?.spent ?? 0) + totalCost }).eq("id", projectId);
+      }
+    })(),
+  ]);
 
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/materials");
   revalidatePath("/dashboard");
   return { id: data.id };
 }
@@ -81,13 +91,18 @@ export async function addProjectExit(
 
   if (error) return { error: error.message };
 
+  // Décrémenter le stock
+  await adjustStock(admin, materialId, -quantity);
+
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/materials");
   return { id: data.id };
 }
 
 export async function deleteProjectMovement(
   movementId: string,
   projectId: string,
+  materialId: string,
   type: string,
   quantity: number,
   unitCost: number | null
@@ -97,17 +112,22 @@ export async function deleteProjectMovement(
 
   await admin.from("stock_movements").delete().eq("id", movementId);
 
-  // Inverser l'impact budget si c'était une entrée
-  if (type === "purchase" && unitCost && quantity > 0) {
-    const totalCost = quantity * unitCost;
-    const { data: proj } = await admin
-      .from("projects").select("spent").eq("id", projectId).single();
-    await admin
-      .from("projects")
-      .update({ spent: Math.max(0, (proj?.spent ?? 0) - totalCost) })
-      .eq("id", projectId);
-  }
+  await Promise.all([
+    // Inverser le mouvement de stock
+    adjustStock(admin, materialId, type === "purchase" ? -quantity : +quantity),
+    // Inverser l'impact budget si c'était une entrée
+    (async () => {
+      if (type === "purchase" && unitCost && quantity > 0) {
+        const totalCost = quantity * unitCost;
+        const { data: proj } = await admin.from("projects").select("spent").eq("id", projectId).single();
+        await admin.from("projects").update({
+          spent: Math.max(0, (proj?.spent ?? 0) - totalCost),
+        }).eq("id", projectId);
+      }
+    })(),
+  ]);
 
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/materials");
   revalidatePath("/dashboard");
 }

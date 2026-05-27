@@ -61,7 +61,9 @@ export function MaterialsList({
                   <p className="text-xs text-muted-foreground">{labelMap[m.category] ?? m.category}</p>
                 </div>
                 <div className="flex-shrink-0 text-right">
-                  <p className="text-sm font-semibold">{m.stock_qty.toLocaleString("fr-FR")} {m.unit}</p>
+                  <p className={`text-sm font-semibold ${m.stock_qty <= 0 ? "text-destructive" : m.stock_qty < 10 ? "text-orange-600" : "text-foreground"}`}>
+                    {m.stock_qty.toLocaleString("fr-FR")} {m.unit}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {m.unit_cost > 0 ? `${m.unit_cost.toLocaleString("fr-FR")} / ${m.unit}` : "Prix non défini"}
                   </p>
