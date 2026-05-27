@@ -25,25 +25,25 @@ export function OverviewTab({ project, tasks, currency }: { project: Project; ta
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1"><Wallet className="h-3.5 w-3.5 shrink-0" /><span className="text-xs truncate">Budget</span></div>
-          <p className="font-semibold text-sm break-words leading-tight">{project.budget ? fmt(project.budget, currency) : "—"}</p>
+          <p className="font-semibold text-xs sm:text-sm break-words leading-tight">{project.budget ? fmt(project.budget, currency) : "—"}</p>
         </CardContent></Card>
         <Card><CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1"><Wallet className="h-3.5 w-3.5 shrink-0" /><span className="text-xs truncate">Dépensé</span></div>
-          <p className="font-semibold text-sm break-words leading-tight">{fmt(project.spent, currency)}</p>
+          <p className="font-semibold text-xs sm:text-sm break-words leading-tight">{fmt(project.spent, currency)}</p>
         </CardContent></Card>
         <Card><CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1"><Calendar className="h-3.5 w-3.5 shrink-0" /><span className="text-xs truncate">Début</span></div>
-          <p className="font-semibold text-sm break-words leading-tight">{fmtDate(project.start_date)}</p>
+          <p className="font-semibold text-xs sm:text-sm break-words leading-tight">{fmtDate(project.start_date)}</p>
         </CardContent></Card>
         <Card><CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1"><Calendar className="h-3.5 w-3.5 shrink-0" /><span className="text-xs truncate">Fin prévue</span></div>
-          <p className="font-semibold text-sm break-words leading-tight">{fmtDate(project.end_date)}</p>
+          <p className="font-semibold text-xs sm:text-sm break-words leading-tight">{fmtDate(project.end_date)}</p>
         </CardContent></Card>
       </div>
 
       {project.description && (
-        <Card className="overflow-hidden"><CardContent className="pt-4">
-          <p className="text-sm text-muted-foreground whitespace-pre-line overflow-wrap-anywhere" style={{ overflowWrap: "anywhere" }}>{project.description}</p>
+        <Card><CardContent className="pt-4">
+          <p className="text-sm text-muted-foreground whitespace-pre-line break-words">{project.description}</p>
         </CardContent></Card>
       )}
 

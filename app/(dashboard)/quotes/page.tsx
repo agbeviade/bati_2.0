@@ -50,7 +50,7 @@ export default async function QuotesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">Devis</h2>
           <p className="text-muted-foreground">
@@ -67,14 +67,14 @@ export default async function QuotesPage() {
 
       {/* Stats rapides */}
       {stats.total > 0 && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2">
           {[
             { label: "Brouillons", value: stats.draft, color: "text-muted-foreground" },
             { label: "Envoyés", value: stats.sent, color: "text-blue-600" },
             { label: "Approuvés", value: stats.approved, color: "text-green-600" },
           ].map((s) => (
             <Card key={s.label}>
-              <CardContent className="pt-4 text-center">
+              <CardContent className="px-3 pt-3 pb-3 text-center">
                 <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
                 <p className="text-xs text-muted-foreground">{s.label}</p>
               </CardContent>

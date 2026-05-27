@@ -70,8 +70,8 @@ export function QuotesList({ quotes, currency }: { quotes: QuoteRow[]; currency:
                   <Calendar className="h-3.5 w-3.5" />
                   <span>{quote.valid_until ? `Valide jusqu'au ${formatDate(quote.valid_until)}` : formatDate(quote.created_at)}</span>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold">{formatAmount(quote.total, currency)}</p>
+                <div className="text-right min-w-0">
+                  <p className="font-semibold break-all">{formatAmount(quote.total, currency)}</p>
                 </div>
               </div>
               <QuoteStatusBadge status={quote.status} />

@@ -162,14 +162,14 @@ export default async function NotificationsPage() {
       ) : (
         <div className="space-y-3">
           {/* Résumé par type */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             {[
               { label: "Urgentes", count: alerts.filter(a => a.level === "error").length, color: "text-red-600" },
               { label: "Attention", count: alerts.filter(a => a.level === "warning").length, color: "text-orange-600" },
               { label: "Info", count: alerts.filter(a => a.level === "info").length, color: "text-blue-600" },
             ].map(s => (
               <Card key={s.label}>
-                <CardContent className="pt-4 text-center">
+                <CardContent className="px-3 pt-3 pb-3 text-center">
                   <div className={`text-2xl font-bold ${s.color}`}>{s.count}</div>
                   <p className="text-xs text-muted-foreground">{s.label}</p>
                 </CardContent>

@@ -143,7 +143,7 @@ export default async function ProjectDetailPage({
   }
 
   return (
-    <div className="space-y-4 max-w-4xl w-full overflow-hidden">
+    <div className="space-y-4 max-w-4xl w-full min-w-0">
       {/* Header */}
       <div className="flex items-start gap-3">
         <Button variant="ghost" size="icon" asChild className="mt-0.5">
