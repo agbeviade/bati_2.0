@@ -103,9 +103,9 @@ export function computeRecap(inp: AllInputs): DebourseRecap {
   const s6_vb  = vb(g.lin, s6.larg, s6.ht);
   const s8_vb  = vb(g.lin, s8.larg, s8.ht);
   const s9_vb  = vb(g.lin, s9.larg, s9.ht);
-  const s11_vb = s11.larg_dall * s10.long_dall * s11.ep * 2;
-  const s12_vb = s12.sect_b * s12.sect_h * g.lin * s12.np;
-  const s13_vb = s13.larg * s13.ht * g.lin * s13.np;
+  const s11_vb = s11.larg_dall * s10.long_dall * s11.ep;
+  const s12_vb = s12.sect_b * s12.sect_h * s10.larg * s12.np;
+  const s13_vb = s13.larg * s13.ht * s10.long_dall * s13.np;
   const s15_vb = s15.larg_dall * s10.long_dall * s15.ep;
 
   // Ciment beton (kg)
@@ -134,8 +134,8 @@ export function computeRecap(inp: AllInputs): DebourseRecap {
   // Armatures
   const ha10_s2 = g.lin * s2.n_barres / LB / B10;
   const ha6_s2  = (g.lin / s2.esp) * s2.long_traverse / LB / B6;
-  const ha10_s3 = g.lin * s3.n_barres / LB / B10;
-  const ha6_s3  = (g.lin / s3.esp) * s3.long_traverse / LB / B6;
+  const ha10_s3 = s3.np * s3.n_barres * s3.long / LB / B10;
+  const ha6_s3  = s3.np * (s3.long / s3.esp) * s3.long_traverse / LB / B6;
   const ha12_s4 = s4.n_barres * s4.ht * s4.np / LB / B12;
   const ha6_s4  = (s4.ht * s4.np) / s4.esp * s4.long_etrier / LB / B6;
   const ha10_s6 = g.lin * s6.n_barres / LB / B10;
@@ -144,9 +144,9 @@ export function computeRecap(inp: AllInputs): DebourseRecap {
   const ha6_s8  = (g.lin / s8.esp) * s8.long_traverse / LB / B6;
   const ha10_s9 = g.lin * s9.n_barres / LB / B10;
   const ha6_s9  = (g.lin / s9.esp) * s9.long_traverse / LB / B6;
-  const ha12_s12 = s12.n_barres * g.lin * s12.np / LB / B12;
-  const ha6_s12  = (g.lin * s12.np) / s12.esp * s12.long_etrier / LB / B6;
-  const ha10_s13 = g.lin * 2 * s13.np / LB / B10;
+  const ha12_s12 = s12.n_barres * s10.larg * s12.np / LB / B12;
+  const ha6_s12  = (s10.larg * s12.np) / s12.esp * s12.long_etrier / LB / B6;
+  const ha10_s13 = s10.long_dall * 2 * s13.np / LB / B10;
   const ha6_s13  = (s13.ht * s13.np) / s13.esp_etr * s13.long_etrier / LB / B6;
   const s10_long = s10.long_dall;
   const ha8_s14  = s10_long > 0 ? s10_long / s14.esp / B8 : 0;
