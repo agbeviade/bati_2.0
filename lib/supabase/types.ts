@@ -378,6 +378,12 @@ export type Database = {
         Update: Partial<Omit<Attendance, "id">>;
         Relationships: [];
       };
+      debourses_models: {
+        Row: { id: string; company_id: string; name: string; inputs: Json; created_at: string; updated_at: string };
+        Insert: { id?: string; company_id: string; name: string; inputs: Json; created_at?: string; updated_at?: string };
+        Update: { name?: string; inputs?: Json; updated_at?: string };
+        Relationships: [];
+      };
       material_categories: {
         Row: { id: string; company_id: string; slug: string; label: string; created_at: string };
         Insert: { id?: string; company_id: string; slug: string; label: string; created_at?: string };

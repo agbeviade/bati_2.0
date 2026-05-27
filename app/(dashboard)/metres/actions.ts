@@ -94,6 +94,47 @@ export async function deleteOuvrage(id: string) {
   revalidatePath("/metres");
 }
 
+// --- Modeles debourses secs ---
+
+export async function saveModel(name: string, inputs: object) {
+  const { companyId, supabase } = await getProfile();
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "Le nom est requis." };
+  const { error } = await supabase.from("debourses_models").insert({
+    company_id: companyId,
+    name: trimmed,
+    inputs: inputs as Json,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/metres");
+  return { success: true };
+}
+
+export async function listModels(): Promise<{ id: string; name: string; created_at: string }[]> {
+  const { supabase } = await getProfile();
+  const { data } = await supabase
+    .from("debourses_models")
+    .select("id, name, created_at")
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export async function loadModel(id: string) {
+  const { supabase } = await getProfile();
+  const { data } = await supabase
+    .from("debourses_models")
+    .select("inputs")
+    .eq("id", id)
+    .single();
+  return data?.inputs ?? null;
+}
+
+export async function deleteModel(id: string) {
+  const { supabase } = await getProfile();
+  await supabase.from("debourses_models").delete().eq("id", id);
+  revalidatePath("/metres");
+}
+
 export async function saveOuvrageType(data: {
   designation: string;
   type_geometrie: TypeGeometrie;

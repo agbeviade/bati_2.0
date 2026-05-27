@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronRight, Save, FolderOpen, Trash2 } from "lucide-react";
+import { saveModel, loadModel, deleteModel } from "@/app/(dashboard)/metres/actions";
 
 // --- Types -------------------------------------------------------------------
 
@@ -167,14 +169,35 @@ function StepCard({ num, title, children }: { num: number; title: string; childr
 
 // --- Main component -----------------------------------------------------------
 
-export function DeboursesCalculator() {
+export type ModelMeta = { id: string; name: string; created_at: string };
+
+export function DeboursesCalculator({ models = [] }: { models?: ModelMeta[] }) {
   const [inputs, setInputs] = useState<AllInputs>(DEFAULTS);
   const [open, setOpen] = useState<Record<SectionKey, boolean>>({
     fondation: true, elevation: false, dalle: false,
   });
+  const [modelName, setModelName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
   const toggleSection = useCallback((k: SectionKey) => {
     setOpen(o => ({ ...o, [k]: !o[k] }));
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!modelName.trim()) { setSaveMsg("Saisissez un nom."); return; }
+    setSaving(true);
+    setSaveMsg(null);
+    const res = await saveModel(modelName.trim(), inputs);
+    setSaving(false);
+    if (res?.error) setSaveMsg("Erreur : " + res.error);
+    else { setSaveMsg("Modele enregistre !"); setModelName(""); }
+  }, [modelName, inputs]);
+
+  const handleLoad = useCallback((rawInputs: unknown) => {
+    if (!rawInputs || typeof rawInputs !== "object") return;
+    setInputs(prev => ({ ...prev, ...(rawInputs as Partial<AllInputs>) }));
+    setSaveMsg("Modele charge.");
   }, []);
 
   const upd = useCallback(<K extends keyof AllInputs>(step: K, field: string, val: number) => {
@@ -315,6 +338,33 @@ export function DeboursesCalculator() {
 
   return (
     <div className="space-y-6">
+
+      {/* Barre modeles */}
+      {models.length > 0 && (
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-sm font-medium shrink-0">Charger un modele :</span>
+              {models.map(m => (
+                <div key={m.id} className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" className="h-7 text-xs"
+                    onClick={() => loadModel(m.id).then(handleLoad)}>
+                    {m.name}
+                  </Button>
+                  <button
+                    onClick={() => deleteModel(m.id)}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    title="Supprimer ce modele"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Parametres globaux */}
       <Card>
@@ -676,6 +726,30 @@ export function DeboursesCalculator() {
                 <ResultRow label="HA12" value={`${fmtI(tot_ha12)} bottes`} />
               </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sauvegarder comme modele */}
+      <Card>
+        <CardContent className="pt-4 pb-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Save className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm font-medium shrink-0">Enregistrer comme modele :</span>
+            <Input
+              placeholder="Nom du modele (ex: Villa 3 pieces)"
+              value={modelName}
+              onChange={e => setModelName(e.target.value)}
+              className="h-8 text-sm flex-1 min-w-[200px]"
+            />
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? "Enregistrement..." : "Enregistrer"}
+            </Button>
+            {saveMsg && (
+              <span className={`text-xs ${saveMsg.startsWith("Erreur") ? "text-destructive" : "text-green-600"}`}>
+                {saveMsg}
+              </span>
+            )}
           </div>
         </CardContent>
       </Card>
