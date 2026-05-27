@@ -82,10 +82,10 @@ export function SearchFilter<T>({
         </div>
 
         {filterOptions.length > 0 && (
-          <div className="flex gap-1.5 flex-wrap">
+          <div className="flex gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-x-visible md:pb-0 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Badge
               variant={activeFilter === "all" ? "default" : "outline"}
-              className="cursor-pointer px-3 py-1 text-xs"
+              className="cursor-pointer px-3 py-1 text-xs shrink-0"
               onClick={() => setActiveFilter("all")}
             >
               {filterAllLabel}
@@ -94,7 +94,7 @@ export function SearchFilter<T>({
               <Badge
                 key={opt.value}
                 variant={activeFilter === opt.value ? "default" : "outline"}
-                className="cursor-pointer px-3 py-1 text-xs"
+                className="cursor-pointer px-3 py-1 text-xs shrink-0"
                 onClick={() => setActiveFilter(opt.value)}
               >
                 {opt.label}
