@@ -9,7 +9,14 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface GlobalInputs { lin: number; }
+interface GlobalInputs {
+  lin: number;
+  long_barre: number;   // longueur d'une barre (m)
+  botte_ha6: number;    // barres par botte HA6
+  botte_ha8: number;    // barres par botte HA8
+  botte_ha10: number;   // barres par botte HA10
+  botte_ha12: number;   // barres par botte HA12
+}
 interface Step1Inputs { larg: number; ep: number; dosage: number; }
 interface Step2Inputs { larg: number; ht: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
 interface Step3Inputs { larg: number; ep: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
@@ -48,7 +55,7 @@ function fmtI(n: number) { return isFinite(n) && !isNaN(n) ? Math.ceil(n).toStri
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
 const DEFAULTS: AllInputs = {
-  global: { lin: 0 },
+  global: { lin: 0, long_barre: 12, botte_ha6: 36, botte_ha8: 21, botte_ha10: 13, botte_ha12: 9 },
   s1: { larg: 0.5, ep: 0.1, dosage: 250 },
   s2: { larg: 0.5, ht: 0.4, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 0.85 },
   s3: { larg: 1.0, ep: 0.15, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 1.35 },
@@ -164,6 +171,11 @@ export function DeboursesCalculator() {
   }, []);
 
   const g = inputs.global;
+  const LB  = g.long_barre;
+  const B6  = g.botte_ha6;
+  const B8  = g.botte_ha8;
+  const B10 = g.botte_ha10;
+  const B12 = g.botte_ha12;
 
   // ── Step 1 ─ Beton proprete ───────────────────────────────────────────────
   const s1 = inputs.s1;
@@ -174,15 +186,15 @@ export function DeboursesCalculator() {
   const s2 = inputs.s2;
   const s2_vb = vb(g.lin, s2.larg, s2.ht);
   const s2_cim = cim(s2_vb, s2.dosage);
-  const s2_ha10 = g.lin * s2.n_barres / 12 / 13;
-  const s2_ha6  = (g.lin / s2.esp) * s2.long_traverse / 12 / 36;
+  const s2_ha10 = g.lin * s2.n_barres / LB / B10;
+  const s2_ha6  = (g.lin / s2.esp) * s2.long_traverse / LB / B6;
 
   // ── Step 3 ─ Paillasses ───────────────────────────────────────────────────
   const s3 = inputs.s3;
   const s3_vb = vb(g.lin, s3.larg, s3.ep);
   const s3_cim = cim(s3_vb, s3.dosage);
-  const s3_ha10 = g.lin * s3.n_barres / 12 / 13;
-  const s3_ha6  = (g.lin / s3.esp) * s3.long_traverse / 12 / 36;
+  const s3_ha10 = g.lin * s3.n_barres / LB / B10;
+  const s3_ha6  = (g.lin / s3.esp) * s3.long_traverse / LB / B6;
   const s3_pl30 = (g.lin / 4) * 2;
   const s3_pl20 = g.lin / 4;
 
@@ -190,8 +202,8 @@ export function DeboursesCalculator() {
   const s4 = inputs.s4;
   const s4_vb  = s4.sect_b * s4.sect_h * s4.ht * s4.np;
   const s4_cim = cim(s4_vb, s4.dosage);
-  const s4_ha12 = s4.n_barres * s4.ht * s4.np / 12 / 9;
-  const s4_ha6  = (s4.ht * s4.np) / s4.esp * s4.long_etrier / 12 / 36;
+  const s4_ha12 = s4.n_barres * s4.ht * s4.np / LB / B12;
+  const s4_ha6  = (s4.ht * s4.np) / s4.esp * s4.long_etrier / LB / B6;
 
   // ── Step 5 ─ Murs 15 plein ────────────────────────────────────────────────
   const s5 = inputs.s5;
@@ -201,8 +213,8 @@ export function DeboursesCalculator() {
   const s6 = inputs.s6;
   const s6_vb  = vb(g.lin, s6.larg, s6.ht);
   const s6_cim = cim(s6_vb, s6.dosage);
-  const s6_ha10 = g.lin * s6.n_barres / 12 / 13;
-  const s6_ha6  = (g.lin / s6.esp) * s6.long_traverse / 12 / 36;
+  const s6_ha10 = g.lin * s6.n_barres / LB / B10;
+  const s6_ha6  = (g.lin / s6.esp) * s6.long_traverse / LB / B6;
 
   // ── Step 7 ─ Murs 15 creux ────────────────────────────────────────────────
   const s7 = inputs.s7;
@@ -212,15 +224,15 @@ export function DeboursesCalculator() {
   const s8 = inputs.s8;
   const s8_vb  = vb(g.lin, s8.larg, s8.ht);
   const s8_cim = cim(s8_vb, s8.dosage);
-  const s8_ha10 = g.lin * s8.n_barres / 12 / 13;
-  const s8_ha6  = (g.lin / s8.esp) * s8.long_traverse / 12 / 36;
+  const s8_ha10 = g.lin * s8.n_barres / LB / B10;
+  const s8_ha6  = (g.lin / s8.esp) * s8.long_traverse / LB / B6;
 
   // ── Step 9 ─ Chainage dalle ───────────────────────────────────────────────
   const s9 = inputs.s9;
   const s9_vb  = vb(g.lin, s9.larg, s9.ht);
   const s9_cim = cim(s9_vb, s9.dosage);
-  const s9_ha10 = g.lin * s9.n_barres / 12 / 13;
-  const s9_ha6  = (g.lin / s9.esp) * s9.long_traverse / 12 / 36;
+  const s9_ha10 = g.lin * s9.n_barres / LB / B10;
+  const s9_ha6  = (g.lin / s9.esp) * s9.long_traverse / LB / B6;
 
   // ── Step 10 ─ Hourdis ────────────────────────────────────────────────────
   const s10 = inputs.s10;
@@ -236,21 +248,20 @@ export function DeboursesCalculator() {
   const s12 = inputs.s12;
   const s12_vb  = s12.sect_b * s12.sect_h * g.lin * s12.np;
   const s12_cim = cim(s12_vb, s12.dosage);
-  // longueur des barres = lin (portée), pas ht (hauteur de section)
-  const s12_ha12 = s12.n_barres * g.lin * s12.np / 12 / 9;
-  const s12_ha6  = (g.lin * s12.np) / s12.esp * s12.long_etrier / 12 / 36;
+  const s12_ha12 = s12.n_barres * g.lin * s12.np / LB / B12;
+  const s12_ha6  = (g.lin * s12.np) / s12.esp * s12.long_etrier / LB / B6;
 
   // ── Step 13 ─ Nervures ────────────────────────────────────────────────────
   const s13 = inputs.s13;
   const s13_vb  = s13.larg * s13.ht * g.lin * s13.np;
   const s13_cim = cim(s13_vb, s13.dosage);
-  const s13_ha10 = g.lin * 2 * s13.np / 12 / 13;
-  const s13_ha6  = (s13.ht * s13.np) / s13.esp_etr * s13.long_etrier / 12 / 36;
+  const s13_ha10 = g.lin * 2 * s13.np / LB / B10;
+  const s13_ha6  = (s13.ht * s13.np) / s13.esp_etr * s13.long_etrier / LB / B6;
 
   // ── Step 14 ─ Quadrillage ─────────────────────────────────────────────────
   const s14 = inputs.s14;
-  const s14_ha8_long  = g.lin / s14.esp / 21;
-  const s14_ha6_trans = s10.larg > 0 ? s10.larg / s14.esp / 36 : 0;
+  const s14_ha8_long  = g.lin / s14.esp / B8;
+  const s14_ha6_trans = s10.larg > 0 ? s10.larg / s14.esp / B6 : 0;
 
   // ── Step 15 ─ Coulage dalle ───────────────────────────────────────────────
   const s15 = inputs.s15;
@@ -278,15 +289,30 @@ export function DeboursesCalculator() {
   return (
     <div className="space-y-6">
 
-      {/* Lineaire global */}
+      {/* Parametres globaux */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Parametre global</CardTitle>
+          <CardTitle className="text-base">Parametres globaux</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="max-w-xs">
             <NumInput label="Lineaire total" unit="m" defaultValue={g.lin}
               onChange={v => upd("global", "lin", v)} step="0.5" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Barres & bottes</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <NumInput label="Long. d'une barre" unit="m" defaultValue={g.long_barre}
+                onChange={v => upd("global", "long_barre", v)} step="0.5" min="1" />
+              <NumInput label="Barres/botte HA6" defaultValue={g.botte_ha6}
+                onChange={v => upd("global", "botte_ha6", v)} step="1" min="1" />
+              <NumInput label="Barres/botte HA8" defaultValue={g.botte_ha8}
+                onChange={v => upd("global", "botte_ha8", v)} step="1" min="1" />
+              <NumInput label="Barres/botte HA10" defaultValue={g.botte_ha10}
+                onChange={v => upd("global", "botte_ha10", v)} step="1" min="1" />
+              <NumInput label="Barres/botte HA12" defaultValue={g.botte_ha12}
+                onChange={v => upd("global", "botte_ha12", v)} step="1" min="1" />
+            </div>
           </div>
         </CardContent>
       </Card>
