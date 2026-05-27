@@ -8,56 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Save, FolderOpen, Trash2 } from "lucide-react";
 import { saveModel, loadModel, deleteModel } from "@/app/(dashboard)/metres/actions";
-
-// --- Types -------------------------------------------------------------------
-
-interface GlobalInputs {
-  lin: number;
-  long_barre: number;
-  botte_ha6: number;
-  botte_ha8: number;
-  botte_ha10: number;
-  botte_ha12: number;
-  poids_sac: number;       // kg par sac de ciment
-  briques_m2: number;
-  hourdis_m2: number;
-  long_planche: number;
-  hauteur_montee: number;  // hauteur d'une montee de briques (m)
-  montes_par_sac: number;  // nombre de montees par sac de ciment
-  camion_sable: number;
-  camion_g0525: number;
-  camion_g1525: number;
-  densite_gravier: number;
-}
-interface Step1Inputs { larg: number; ep: number; dosage: number; }
-interface Step2Inputs { larg: number; ht: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
-interface Step3Inputs { long: number; larg: number; prof: number; np: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
-interface Step4Inputs { n_barres: number; ht: number; np: number; esp: number; long_etrier: number; dosage: number; sect_b: number; sect_h: number; }
-interface Step5Inputs { ht_murs: number; }
-interface Step6Inputs { larg: number; ht: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
-interface Step7Inputs { ht_murs: number; }
-interface Step8Inputs { larg: number; ht: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
-interface Step9Inputs { larg: number; ht: number; dosage: number; n_barres: number; esp: number; long_traverse: number; }
-interface Step10Inputs { long_dall: number; larg: number; }
-interface Step11Inputs { larg_dall: number; ep: number; dosage: number; }
-interface Step12Inputs { n_barres: number; np: number; esp: number; long_etrier: number; dosage: number; sect_b: number; sect_h: number; }
-interface Step13Inputs { larg: number; ht: number; np: number; esp_etr: number; long_etrier: number; dosage: number; }
-interface Step14Inputs { esp: number; }
-interface Step15Inputs { larg_dall: number; ep: number; dosage: number; }
-
-interface AllInputs {
-  global: GlobalInputs;
-  s1: Step1Inputs; s2: Step2Inputs; s3: Step3Inputs; s4: Step4Inputs;
-  s5: Step5Inputs; s6: Step6Inputs; s7: Step7Inputs; s8: Step8Inputs;
-  s9: Step9Inputs; s10: Step10Inputs; s11: Step11Inputs; s12: Step12Inputs;
-  s13: Step13Inputs; s14: Step14Inputs; s15: Step15Inputs;
-}
+import type { AllInputs } from "@/lib/debourses-calc";
+import { DEFAULTS as CALC_DEFAULTS } from "@/lib/debourses-calc";
 
 // --- Calc helpers -------------------------------------------------------------
 
 function vb(lin: number, larg: number, ep: number) { return lin * larg * ep; }
 function cim(v: number, dosage: number) { return v * dosage; }
-function t(kg: number) { return kg / 1000; }
 function sbl(v: number) { return v * 0.4; }
 function grv(v: number) { return v * 0.8; }
 function fmt(n: number, d = 2) { return isFinite(n) && !isNaN(n) ? n.toFixed(d) : "0.00"; }
@@ -65,29 +22,7 @@ function fmtI(n: number) { return isFinite(n) && !isNaN(n) ? Math.ceil(n).toStri
 
 // --- Defaults ----------------------------------------------------------------
 
-const DEFAULTS: AllInputs = {
-  global: {
-    lin: 0, long_barre: 12, botte_ha6: 36, botte_ha8: 21, botte_ha10: 13, botte_ha12: 9,
-    poids_sac: 50,
-    briques_m2: 12, hourdis_m2: 10, long_planche: 4, hauteur_montee: 0.22, montes_par_sac: 3,
-    camion_sable: 6, camion_g0525: 20, camion_g1525: 25, densite_gravier: 1.5,
-  },
-  s1: { larg: 0.5, ep: 0.1, dosage: 250 },
-  s2: { larg: 0.5, ht: 0.4, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 0.85 },
-  s3: { long: 0.8, larg: 0.8, prof: 0.4, np: 0, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 1.35 },
-  s4: { n_barres: 4, ht: 3.0, np: 0, esp: 0.15, long_etrier: 1.5, dosage: 350, sect_b: 0.25, sect_h: 0.25 },
-  s5: { ht_murs: 1.0 },
-  s6: { larg: 0.25, ht: 0.25, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 0.85 },
-  s7: { ht_murs: 3.0 },
-  s8: { larg: 0.25, ht: 0.25, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 0.85 },
-  s9: { larg: 0.25, ht: 0.25, dosage: 350, n_barres: 4, esp: 0.25, long_traverse: 0.85 },
-  s10: { long_dall: 0, larg: 0 },
-  s11: { larg_dall: 0, ep: 0.05, dosage: 350 },
-  s12: { n_barres: 4, np: 0, esp: 0.15, long_etrier: 1.2, dosage: 350, sect_b: 0.25, sect_h: 0.35 },
-  s13: { larg: 0.25, ht: 0.35, np: 0, esp_etr: 0.15, long_etrier: 1.0, dosage: 350 },
-  s14: { esp: 0.5 },
-  s15: { larg_dall: 0, ep: 0.05, dosage: 350 },
-};
+const DEFAULTS: AllInputs = CALC_DEFAULTS;
 
 // --- UI primitives (defined OUTSIDE main component so refs are stable) --------
 

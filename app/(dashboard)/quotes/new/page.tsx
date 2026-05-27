@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Sparkles, ChevronDown, ChevronUp, Calculator } from "lucide-react";
 import { toast } from "sonner";
 import { createQuote, type QuoteItemInput } from "../actions";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
+import { loadModel } from "@/app/(dashboard)/metres/actions";
+import { computeRecap, RECAP_LABELS, RECAP_UNITS, RECAP_TO_MATERIAL, type AllInputs } from "@/lib/debourses-calc";
 
 type ItemCategory = "material" | "labor" | "transport" | "equipment" | "other";
 
@@ -54,6 +56,18 @@ export default function NewQuotePage() {
   const [aiDesc, setAiDesc] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Modeles debourses
+  const [modelOpen, setModelOpen] = useState(false);
+  const [models, setModels] = useState<{ id: string; name: string }[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState("");
+  const [modelLoading, setModelLoading] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from("debourses_models").select("id, name").order("created_at", { ascending: false })
+      .then(({ data }) => setModels(data ?? []));
+  }, []);
+
   const subtotal = items.reduce((s, i) => s + lineTotal(i), 0);
   const tax = subtotal * (Number(taxRate) || 0) / 100;
   const margin = subtotal * (Number(marginPct) || 0) / 100;
@@ -66,6 +80,48 @@ export default function NewQuotePage() {
   function removeItem(id: string) {
     if (items.length === 1) return;
     setItems(prev => prev.filter(i => i.id !== id));
+  }
+
+  async function handleGenerateFromModel() {
+    if (!selectedModelId) { toast.error("Selectionnez un modele."); return; }
+    setModelLoading(true);
+    try {
+      const rawInputs = await loadModel(selectedModelId);
+      if (!rawInputs) { toast.error("Modele introuvable."); return; }
+
+      const inputs = rawInputs as unknown as AllInputs;
+      const recap = computeRecap(inputs);
+
+      // Charger les prix depuis la DB
+      const supabase = createClient();
+      const matNames = [...new Set(Object.values(RECAP_TO_MATERIAL))];
+      const { data: mats } = await supabase
+        .from("materials").select("name, unit_cost").in("name", matNames);
+      const priceMap: Record<string, number> = {};
+      (mats ?? []).forEach(m => { priceMap[m.name] = m.unit_cost ?? 0; });
+
+      // Generer les lignes
+      const lines: LineItem[] = (Object.keys(recap) as (keyof typeof recap)[])
+        .filter(key => recap[key] > 0)
+        .map(key => {
+          const matName = RECAP_TO_MATERIAL[key];
+          const price = priceMap[matName] ?? 0;
+          return {
+            id: crypto.randomUUID(),
+            category: "material" as const,
+            label: RECAP_LABELS[key],
+            quantity: String(recap[key]),
+            unit: RECAP_UNITS[key],
+            unit_price: String(price),
+          };
+        });
+
+      setItems(lines);
+      setModelOpen(false);
+      toast.success(`${lines.length} lignes generees depuis le modele.`);
+    } finally {
+      setModelLoading(false);
+    }
   }
 
   async function handleGenerateAI(formEl: HTMLFormElement | null) {
@@ -153,6 +209,49 @@ export default function NewQuotePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6" id="quote-form">
+        {/* Bloc modele debourses */}
+        <Card className="border-dashed border-blue-300 bg-blue-50/40">
+          <CardHeader className="py-3 px-4">
+            <button type="button" className="flex items-center gap-2 w-full text-left"
+              onClick={() => setModelOpen(v => !v)}>
+              <Calculator className="h-4 w-4 text-blue-500" />
+              <span className="font-semibold text-sm text-blue-800">Generer depuis un modele de debourses</span>
+              <span className="ml-auto">
+                {modelOpen ? <ChevronUp className="h-4 w-4 text-blue-400" /> : <ChevronDown className="h-4 w-4 text-blue-400" />}
+              </span>
+            </button>
+          </CardHeader>
+          {modelOpen && (
+            <CardContent className="pt-0 pb-4 px-4 space-y-3">
+              {models.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Aucun modele sauvegarde. Rendez-vous dans <Link href="/metres" className="underline">Metres</Link> pour en creer un.
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    Selectionnez un modele de debourses — les quantites et prix des materiaux seront importes automatiquement.
+                  </p>
+                  <select
+                    value={selectedModelId}
+                    onChange={e => setSelectedModelId(e.target.value)}
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="">-- Choisir un modele --</option>
+                    {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                  <Button type="button" size="sm" disabled={modelLoading || !selectedModelId}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={handleGenerateFromModel}>
+                    <Calculator className="h-3.5 w-3.5 mr-1.5" />
+                    {modelLoading ? "Generation en cours..." : "Generer les lignes"}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          )}
+        </Card>
+
         {/* Bloc IA */}
         <Card className="border-dashed border-purple-300 bg-purple-50/40">
           <CardHeader className="py-3 px-4">
