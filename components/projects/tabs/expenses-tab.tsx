@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition, useState } from "react";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { createExpense, deleteExpense } from "@/app/(dashboard)/projects/actions";
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,44 @@ function catColor(cat: string) {
   return CATEGORIES.find(c => c.value === cat)?.color ?? "bg-gray-100 text-gray-600";
 }
 
-export function ExpensesTab({ projectId, expenses, currency }: {
+function printExpenseReceipt(exp: {
+  description: string | null;
+  category: string;
+  amount: number;
+  spent_at: string;
+}, projectName: string, currency: string) {
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<title>Reçu dépense</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 420px; margin: 40px auto; color: #111; }
+  .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 16px; margin-bottom: 20px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #ede9fe; color: #5b21b6; }
+  .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; }
+  .row .label { color: #555; font-size: 13px; }
+  .row .value { font-weight: 600; font-size: 13px; }
+  .total { display: flex; justify-content: space-between; padding: 12px 0; font-size: 16px; font-weight: bold; border-top: 2px solid #111; margin-top: 8px; }
+  .footer { text-align: center; margin-top: 32px; font-size: 11px; color: #888; }
+</style></head><body>
+<div class="header">
+  <p style="font-size:11px;color:#888;margin:0 0 8px">BatiFlow</p>
+  <h2 style="margin:0 0 8px">REÇU DE DÉPENSE</h2>
+  <span class="badge">DÉPENSE</span>
+</div>
+<div class="row"><span class="label">Chantier</span><span class="value">${projectName}</span></div>
+<div class="row"><span class="label">Date</span><span class="value">${new Date(exp.spent_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</span></div>
+<div class="row"><span class="label">Catégorie</span><span class="value">${catLabel(exp.category)}</span></div>
+${exp.description ? `<div class="row"><span class="label">Description</span><span class="value">${exp.description}</span></div>` : ""}
+<div class="total"><span>MONTANT</span><span>${new Intl.NumberFormat("fr-FR", { style: "currency", currency, maximumFractionDigits: 0 }).format(exp.amount)}</span></div>
+<div class="footer">Document généré le ${new Date().toLocaleDateString("fr-FR")} — BatiFlow</div>
+<script>window.onload = function(){ window.print(); }</script>
+</body></html>`;
+  const win = window.open("", "_blank", "width=500,height=700");
+  if (win) { win.document.write(html); win.document.close(); }
+}
+
+export function ExpensesTab({ projectId, projectName, expenses, currency }: {
   projectId: string;
+  projectName: string;
   expenses: ProjectExpense[];
   currency: string;
 }) {
@@ -136,6 +172,13 @@ export function ExpensesTab({ projectId, expenses, currency }: {
                       {new Date(exp.spent_at).toLocaleDateString("fr-FR")}
                     </span>
                     <span className="font-semibold text-sm flex-shrink-0">{fmt(exp.amount, currency)}</span>
+                    <Button
+                      variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 text-muted-foreground hover:text-foreground"
+                      title="Imprimer le reçu"
+                      onClick={() => printExpenseReceipt(exp, projectName, currency)}
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                    </Button>
                     <Button
                       variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 text-muted-foreground hover:text-destructive"
                       disabled={isPending}

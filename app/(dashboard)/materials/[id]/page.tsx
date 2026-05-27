@@ -5,12 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PurchaseSection } from "@/components/materials/purchase-section";
 import { deleteMaterial, updateMaterial } from "@/app/(dashboard)/materials/actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DeleteButton } from "@/components/ui/delete-button";
-import type { Material, StockMovement } from "@/lib/supabase/types";
+import type { Material } from "@/lib/supabase/types";
 import type { CategoryRow } from "@/components/materials/category-manager";
 
 const UNITS = ["u", "kg", "t", "m", "m²", "m³", "L", "ml", "sac", "barre", "planche", "rouleau", "boîte"];
@@ -41,17 +40,6 @@ export default async function MaterialDetailPage({
     .order("label");
   const categories = (categoriesData ?? []) as CategoryRow[];
   const categoryLabel = categories.find((c) => c.slug === mat.category)?.label ?? mat.category;
-
-  // Mouvements d'achat et d'ajustement uniquement (les sorties chantier se gèrent depuis le chantier)
-  const { data: movData } = await admin
-    .from("stock_movements")
-    .select("id, material_id, type, quantity, unit_cost, notes, created_at")
-    .eq("material_id", id)
-    .in("type", ["purchase", "adjustment"])
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  const movements = (movData ?? []) as Pick<StockMovement, "id" | "material_id" | "type" | "quantity" | "unit_cost" | "notes" | "created_at">[];
 
   const stockValue = mat.stock_qty * mat.unit_cost;
 
@@ -150,12 +138,6 @@ export default async function MaterialDetailPage({
         </Card>
       )}
 
-      {/* Achats & ajustements (les sorties se font depuis le chantier) */}
-      <PurchaseSection
-        materialId={id}
-        unit={mat.unit}
-        movements={movements}
-      />
     </div>
   );
 }

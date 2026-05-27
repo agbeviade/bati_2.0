@@ -60,7 +60,7 @@ export default async function ProjectDetailPage({
         .from("stock_movements")
         .select("id, material_id, type, quantity, unit_cost, notes, created_at, materials(name, unit)")
         .eq("project_id", id)
-        .in("type", ["use", "return"])
+        .in("type", ["purchase", "use", "return"])
         .order("created_at", { ascending: false }),
       admin
         .from("materials")
@@ -190,13 +190,14 @@ export default async function ProjectDetailPage({
       {tab === "materials" && (
         <MaterialsTab
           projectId={id}
+          projectName={project.name}
           movements={projectMovements}
           materials={allMaterials}
           currency={currency}
         />
       )}
       {tab === "expenses" && (
-        <ExpensesTab projectId={id} expenses={expenses} currency={currency} />
+        <ExpensesTab projectId={id} projectName={project.name} expenses={expenses} currency={currency} />
       )}
       {tab === "photos" && (
         <PhotosTab projectId={id} companyId={project.company_id} initialPhotos={photos} />

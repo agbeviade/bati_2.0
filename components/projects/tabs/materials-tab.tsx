@@ -1,9 +1,9 @@
 "use client";
 
-import { useTransition, useState } from "react";
-import { Trash2, Plus, ArrowUp, RotateCcw, Package, PackageX } from "lucide-react";
+import { useTransition, useState, useRef, useEffect } from "react";
+import { Trash2, Plus, ArrowDown, ArrowUp, Package, PackageX, Printer, Search, X } from "lucide-react";
 import { toast } from "sonner";
-import { addMovement, deleteMovement } from "@/app/(dashboard)/materials/actions";
+import { addProjectEntry, addProjectExit, deleteProjectMovement } from "@/app/(dashboard)/projects/[id]/stock-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,243 +23,414 @@ type Movement = {
   unit: string;
 };
 
-const MOVE_TYPES = {
-  use:    { label: "Sortie chantier",  icon: ArrowUp,   color: "text-destructive", bg: "bg-destructive/10" },
-  return: { label: "Retour au stock",  icon: RotateCcw, color: "text-primary",     bg: "bg-primary/10" },
-} as const;
+type CatalogMaterial = Pick<Material, "id" | "name" | "unit" | "unit_cost">;
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
-
+function fmt(n: number, currency: string) {
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
+}
 function fmtNum(n: number) {
   return n.toLocaleString("fr-FR");
 }
 
+function printReceipt(data: {
+  type: "entry" | "exit";
+  projectName: string;
+  materialName: string;
+  unit: string;
+  quantity: number;
+  unitCost?: number;
+  notes?: string | null;
+  date: string;
+  currency: string;
+}) {
+  const isEntry = data.type === "entry";
+  const total = isEntry && data.unitCost ? data.quantity * data.unitCost : null;
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<title>Reçu ${isEntry ? "Entrée" : "Sortie"} stock</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 420px; margin: 40px auto; color: #111; }
+  .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 16px; margin-bottom: 20px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;
+    background: ${isEntry ? "#d1fae5" : "#fee2e2"}; color: ${isEntry ? "#065f46" : "#991b1b"}; }
+  .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; }
+  .row .label { color: #555; font-size: 13px; }
+  .row .value { font-weight: 600; font-size: 13px; }
+  .total { display: flex; justify-content: space-between; padding: 12px 0; font-size: 16px; font-weight: bold; border-top: 2px solid #111; margin-top: 8px; }
+  .footer { text-align: center; margin-top: 32px; font-size: 11px; color: #888; }
+  @media print { body { margin: 20px; } }
+</style></head><body>
+<div class="header">
+  <p style="font-size:11px;color:#888;margin:0 0 8px">BatiFlow</p>
+  <h2 style="margin:0 0 8px">REÇU DE STOCK</h2>
+  <span class="badge">${isEntry ? "ENTRÉE (ACHAT)" : "SORTIE (UTILISATION)"}</span>
+</div>
+<div class="row"><span class="label">Chantier</span><span class="value">${data.projectName}</span></div>
+<div class="row"><span class="label">Date</span><span class="value">${fmtDate(data.date)}</span></div>
+<div class="row"><span class="label">Matériau</span><span class="value">${data.materialName}</span></div>
+<div class="row"><span class="label">Quantité</span><span class="value">${fmtNum(data.quantity)} ${data.unit}</span></div>
+${isEntry && data.unitCost ? `<div class="row"><span class="label">Prix unitaire</span><span class="value">${fmt(data.unitCost, data.currency)} / ${data.unit}</span></div>` : ""}
+${data.notes ? `<div class="row"><span class="label">${isEntry ? "Notes" : "Justification"}</span><span class="value">${data.notes}</span></div>` : ""}
+${total !== null ? `<div class="total"><span>TOTAL</span><span>${fmt(total, data.currency)}</span></div>` : ""}
+<div class="footer">Document généré le ${new Date().toLocaleDateString("fr-FR")} — BatiFlow</div>
+<script>window.onload = function(){ window.print(); }</script>
+</body></html>`;
+  const win = window.open("", "_blank", "width=500,height=700");
+  if (win) { win.document.write(html); win.document.close(); }
+}
+
+// Combobox de recherche matériau
+function MaterialSearch({
+  materials,
+  selected,
+  onSelect,
+}: {
+  materials: CatalogMaterial[];
+  selected: CatalogMaterial | null;
+  onSelect: (m: CatalogMaterial | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const filtered = query.trim()
+    ? materials.filter(m => m.name.toLowerCase().includes(query.toLowerCase()))
+    : materials.slice(0, 20);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <Input
+          value={selected ? selected.name : query}
+          onChange={e => { setQuery(e.target.value); onSelect(null); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder="Rechercher un matériau..."
+          className="pl-8 pr-8 text-sm"
+        />
+        {(selected || query) && (
+          <button
+            type="button"
+            onClick={() => { setQuery(""); onSelect(null); setOpen(false); }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {open && filtered.length > 0 && !selected && (
+        <div className="absolute z-50 w-full mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
+          {filtered.map(m => (
+            <button
+              key={m.id}
+              type="button"
+              className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center justify-between gap-2"
+              onMouseDown={e => { e.preventDefault(); onSelect(m); setQuery(""); setOpen(false); }}
+            >
+              <span className="truncate">{m.name}</span>
+              <span className="text-xs text-muted-foreground flex-shrink-0">{fmtNum(m.unit_cost)} / {m.unit}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MaterialsTab({
   projectId,
+  projectName,
   movements: initialMovements,
   materials,
   currency,
 }: {
   projectId: string;
+  projectName: string;
   movements: Movement[];
-  materials: Pick<Material, "id" | "name" | "unit" | "stock_qty" | "unit_cost">[];
+  materials: CatalogMaterial[];
   currency: string;
 }) {
   const [movements, setMovements] = useState(initialMovements);
-  const [showForm, setShowForm] = useState(false);
-  const [selectedMat, setSelectedMat] = useState(materials[0]?.id ?? "");
+  const [mode, setMode] = useState<"entry" | "exit" | null>(null);
+  const [selectedMat, setSelectedMat] = useState<CatalogMaterial | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const mat = materials.find(m => m.id === selectedMat);
+  // État formulaire entrée
+  const [entryQty, setEntryQty] = useState("");
+  const [entryPrice, setEntryPrice] = useState("");
+  const [entryNotes, setEntryNotes] = useState("");
 
-  // Résumé par matériau
-  const summary = Object.values(
-    movements.reduce<Record<string, { material_id: string; name: string; unit: string; used: number; returned: number; cost: number }>>((acc, m) => {
-      if (!acc[m.material_id]) {
-        acc[m.material_id] = { material_id: m.material_id, name: m.material_name, unit: m.unit, used: 0, returned: 0, cost: 0 };
-      }
-      if (m.type === "use") {
-        acc[m.material_id].used += m.quantity;
-        acc[m.material_id].cost += m.quantity * (m.unit_cost ?? 0);
-      } else if (m.type === "return") {
-        acc[m.material_id].returned += m.quantity;
-      }
-      return acc;
-    }, {})
-  ).sort((a, b) => b.cost - a.cost);
+  // État formulaire sortie
+  const [exitQty, setExitQty] = useState("");
+  const [exitJustif, setExitJustif] = useState("");
 
-  const totalCost = summary.reduce((s, r) => s + r.cost, 0);
+  const totalEntries = movements
+    .filter(m => m.type === "purchase")
+    .reduce((s, m) => s + m.quantity * (m.unit_cost ?? 0), 0);
 
-  function handleAdd(e: React.FormEvent<HTMLFormElement>) {
+  function openMode(m: "entry" | "exit") {
+    setMode(prev => prev === m ? null : m);
+    setSelectedMat(null);
+    setEntryQty(""); setEntryPrice(""); setEntryNotes("");
+    setExitQty(""); setExitJustif("");
+  }
+
+  function handleEntry(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedMat) { toast.error("Choisissez un matériau."); return; }
-    const fd = new FormData(e.currentTarget);
-    fd.set("project_id", projectId);
+    const qty = parseFloat(entryQty);
+    const price = parseFloat(entryPrice);
+    if (!qty || qty <= 0) { toast.error("Quantité invalide."); return; }
+    if (!price || price <= 0) { toast.error("Prix unitaire requis."); return; }
     startTransition(async () => {
-      const res = await addMovement(selectedMat, fd);
+      const res = await addProjectEntry(projectId, selectedMat.id, qty, price, entryNotes);
       if (res?.error) { toast.error(res.error); return; }
-      toast.success("Mouvement enregistré.");
-      setShowForm(false);
-      // Recharger la page pour avoir les données fraîches
+      toast.success("Entrée enregistrée — budget mis à jour.");
+      setMode(null);
       window.location.reload();
     });
   }
 
-  function handleDelete(id: string, matId: string) {
+  function handleExit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedMat) { toast.error("Choisissez un matériau."); return; }
+    const qty = parseFloat(exitQty);
+    if (!qty || qty <= 0) { toast.error("Quantité invalide."); return; }
+    if (!exitJustif.trim()) { toast.error("La justification est obligatoire."); return; }
     startTransition(async () => {
-      await deleteMovement(id, matId);
-      setMovements(prev => prev.filter(m => m.id !== id));
+      const res = await addProjectExit(projectId, selectedMat.id, qty, exitJustif);
+      if (res?.error) { toast.error(res.error); return; }
+      toast.success("Sortie enregistrée.");
+      setMode(null);
+      window.location.reload();
+    });
+  }
+
+  function handleDelete(m: Movement) {
+    startTransition(async () => {
+      await deleteProjectMovement(m.id, projectId, m.type, m.quantity, m.unit_cost);
+      setMovements(prev => prev.filter(x => x.id !== m.id));
       toast.success("Mouvement supprimé.");
     });
   }
 
   return (
     <div className="space-y-4">
-      {/* Récap coût total */}
-      {summary.length > 0 && (
+      {/* Résumé */}
+      {totalEntries > 0 && (
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold">Récapitulatif des matériaux</p>
-              <p className="text-sm font-bold text-primary">
-                {fmtNum(totalCost)} {currency}
-              </p>
-            </div>
-            <div className="space-y-2">
-              {summary.map(row => {
-                const net = row.used - row.returned;
-                return (
-                  <div key={row.material_id} className="flex items-center gap-3 py-1.5">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Package className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{row.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {fmtNum(row.used)} {row.unit} sorti
-                        {row.returned > 0 && ` · ${fmtNum(row.returned)} retourné`}
-                        {" · "}net : {fmtNum(net)} {row.unit}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">{fmtNum(row.cost)} {currency}</p>
-                    </div>
-                  </div>
-                );
-              })}
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm text-muted-foreground">Total achats matériaux</span>
+              <span className="font-bold text-primary">{fmt(totalEntries, currency)}</span>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Bouton + formulaire */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Sorties & retours matériaux</CardTitle>
-            <Button size="sm" onClick={() => setShowForm(v => !v)} disabled={materials.length === 0}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Enregistrer
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {materials.length === 0 && (
-            <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-              <PackageX className="h-8 w-8 opacity-40" />
-              <p className="text-sm">Aucun matériau dans le catalogue.</p>
-              <p className="text-xs">Ajoutez d'abord des matériaux dans le module Matériaux.</p>
-            </div>
-          )}
+      {/* Boutons actions */}
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant={mode === "entry" ? "default" : "outline"}
+          onClick={() => openMode("entry")}
+          disabled={materials.length === 0}
+        >
+          <ArrowDown className="h-3.5 w-3.5 mr-1.5" />
+          Entrée
+        </Button>
+        <Button
+          size="sm"
+          variant={mode === "exit" ? "destructive" : "outline"}
+          onClick={() => openMode("exit")}
+          disabled={materials.length === 0}
+        >
+          <ArrowUp className="h-3.5 w-3.5 mr-1.5" />
+          Sortie
+        </Button>
+      </div>
 
-          {showForm && (
-            <form onSubmit={handleAdd} className="border rounded-lg p-4 space-y-3 bg-muted/30">
-              {/* Sélection matériau */}
+      {/* Formulaire entrée */}
+      {mode === "entry" && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <ArrowDown className="h-4 w-4 text-green-600" />
+              Nouvelle entrée — Achat
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleEntry} className="space-y-3">
               <div className="space-y-1.5">
                 <Label>Matériau *</Label>
-                <select
-                  value={selectedMat}
-                  onChange={e => setSelectedMat(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  required
-                >
-                  {materials.map(m => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} — stock : {fmtNum(m.stock_qty)} {m.unit}
-                    </option>
-                  ))}
-                </select>
-                {mat && mat.stock_qty <= 0 && (
-                  <p className="text-xs text-destructive">⚠ Stock épuisé pour ce matériau.</p>
-                )}
+                <MaterialSearch materials={materials} selected={selectedMat} onSelect={setSelectedMat} />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* Type */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="mat_type">Type *</Label>
-                  <select
-                    name="type" id="mat_type" defaultValue="use" required
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    {Object.entries(MOVE_TYPES).map(([v, c]) => (
-                      <option key={v} value={v}>{c.label}</option>
-                    ))}
-                  </select>
-                </div>
-                {/* Quantité */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="quantity">Quantité ({mat?.unit ?? "u"}) *</Label>
-                  <Input id="quantity" name="quantity" type="number" min="0.001" step="0.001" required />
-                </div>
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="unit_cost">Prix unitaire (optionnel)</Label>
+                  <Label>Quantité{selectedMat ? ` (${selectedMat.unit})` : ""} *</Label>
                   <Input
-                    id="unit_cost" name="unit_cost" type="number" min="0" step="1"
-                    placeholder={mat ? String(mat.unit_cost) : ""}
+                    type="number" min="0.001" step="0.001"
+                    value={entryQty} onChange={e => setEntryQty(e.target.value)}
+                    placeholder="0"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Input id="notes" name="notes" placeholder="Bon de livraison, remarques..." />
+                  <Label>Prix unitaire ({currency}) *</Label>
+                  <Input
+                    type="number" min="0" step="1"
+                    value={entryPrice}
+                    onChange={e => setEntryPrice(e.target.value)}
+                    placeholder={selectedMat ? String(selectedMat.unit_cost) : "0"}
+                  />
                 </div>
               </div>
-
+              {entryQty && entryPrice && parseFloat(entryQty) > 0 && parseFloat(entryPrice) > 0 && (
+                <p className="text-sm font-semibold text-primary">
+                  Total : {fmt(parseFloat(entryQty) * parseFloat(entryPrice), currency)}
+                </p>
+              )}
+              <div className="space-y-1.5">
+                <Label>Notes (fournisseur, bon de livraison...)</Label>
+                <Input
+                  value={entryNotes} onChange={e => setEntryNotes(e.target.value)}
+                  placeholder="Optionnel"
+                />
+              </div>
               <div className="flex gap-2">
                 <Button type="submit" size="sm" disabled={isPending}>
                   {isPending ? "Enregistrement..." : "Enregistrer"}
                 </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={() => setShowForm(false)}>
-                  Annuler
-                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setMode(null)}>Annuler</Button>
               </div>
             </form>
-          )}
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Historique des mouvements du chantier */}
-          {movements.length === 0 && !showForm ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">
-              Aucun mouvement enregistré sur ce chantier.
-            </p>
+      {/* Formulaire sortie */}
+      {mode === "exit" && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <ArrowUp className="h-4 w-4 text-destructive" />
+              Nouvelle sortie — Utilisation
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleExit} className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Matériau *</Label>
+                <MaterialSearch materials={materials} selected={selectedMat} onSelect={setSelectedMat} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Quantité{selectedMat ? ` (${selectedMat.unit})` : ""} *</Label>
+                <Input
+                  type="number" min="0.001" step="0.001"
+                  value={exitQty} onChange={e => setExitQty(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Justification *</Label>
+                <Input
+                  value={exitJustif} onChange={e => setExitJustif(e.target.value)}
+                  placeholder="Ex : fondations nord, dalle RDC..."
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" size="sm" variant="destructive" disabled={isPending}>
+                  {isPending ? "Enregistrement..." : "Enregistrer"}
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setMode(null)}>Annuler</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Catalogue vide */}
+      {materials.length === 0 && (
+        <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+          <PackageX className="h-8 w-8 opacity-40" />
+          <p className="text-sm">Aucun matériau dans le catalogue.</p>
+          <p className="text-xs">Ajoutez d'abord des matériaux dans le module Matériaux.</p>
+        </div>
+      )}
+
+      {/* Historique */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Historique des mouvements</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {movements.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Aucun mouvement enregistré.</p>
           ) : (
             <ul className="space-y-0.5">
               {movements.map((m, i) => {
-                const cfg = MOVE_TYPES[m.type as keyof typeof MOVE_TYPES];
-                if (!cfg) return null;
-                const Icon = cfg.icon;
+                const isEntry = m.type === "purchase";
                 return (
                   <li key={m.id}>
                     <div className="flex items-center gap-3 py-2.5">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${cfg.bg}`}>
-                        <Icon className={`h-3.5 w-3.5 ${cfg.color}`} />
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${isEntry ? "bg-green-100" : "bg-red-100"}`}>
+                        {isEntry
+                          ? <ArrowDown className="h-3.5 w-3.5 text-green-700" />
+                          : <ArrowUp className="h-3.5 w-3.5 text-red-700" />
+                        }
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium truncate">{m.material_name}</span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${cfg.bg} ${cfg.color}`}>
-                            {cfg.label}
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${isEntry ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            {isEntry ? "Entrée" : "Sortie"}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {m.type === "use" ? "−" : "+"}{fmtNum(m.quantity)} {m.unit}
-                          {m.unit_cost ? ` · ${fmtNum(m.unit_cost * m.quantity)} ${currency}` : ""}
+                          {fmtNum(m.quantity)} {m.unit}
+                          {isEntry && m.unit_cost ? ` · ${fmt(m.unit_cost * m.quantity, currency)}` : ""}
                           {" · "}{fmtDate(m.created_at)}
-                          {m.notes && ` · ${m.notes}`}
+                          {m.notes ? ` · ${m.notes}` : ""}
                         </p>
                       </div>
-                      <Button
-                        variant="ghost" size="icon"
-                        className="h-7 w-7 flex-shrink-0 text-muted-foreground hover:text-destructive"
-                        disabled={isPending}
-                        onClick={() => handleDelete(m.id, m.material_id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost" size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          title="Imprimer le reçu"
+                          onClick={() => printReceipt({
+                            type: isEntry ? "entry" : "exit",
+                            projectName,
+                            materialName: m.material_name,
+                            unit: m.unit,
+                            quantity: m.quantity,
+                            unitCost: m.unit_cost ?? undefined,
+                            notes: m.notes,
+                            date: m.created_at,
+                            currency,
+                          })}
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          disabled={isPending}
+                          onClick={() => handleDelete(m)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                     {i < movements.length - 1 && <Separator />}
                   </li>
