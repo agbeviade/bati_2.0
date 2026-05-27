@@ -306,7 +306,98 @@ Catégories valides : "material", "labor", "transport", "equipment", "other"`,
 }
 
 // ---------------------------------------------------------------------------
-// Feature 5 — Generation de devis depuis les debours secs
+// Feature 5 — Generation de devis depuis un modele de devis (PDF/image)
+// ---------------------------------------------------------------------------
+
+export async function genererDevisDepuisTemplate(
+  fileBase64: string,
+  mimeType: string,
+  fileType: "pdf" | "image",
+  description: string,
+  debourseContext?: Array<{ label: string; quantity: number; unit: string }>
+): Promise<{
+  items: Array<{
+    category: "material" | "labor" | "transport" | "equipment" | "other";
+    label: string;
+    quantity: number;
+    unit: string;
+    unit_price: number;
+    total: number;
+  }>;
+  notes: string;
+  error?: string;
+}> {
+  try {
+    const ai = getAI();
+
+    const debourseSection = debourseContext && debourseContext.length > 0
+      ? `\nQuantités exactes calculées par le calculateur de débours secs (à utiliser telles quelles pour les matériaux) :\n${debourseContext.map(l => `- ${l.label} : ${l.quantity} ${l.unit}`).join("\n")}\n`
+      : "";
+
+    const systemPrompt = `Tu es un expert en devis BTP Côte d'Ivoire (Bordereau des Prix BTP CI 2024).
+Tu analyses des modèles de devis pour en extraire la structure et les postes types.
+Tu génères des devis complets avec des prix réalistes en FCFA.
+Tu réponds UNIQUEMENT en JSON valide, sans texte autour.`;
+
+    const userText = `Analyse ce modèle de devis BTP et génère un devis COMPLET et ADAPTÉ pour le projet suivant.
+
+Description du projet : ${description || "Construction BTP en Côte d'Ivoire"}
+${debourseSection}
+INSTRUCTIONS :
+${debourseContext?.length ? "1. Pour les matériaux listés ci-dessus, utilise les quantités EXACTES fournies (ne les modifie pas)\n2. Adapte les autres postes (main d'oeuvre, transport, équipements) selon le modèle\n3. Attribue des prix réalistes selon le marché ivoirien 2024" : "1. Inspire-toi de la structure et des postes du modèle\n2. Adapte les quantités à la description du projet\n3. Attribue des prix réalistes selon le marché ivoirien 2024"}
+4. Catégories valides : "material", "labor", "transport", "equipment", "other"
+5. Sois EXHAUSTIF - inclus tous les postes nécessaires
+
+Réponds UNIQUEMENT avec ce JSON :
+{
+  "items": [
+    {
+      "category": "material",
+      "label": "Ciment CPA 325 (sac 50kg)",
+      "quantity": 120,
+      "unit": "sac",
+      "unit_price": 5000,
+      "total": 600000
+    }
+  ],
+  "notes": "Devis généré à partir du modèle. Prix indicatifs BTP CI 2024."
+}`;
+
+    const imageMediaType = mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+
+    const contentBlock = fileType === "pdf"
+      ? {
+          type: "document" as const,
+          source: { type: "base64" as const, media_type: "application/pdf" as const, data: fileBase64 },
+        }
+      : {
+          type: "image" as const,
+          source: { type: "base64" as const, media_type: imageMediaType, data: fileBase64 },
+        };
+
+    const response = await ai.messages.create({
+      model: AI_MODEL,
+      max_tokens: 8192,
+      system: systemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: [contentBlock, { type: "text", text: userText }],
+        },
+      ],
+    });
+
+    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const json = extractJson(text);
+    const result = JSON.parse(json);
+    return { items: result.items ?? [], notes: result.notes ?? "" };
+  } catch (e) {
+    return { items: [], notes: "", error: String(e) };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Feature 6 — Generation de devis depuis les quantites debours secs
 // ---------------------------------------------------------------------------
 
 export async function genererDevisDepuisDebourses(

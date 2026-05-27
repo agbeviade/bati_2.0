@@ -14,6 +14,7 @@ import {
   Settings,
   BarChart3,
   Ruler,
+  BookTemplate,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ const items = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/projects", label: "Chantiers", icon: HardHat },
   { href: "/quotes", label: "Devis", icon: FileText },
+  { href: "/quotes/templates", label: "Modèles de devis", icon: BookTemplate },
   { href: "/materials", label: "Matériaux", icon: Package },
   { href: "/metres", label: "Métrés", icon: Ruler },
   { href: "/teams", label: "Équipes", icon: Users },

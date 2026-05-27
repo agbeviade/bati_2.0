@@ -165,6 +165,43 @@ export async function generateQuoteFromDebourseModel(
   return genererDevisDepuisDebourses(lignes, description);
 }
 
+export async function generateQuoteFromTemplate(
+  templateId: string,
+  description: string,
+  debourseModelId?: string
+): Promise<{
+  items: Array<{
+    category: "material" | "labor" | "transport" | "equipment" | "other";
+    label: string;
+    quantity: number;
+    unit: string;
+    unit_price: number;
+    total: number;
+  }>;
+  notes: string;
+  error?: string;
+}> {
+  const { getTemplateAsBase64 } = await import("@/app/(dashboard)/quotes/templates/actions");
+  const { base64, mimeType, fileType, error: fetchError } = await getTemplateAsBase64(templateId);
+  if (fetchError) return { items: [], notes: "", error: fetchError };
+
+  let debourseContext: Array<{ label: string; quantity: number; unit: string }> | undefined;
+  if (debourseModelId) {
+    const { supabase } = await getProfile();
+    const { data } = await supabase.from("debourses_models").select("inputs").eq("id", debourseModelId).single();
+    if (data?.inputs) {
+      const { computeRecap, RECAP_LABELS, RECAP_UNITS } = await import("@/lib/debourses-calc");
+      const recap = computeRecap(data.inputs as unknown as Parameters<typeof computeRecap>[0]);
+      debourseContext = (Object.keys(recap) as (keyof typeof recap)[])
+        .filter(k => recap[k] > 0)
+        .map(k => ({ label: RECAP_LABELS[k], quantity: recap[k], unit: RECAP_UNITS[k] }));
+    }
+  }
+
+  const { genererDevisDepuisTemplate } = await import("./ai-actions");
+  return genererDevisDepuisTemplate(base64, mimeType, fileType as "pdf" | "image", description, debourseContext);
+}
+
 export async function saveOuvrageType(data: {
   designation: string;
   type_geometrie: TypeGeometrie;

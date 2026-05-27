@@ -289,6 +289,18 @@ export type ProjectOuvrage = {
   updated_at: string;
 };
 
+export type QuoteTemplate = {
+  id: string;
+  company_id: string;
+  name: string;
+  category: string;
+  description: string | null;
+  storage_path: string | null;
+  file_type: string | null;
+  mime_type: string | null;
+  created_at: string;
+};
+
 // -- Database ------------------------------------------------
 
 export type Database = {
@@ -418,6 +430,12 @@ export type Database = {
         Row: ProjectOuvrage;
         Insert: { id?: string; project_id: string; company_id: string; type_id?: string | null; designation: string; type_geometrie: string; dimensions?: Json; vides_deduits?: Json; quantite_brute?: number; quantite_nette?: number; unite_principale?: string; recette?: Json; recette_calculee?: Json; created_at?: string; updated_at?: string };
         Update: { designation?: string; type_geometrie?: string; dimensions?: Json; vides_deduits?: Json; quantite_brute?: number; quantite_nette?: number; unite_principale?: string; recette?: Json; recette_calculee?: Json; type_id?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      quote_templates: {
+        Row: QuoteTemplate;
+        Insert: { id?: string; company_id: string; name: string; category?: string; description?: string | null; storage_path?: string | null; file_type?: string | null; mime_type?: string | null; created_at?: string };
+        Update: { name?: string; category?: string; description?: string | null; storage_path?: string | null; file_type?: string | null; mime_type?: string | null };
         Relationships: [];
       };
     };

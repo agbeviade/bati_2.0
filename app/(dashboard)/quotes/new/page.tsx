@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Sparkles, ChevronDown, ChevronUp, BookTemplate, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { createQuote, type QuoteItemInput } from "../actions";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
-import { generateQuoteFromDebourseModel } from "@/app/(dashboard)/metres/actions";
+import { generateQuoteFromDebourseModel, generateQuoteFromTemplate } from "@/app/(dashboard)/metres/actions";
 
 type ItemCategory = "material" | "labor" | "transport" | "equipment" | "other";
 
@@ -51,16 +51,29 @@ export default function NewQuotePage() {
   const [items, setItems] = useState<LineItem[]>([newLine()]);
   const [taxRate, setTaxRate] = useState("18");
   const [marginPct, setMarginPct] = useState("0");
+
+  // AI panel
   const [aiOpen, setAiOpen] = useState(false);
   const [aiDesc, setAiDesc] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-  const [models, setModels] = useState<{ id: string; name: string }[]>([]);
-  const [selectedModelId, setSelectedModelId] = useState("");
+
+  // Modeles debours secs
+  const [debourseModels, setDebourseModels] = useState<{ id: string; name: string }[]>([]);
+  const [selectedDebourseId, setSelectedDebourseId] = useState("");
+
+  // Modeles de devis
+  const [quoteTemplates, setQuoteTemplates] = useState<{ id: string; name: string; category: string }[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.from("debourses_models").select("id, name").order("created_at", { ascending: false })
-      .then(({ data }) => setModels(data ?? []));
+    Promise.all([
+      supabase.from("debourses_models").select("id, name").order("created_at", { ascending: false }),
+      supabase.from("quote_templates").select("id, name, category").order("category").order("name"),
+    ]).then(([{ data: dm }, { data: qt }]) => {
+      setDebourseModels(dm ?? []);
+      setQuoteTemplates(qt ?? []);
+    });
   }, []);
 
   const subtotal = items.reduce((s, i) => s + lineTotal(i), 0);
@@ -77,52 +90,55 @@ export default function NewQuotePage() {
     setItems(prev => prev.filter(i => i.id !== id));
   }
 
-  async function handleGenerateAI(formEl: HTMLFormElement | null) {
-    if (!selectedModelId && aiDesc.trim().length < 10) {
+  function applyGeneratedItems(generated: { category: ItemCategory; label: string; quantity: number; unit: string; unit_price: number }[]) {
+    const lines: LineItem[] = generated.map(it => ({
+      id: crypto.randomUUID(),
+      category: it.category,
+      label: it.label,
+      quantity: String(it.quantity),
+      unit: it.unit,
+      unit_price: String(it.unit_price),
+    }));
+    setItems(lines);
+    setAiOpen(false);
+    toast.success(`${lines.length} lignes générées par l'IA.`);
+  }
+
+  async function handleGenerateAI() {
+    const hasTemplate = !!selectedTemplateId;
+    const hasDebourse = !!selectedDebourseId;
+    const hasDesc = aiDesc.trim().length >= 10;
+
+    if (!hasTemplate && !hasDebourse && !hasDesc) {
       toast.error("Sélectionnez un modèle ou décrivez le chantier (min 10 caractères).");
       return;
     }
+
     setAiLoading(true);
     try {
-      let generated: LineItem[] = [];
-
-      if (selectedModelId) {
-        const result = await generateQuoteFromDebourseModel(selectedModelId, aiDesc);
+      if (hasTemplate) {
+        // Template de devis + optionnellement debours
+        const result = await generateQuoteFromTemplate(
+          selectedTemplateId,
+          aiDesc,
+          hasDebourse ? selectedDebourseId : undefined
+        );
         if (result.error) { toast.error(result.error); return; }
-        generated = result.items.map(it => ({
-          id: crypto.randomUUID(),
-          category: it.category,
-          label: it.label,
-          quantity: String(it.quantity),
-          unit: it.unit,
-          unit_price: String(it.unit_price),
-        }));
+        applyGeneratedItems(result.items);
+      } else if (hasDebourse) {
+        // Débours uniquement
+        const result = await generateQuoteFromDebourseModel(selectedDebourseId, aiDesc);
+        if (result.error) { toast.error(result.error); return; }
+        applyGeneratedItems(result.items);
       } else {
+        // Description libre uniquement
         const supabase = createClient();
-        const surface = formEl ? (formEl.elements.namedItem("surface_m2") as HTMLInputElement)?.value : "";
-        const projectType = formEl ? (formEl.elements.namedItem("project_type") as HTMLInputElement)?.value : "";
         const { data, error } = await supabase.functions.invoke("generate-quote", {
-          body: {
-            description: aiDesc,
-            surface_m2: surface ? Number(surface) : undefined,
-            project_type: projectType || undefined,
-          },
+          body: { description: aiDesc },
         });
         if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Erreur IA."); return; }
-        generated = ((data.items ?? []) as { category: ItemCategory; label: string; quantity: number; unit: string; unit_price: number }[])
-          .map(it => ({
-            id: crypto.randomUUID(),
-            category: it.category,
-            label: it.label,
-            quantity: String(it.quantity),
-            unit: it.unit,
-            unit_price: String(it.unit_price),
-          }));
+        applyGeneratedItems(data.items ?? []);
       }
-
-      setItems(generated);
-      setAiOpen(false);
-      toast.success(`${generated.length} lignes générées par l'IA.`);
     } finally {
       setAiLoading(false);
     }
@@ -139,7 +155,6 @@ export default function NewQuotePage() {
     }
 
     setLoading(true);
-
     const result = await createQuote({
       client_name: (form.elements.namedItem("client_name") as HTMLInputElement).value,
       project_type: (form.elements.namedItem("project_type") as HTMLInputElement).value,
@@ -163,6 +178,14 @@ export default function NewQuotePage() {
     if (result?.error) toast.error(result.error);
   }
 
+  const generateButtonLabel = () => {
+    if (aiLoading) return "Génération en cours...";
+    if (selectedTemplateId && selectedDebourseId) return "Générer (template + débours)";
+    if (selectedTemplateId) return "Générer depuis le modèle";
+    if (selectedDebourseId) return "Générer depuis les débours";
+    return "Générer avec l'IA";
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
@@ -176,14 +199,12 @@ export default function NewQuotePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6" id="quote-form">
-        {/* Génération IA avec modèle optionnel */}
+
+        {/* Génération IA */}
         <Card className="border-dashed border-purple-300 bg-purple-50/40">
           <CardHeader className="py-3 px-4">
-            <button
-              type="button"
-              className="flex items-center gap-2 w-full text-left"
-              onClick={() => setAiOpen(v => !v)}
-            >
+            <button type="button" className="flex items-center gap-2 w-full text-left"
+              onClick={() => setAiOpen(v => !v)}>
               <Sparkles className="h-4 w-4 text-purple-500" />
               <span className="font-semibold text-sm text-purple-800">Générer avec l&apos;IA</span>
               <span className="ml-auto">
@@ -192,49 +213,86 @@ export default function NewQuotePage() {
             </button>
           </CardHeader>
           {aiOpen && (
-            <CardContent className="pt-0 pb-4 px-4 space-y-3">
-              {models.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-purple-700">
-                    Modèle de débours secs <span className="font-normal text-muted-foreground">(optionnel — recommandé)</span>
+            <CardContent className="pt-0 pb-4 px-4 space-y-4">
+
+              {/* Modele de devis */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-purple-800 flex items-center gap-1.5">
+                    <BookTemplate className="h-3.5 w-3.5" />
+                    Modèle de devis
+                    <span className="font-normal text-muted-foreground">(recommandé)</span>
                   </p>
-                  <select
-                    value={selectedModelId}
-                    onChange={e => setSelectedModelId(e.target.value)}
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="">-- Sans modèle (description libre) --</option>
-                    {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  <Link href="/quotes/templates" className="text-xs text-purple-600 hover:underline flex items-center gap-1">
+                    Gérer les modèles <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
+                {quoteTemplates.length === 0 ? (
+                  <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                    Aucun modèle disponible.{" "}
+                    <Link href="/quotes/templates" className="underline text-purple-600">
+                      Ajouter un modèle PDF ou image
+                    </Link>
+                  </p>
+                ) : (
+                  <select value={selectedTemplateId} onChange={e => setSelectedTemplateId(e.target.value)}
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <option value="">-- Sans modèle de devis --</option>
+                    {quoteTemplates.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
                   </select>
-                  {selectedModelId && (
+                )}
+                {selectedTemplateId && (
+                  <p className="text-xs text-muted-foreground">
+                    L&apos;IA lira le fichier du modèle et adaptera sa structure à votre projet.
+                  </p>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Modele debours */}
+              {debourseModels.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-purple-800">
+                    Modèle de débours secs
+                    <span className="font-normal text-muted-foreground ml-1">(optionnel)</span>
+                  </p>
+                  <select value={selectedDebourseId} onChange={e => setSelectedDebourseId(e.target.value)}
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <option value="">-- Sans modèle de débours --</option>
+                    {debourseModels.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                  {selectedDebourseId && (
                     <p className="text-xs text-muted-foreground">
-                      L&apos;IA utilisera les quantités calculées du modèle et estimera les prix du marché ivoirien.
+                      Les quantités calculées seront utilisées telles quelles dans le devis.
                     </p>
                   )}
                 </div>
               )}
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-purple-700">
-                  Description du chantier
-                  {selectedModelId ? <span className="font-normal text-muted-foreground"> (optionnel)</span> : <span className="text-red-500"> *</span>}
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-purple-800">
+                  Description du projet
+                  {!selectedTemplateId && !selectedDebourseId
+                    ? <span className="text-red-500 ml-0.5">*</span>
+                    : <span className="font-normal text-muted-foreground ml-1">(optionnel)</span>}
                 </p>
-                <textarea
-                  value={aiDesc}
-                  onChange={e => setAiDesc(e.target.value)}
-                  rows={3}
+                <textarea value={aiDesc} onChange={e => setAiDesc(e.target.value)} rows={3}
                   placeholder="Ex : Construction d'une villa R+1 de 180m², fondations, gros oeuvre, toiture en zinc..."
                   className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
                 />
               </div>
-              <Button
-                type="button"
-                size="sm"
-                disabled={aiLoading}
+
+              <Button type="button" size="sm" disabled={aiLoading}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
-                onClick={() => handleGenerateAI(document.getElementById("quote-form") as HTMLFormElement)}
-              >
+                onClick={handleGenerateAI}>
                 <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                {aiLoading ? "Génération en cours..." : "Générer les lignes"}
+                {generateButtonLabel()}
               </Button>
             </CardContent>
           )}
@@ -262,10 +320,7 @@ export default function NewQuotePage() {
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="notes">Notes / conditions</Label>
-              <textarea
-                id="notes"
-                name="notes"
-                rows={2}
+              <textarea id="notes" name="notes" rows={2}
                 placeholder="Conditions de paiement, délai d'exécution..."
                 className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
               />
@@ -278,64 +333,37 @@ export default function NewQuotePage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Lignes du devis</CardTitle>
             <Button type="button" variant="outline" size="sm" onClick={() => setItems(prev => [...prev, newLine()])}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Ajouter une ligne
+              <Plus className="h-3.5 w-3.5 mr-1.5" />Ajouter une ligne
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="hidden md:grid grid-cols-[1fr_2fr_80px_80px_110px_110px_36px] gap-2 text-xs text-muted-foreground px-1">
-              <span>Catégorie</span>
-              <span>Description</span>
-              <span>Qté</span>
-              <span>Unité</span>
-              <span className="text-right">P.U.</span>
-              <span className="text-right">Montant</span>
-              <span />
+              <span>Catégorie</span><span>Description</span><span>Qté</span>
+              <span>Unité</span><span className="text-right">P.U.</span>
+              <span className="text-right">Montant</span><span />
             </div>
             <Separator className="hidden md:block" />
 
             {items.map((item) => (
               <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_80px_80px_110px_110px_36px] gap-2 items-center">
-                <select
-                  value={item.category}
-                  onChange={e => updateItem(item.id, "category", e.target.value)}
-                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
+                <select value={item.category} onChange={e => updateItem(item.id, "category", e.target.value)}
+                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
-                <Input
-                  placeholder="Description du poste"
-                  value={item.label}
-                  onChange={e => updateItem(item.id, "label", e.target.value)}
-                  className="h-9"
-                />
-                <Input
-                  type="number" min="0" step="0.01"
-                  value={item.quantity}
-                  onChange={e => updateItem(item.id, "quantity", e.target.value)}
-                  className="h-9 text-right"
-                />
-                <Input
-                  placeholder="m², h..."
-                  value={item.unit}
-                  onChange={e => updateItem(item.id, "unit", e.target.value)}
-                  className="h-9"
-                />
-                <Input
-                  type="number" min="0" step="100"
-                  value={item.unit_price}
-                  onChange={e => updateItem(item.id, "unit_price", e.target.value)}
-                  className="h-9 text-right"
-                />
+                <Input placeholder="Description du poste" value={item.label}
+                  onChange={e => updateItem(item.id, "label", e.target.value)} className="h-9" />
+                <Input type="number" min="0" step="0.01" value={item.quantity}
+                  onChange={e => updateItem(item.id, "quantity", e.target.value)} className="h-9 text-right" />
+                <Input placeholder="m², h..." value={item.unit}
+                  onChange={e => updateItem(item.id, "unit", e.target.value)} className="h-9" />
+                <Input type="number" min="0" step="100" value={item.unit_price}
+                  onChange={e => updateItem(item.id, "unit_price", e.target.value)} className="h-9 text-right" />
                 <div className="h-9 flex items-center justify-end px-2 text-sm font-medium text-right tabular-nums">
                   {formatAmount(lineTotal(item))}
                 </div>
-                <Button
-                  type="button" variant="ghost" size="icon"
+                <Button type="button" variant="ghost" size="icon"
                   className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                  onClick={() => removeItem(item.id)}
-                  disabled={items.length === 1}
-                >
+                  onClick={() => removeItem(item.id)} disabled={items.length === 1}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -351,22 +379,14 @@ export default function NewQuotePage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground whitespace-nowrap">TVA (%)</span>
-                  <Input
-                    type="number" min="0" max="100" step="0.5"
-                    value={taxRate}
-                    onChange={e => setTaxRate(e.target.value)}
-                    className="h-8 w-20 text-right"
-                  />
+                  <Input type="number" min="0" max="100" step="0.5" value={taxRate}
+                    onChange={e => setTaxRate(e.target.value)} className="h-8 w-20 text-right" />
                   <span className="text-sm font-medium ml-auto">{formatAmount(tax)} FCFA</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground whitespace-nowrap">Marge (%)</span>
-                  <Input
-                    type="number" min="0" max="100" step="0.5"
-                    value={marginPct}
-                    onChange={e => setMarginPct(e.target.value)}
-                    className="h-8 w-20 text-right"
-                  />
+                  <Input type="number" min="0" max="100" step="0.5" value={marginPct}
+                    onChange={e => setMarginPct(e.target.value)} className="h-8 w-20 text-right" />
                   <span className="text-sm font-medium ml-auto">{formatAmount(margin)} FCFA</span>
                 </div>
                 <Separator />
