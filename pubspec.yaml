@@ -31,8 +31,11 @@ dependencies:
   image_picker: ^1.1.2
   file_picker: ^8.1.2
 
-  # Persistance simple (flag "onboarding vu", etc.)
+  # Persistance simple (flag "onboarding vu", cache offline, etc.)
   shared_preferences: ^2.3.5
+
+  # Détection en ligne / hors ligne (P1 — offline-first)
+  connectivity_plus: ^6.1.0
 
   # PDF / URLs
   url_launcher: ^6.3.1

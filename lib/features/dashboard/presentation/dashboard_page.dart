@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:timeago/timeago.dart' as timeago;
+import '../../../core/cache/json_cache.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/models.dart';
@@ -14,6 +16,8 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  static const _cacheKey = 'dashboard_v1';
+
   bool _loading = true;
   int _activeProjects = 0;
   int _overdueInvoices = 0;
@@ -21,15 +25,43 @@ class _DashboardPageState extends State<DashboardPage> {
   int _ouvragesCount = 0;
   List<Project> _recentProjects = [];
   String? _userName;
+  DateTime? _lastSyncedAt;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _hydrateFromCache();
+    _refresh();
     NotificationService().checkAndNotify();
   }
 
-  Future<void> _load() async {
+  /// Lecture synchrone du cache au mount — affiche immédiatement les
+  /// dernières données vues, avant même que le fetch réseau commence.
+  void _hydrateFromCache() {
+    final entry = JsonCache.instance.read(_cacheKey);
+    if (entry == null) return;
+    try {
+      final data = entry.data as Map<String, dynamic>;
+      setState(() {
+        _activeProjects = (data['active_projects'] as num?)?.toInt() ?? 0;
+        _overdueInvoices = (data['overdue_invoices'] as num?)?.toInt() ?? 0;
+        _monthRevenue = (data['month_revenue'] as num?)?.toDouble() ?? 0;
+        _ouvragesCount = (data['ouvrages_count'] as num?)?.toInt() ?? 0;
+        _recentProjects = ((data['recent_projects'] as List?) ?? [])
+            .map((j) => Project.fromJson(j as Map<String, dynamic>))
+            .toList();
+        _userName = data['user_name'] as String?;
+        _lastSyncedAt = entry.savedAt;
+        _loading = false;
+      });
+    } catch (_) {
+      // Cache corrompu — on l'ignore, le fetch refera tout
+    }
+  }
+
+  /// Fetch fresh depuis Supabase, met à jour cache + UI.
+  /// Si le fetch échoue (hors ligne), on garde l'UI actuelle (cache).
+  Future<void> _refresh() async {
     final client = Supabase.instance.client;
     try {
       final now = DateTime.now();
@@ -50,20 +82,39 @@ class _DashboardPageState extends State<DashboardPage> {
         revenue += (inv['amount'] as num?)?.toDouble() ?? 0;
       }
 
+      final recentProjectsJson = (results[3] as List).cast<Map<String, dynamic>>();
+      String? userName;
+      if (uid != null && results.length > 5) {
+        final profile = results[5] as Map<String, dynamic>?;
+        userName = profile?['full_name'] as String?;
+      }
+
+      final cachePayload = {
+        'active_projects': (results[0] as List).length,
+        'overdue_invoices': (results[1] as List).length,
+        'month_revenue': revenue,
+        'ouvrages_count': (results[4] as List).length,
+        'recent_projects': recentProjectsJson,
+        'user_name': userName,
+      };
+      await JsonCache.instance.write(_cacheKey, cachePayload);
+
+      if (!mounted) return;
       setState(() {
         _activeProjects = (results[0] as List).length;
         _overdueInvoices = (results[1] as List).length;
         _monthRevenue = revenue;
-        _recentProjects = (results[3] as List).map((j) => Project.fromJson(j)).toList();
+        _recentProjects = recentProjectsJson.map(Project.fromJson).toList();
         _ouvragesCount = (results[4] as List).length;
-        if (uid != null && results.length > 5) {
-          final profile = results[5] as Map<String, dynamic>?;
-          _userName = profile?['full_name'] as String?;
-        }
+        _userName = userName;
+        _lastSyncedAt = DateTime.now();
         _loading = false;
       });
     } catch (_) {
-      setState(() => _loading = false);
+      // Hors ligne ou erreur serveur : on garde les données du cache.
+      // Le loader disparaît même sans fetch réussi pour éviter de bloquer
+      // l'UI quand le cache était vide ET qu'il n'y a pas de réseau.
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -79,7 +130,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: _refresh,
         color: AppColors.primary,
         child: CustomScrollView(
           slivers: [
@@ -98,6 +149,10 @@ class _DashboardPageState extends State<DashboardPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (_lastSyncedAt != null) ...[
+                        _SyncIndicator(syncedAt: _lastSyncedAt!),
+                        const SizedBox(height: 8),
+                      ],
                       _KpiRow(
                         activeProjects: _activeProjects,
                         monthRevenue: _monthRevenue,
@@ -750,4 +805,30 @@ class _QuickAction {
   final Color color;
   final VoidCallback onTap;
   const _QuickAction({required this.icon, required this.label, required this.color, required this.onTap});
+}
+
+/// Affichage discret "Synchronisé il y a Xm" — informe l'utilisateur de la
+/// fraîcheur des données affichées (utile en mode dégradé / offline).
+class _SyncIndicator extends StatelessWidget {
+  final DateTime syncedAt;
+  const _SyncIndicator({required this.syncedAt});
+
+  @override
+  Widget build(BuildContext context) {
+    final relative = timeago.format(syncedAt, locale: 'fr');
+    return Row(
+      children: [
+        Icon(Icons.sync_rounded, size: 12, color: AppColors.textSecondary.withValues(alpha: 0.7)),
+        const SizedBox(width: 4),
+        Text(
+          'Synchronisé $relative',
+          style: TextStyle(
+            fontSize: 11,
+            color: AppColors.textSecondary.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
 }

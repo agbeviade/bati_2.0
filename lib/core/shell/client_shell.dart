@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../connectivity/offline_banner.dart';
 
 /// Shell minimal pour les utilisateurs de role 'client'.
 /// Seules les pages Devis et Factures sont accessibles.
@@ -22,7 +23,12 @@ class ClientShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final index = _currentIndex(context);
     return Scaffold(
-      body: child,
+      body: Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(child: child),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (i) => context.go(_tabs[i].path),

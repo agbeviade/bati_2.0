@@ -50,20 +50,73 @@ const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 // puis main.dart : assert(supabaseAnonKey.isNotEmpty, 'SUPABASE_ANON_KEY manquant')
 ```
 
-### 🔴 2. Pas d'offline-first
-Aucune base locale (`sqflite`, `drift`, `isar`, `hive`). **C'est l'inverse du cahier des charges** : « mobile-first, adapté aux réalités africaines » = réseau pourri sur chantier = offline est table stakes.
+### 🟡 2. Offline-first — MVP livré (lecture seule)
 
-Conséquences :
-- Aucune navigation si pas de réseau (toutes les requêtes Supabase échouent).
-- Photos prises sans réseau : pas de queue → perdues si l'utilisateur ferme l'app.
-- Pointage entrée/sortie : nécessite réseau au moment du clic → bloque l'ouvrier sur chantier.
+**Phase 1 livrée** ([commit P1](.)) :
+- ✅ `connectivity_plus` détecte online/offline
+- ✅ `JsonCache` (SharedPreferences) — KV cache JSON avec timestamp
+- ✅ `OfflineBanner` widget dans `app_shell` + `client_shell`
+- ✅ Dashboard refactoré en **stale-while-revalidate** :
+  - `_hydrateFromCache()` synchrone au mount → UI immédiate
+  - `_refresh()` en parallèle → met à jour le cache + UI
+  - Si fetch échoue (offline) → garde les données du cache
+- ✅ Indicateur « Synchronisé il y a Xm » visible
 
-**Stack à introduire :**
-- `drift` ou `isar` pour la base locale typée.
-- Pattern : sync queue (`pending_writes` table locale) + worker qui flush vers Supabase quand le réseau revient.
-- `connectivity_plus` pour détecter online/offline.
+**Pattern à propager (pour les autres écrans)** :
 
-C'est une **refacto de 2 à 4 semaines** mais essentielle.
+```dart
+class _MyPageState extends State<MyPage> {
+  static const _cacheKey = 'my_page_v1';
+  DateTime? _lastSyncedAt;
+
+  @override
+  void initState() {
+    super.initState();
+    _hydrateFromCache();
+    _refresh();
+  }
+
+  void _hydrateFromCache() {
+    final entry = JsonCache.instance.read(_cacheKey);
+    if (entry == null) return;
+    setState(() {
+      // Désérialiser entry.data
+      _lastSyncedAt = entry.savedAt;
+      _loading = false;
+    });
+  }
+
+  Future<void> _refresh() async {
+    try {
+      final fresh = await supabase.from('...').select();
+      await JsonCache.instance.write(_cacheKey, fresh);
+      if (mounted) setState(() {
+        // Hydrate state depuis fresh
+        _lastSyncedAt = DateTime.now();
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+}
+```
+
+**Écrans à migrer ensuite** : projects, materials, quotes, invoices, teams, clients, metres.
+
+### 🔴 Phase 2 — Queue d'écritures (pas encore livrée)
+
+Toujours nécessaire :
+- Mutations offline : `pending_writes` (table locale via `sqflite` ou `drift`) + worker qui flush au retour online
+- Photos prises offline : queue d'upload avec retry
+- Pointage entrée/sortie offline : enregistrement local + sync
+
+**Stack envisagé pour Phase 2** :
+- `drift` pour la queue typée (mieux que SharedPreferences pour des records structurés)
+- Worker en background avec `connectivity_plus` listener
+- Migration des photos vers le `getApplicationDocumentsDirectory` + path stocké dans la queue
+
+C'est ~2 semaines de travail supplémentaire.
 
 ### 🔴 3. Pas de tests
 [test/widget_test.dart](test/widget_test.dart) est le template Flutter par défaut, vide. Aucun test unitaire ni d'intégration sur **3000+ lignes de code Dart**.

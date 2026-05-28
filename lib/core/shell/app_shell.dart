@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../connectivity/offline_banner.dart';
 import '../theme/app_theme.dart';
 
 class AppShell extends StatelessWidget {
@@ -31,7 +32,12 @@ class AppShell extends StatelessWidget {
         .any((p) => location.startsWith(p));
 
     return Scaffold(
-      body: child,
+      body: Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(child: child),
+        ],
+      ),
       bottomNavigationBar: _BottomNav(
         selectedIndex: isMoreSection ? 4 : index,
         onSelected: (i) {
