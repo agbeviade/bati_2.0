@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/cache/json_cache.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -15,6 +16,8 @@ class ProjectsPage extends StatefulWidget {
 const _kPageSize = 20;
 
 class _ProjectsPageState extends State<ProjectsPage> {
+  static const _cacheKey = 'projects_v1';
+
   bool _loading = true;
   List<Project> _projects = [];
   ProjectStatus? _filter;
@@ -23,26 +26,46 @@ class _ProjectsPageState extends State<ProjectsPage> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _hydrateFromCache();
+    _refresh();
   }
 
-  Future<void> _load() async {
-    setState(() { _loading = true; _displayCount = _kPageSize; });
+  /// Cache stocke la liste complète. Le filtre statut est appliqué
+  /// client-side via `_filteredProjects` — plus de re-fetch à chaque
+  /// changement de filtre, et le cache reste valide pour tous les filtres.
+  void _hydrateFromCache() {
+    final entry = JsonCache.instance.read(_cacheKey);
+    if (entry == null) return;
     try {
-      final client = Supabase.instance.client;
-      final List data;
-      if (_filter != null) {
-        data = await client.from('projects').select().eq('status', projectStatusToString(_filter!)).order('created_at', ascending: false);
-      } else {
-        data = await client.from('projects').select().order('created_at', ascending: false);
-      }
+      final list = (entry.data as List).cast<Map<String, dynamic>>();
       setState(() {
-        _projects = data.map((j) => Project.fromJson(j)).toList();
+        _projects = list.map(Project.fromJson).toList();
+        _loading = false;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _refresh() async {
+    try {
+      final data = await Supabase.instance.client
+          .from('projects')
+          .select()
+          .order('created_at', ascending: false);
+      final jsonList = (data as List).cast<Map<String, dynamic>>();
+      await JsonCache.instance.write(_cacheKey, jsonList);
+      if (!mounted) return;
+      setState(() {
+        _projects = jsonList.map(Project.fromJson).toList();
         _loading = false;
       });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
+  }
+
+  List<Project> get _filteredProjects {
+    if (_filter == null) return _projects;
+    return _projects.where((p) => p.status == _filter).toList();
   }
 
   @override
@@ -54,8 +77,9 @@ class _ProjectsPageState extends State<ProjectsPage> {
           PopupMenuButton<ProjectStatus?>(
             icon: const Icon(Icons.filter_list),
             onSelected: (v) {
-              setState(() => _filter = v);
-              _load();
+              // Plus de re-fetch — le filtre s'applique en mémoire via
+              // `_filteredProjects`. Reset la pagination.
+              setState(() { _filter = v; _displayCount = _kPageSize; });
             },
             itemBuilder: (_) => [
               const PopupMenuItem(value: null, child: Text('Tous')),
@@ -70,7 +94,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final created = await context.push('/projects/new');
-          if (created == true) _load();
+          if (created == true) _refresh();
         },
         icon: const Icon(Icons.add),
         label: const Text('Nouveau chantier'),
@@ -78,21 +102,22 @@ class _ProjectsPageState extends State<ProjectsPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _load,
-              child: _projects.isEmpty
+              onRefresh: _refresh,
+              child: _filteredProjects.isEmpty
                   ? EmptyState(
                       icon: Icons.construction_outlined,
-                      title: 'Aucun chantier',
-                      subtitle: 'Créez votre premier chantier',
+                      title: _filter == null ? 'Aucun chantier' : 'Aucun chantier dans ce filtre',
+                      subtitle: _filter == null ? 'Créez votre premier chantier' : 'Changez de filtre ou créez-en un nouveau',
                       actionLabel: 'Créer un chantier',
                       onAction: () async {
                         final created = await context.push('/projects/new');
-                        if (created == true) _load();
+                        if (created == true) _refresh();
                       },
                     )
                   : Builder(builder: (_) {
-                        final displayed = _projects.take(_displayCount).toList();
-                        final hasMore = displayed.length < _projects.length;
+                        final filtered = _filteredProjects;
+                        final displayed = filtered.take(_displayCount).toList();
+                        final hasMore = displayed.length < filtered.length;
                         return ListView.builder(
                           padding: EdgeInsets.fromLTRB(16, 16, 16, hasMore ? 8 : 100),
                           itemCount: displayed.length + (hasMore ? 1 : 0),
@@ -102,7 +127,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                                 padding: const EdgeInsets.only(bottom: 100),
                                 child: OutlinedButton(
                                   onPressed: () => setState(() => _displayCount += _kPageSize),
-                                  child: Text('Afficher plus (${_projects.length - displayed.length} restants)'),
+                                  child: Text('Afficher plus (${filtered.length - displayed.length} restants)'),
                                 ),
                               );
                             }
