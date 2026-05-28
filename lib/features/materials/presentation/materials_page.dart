@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/cache/json_cache.dart';
 import '../../../shared/models/models.dart' as models;
 import '../../../shared/widgets/empty_state.dart';
 
@@ -12,6 +13,8 @@ class MaterialsPage extends StatefulWidget {
 }
 
 class _MaterialsPageState extends State<MaterialsPage> {
+  static const _cacheKey = 'materials_v1';
+
   bool _loading = true;
   List<models.Material> _materials = [];
   Map<String, String> _categoryLabels = {};
@@ -21,11 +24,31 @@ class _MaterialsPageState extends State<MaterialsPage> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _hydrateFromCache();
+    _refresh();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  /// Cache combiné materials + categories sous une seule clé pour atomicité
+  /// (les 2 sont liés via le slug).
+  void _hydrateFromCache() {
+    final entry = JsonCache.instance.read(_cacheKey);
+    if (entry == null) return;
+    try {
+      final data = entry.data as Map<String, dynamic>;
+      final materialsJson = (data['materials'] as List).cast<Map<String, dynamic>>();
+      final categoriesJson = (data['categories'] as List).cast<Map<String, dynamic>>();
+      final labels = <String, String>{
+        for (final c in categoriesJson) c['slug'] as String: c['label'] as String,
+      };
+      setState(() {
+        _materials = materialsJson.map(models.Material.fromJson).toList();
+        _categoryLabels = labels;
+        _loading = false;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _refresh() async {
     try {
       final client = Supabase.instance.client;
       final results = await Future.wait([
@@ -33,18 +56,26 @@ class _MaterialsPageState extends State<MaterialsPage> {
         client.from('material_categories').select('slug, label').order('label'),
       ]);
 
-      final labels = <String, String>{};
-      for (final c in (results[1] as List)) {
-        labels[c['slug'] as String] = c['label'] as String;
-      }
+      final materialsJson = (results[0] as List).cast<Map<String, dynamic>>();
+      final categoriesJson = (results[1] as List).cast<Map<String, dynamic>>();
 
+      await JsonCache.instance.write(_cacheKey, {
+        'materials': materialsJson,
+        'categories': categoriesJson,
+      });
+
+      final labels = <String, String>{
+        for (final c in categoriesJson) c['slug'] as String: c['label'] as String,
+      };
+
+      if (!mounted) return;
       setState(() {
-        _materials = (results[0] as List).map((j) => models.Material.fromJson(j)).toList();
+        _materials = materialsJson.map(models.Material.fromJson).toList();
         _categoryLabels = labels;
         _loading = false;
       });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -71,7 +102,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
           final result = await context.push('/materials/new');
           if (!mounted) return;
           if (result is String) router.push('/materials/$result');
-          if (result != null) _load();
+          if (result != null) _refresh();
         },
         icon: const Icon(Icons.add_outlined),
         label: const Text('Nouveau matériau'),
@@ -125,14 +156,14 @@ class _MaterialsPageState extends State<MaterialsPage> {
                                   style: TextStyle(color: cs.onSurfaceVariant)),
                             ))
                       : RefreshIndicator(
-                          onRefresh: _load,
+                          onRefresh: _refresh,
                           child: ListView.builder(
                             padding: const EdgeInsets.all(16),
                             itemCount: filtered.length,
                             itemBuilder: (_, i) => _MaterialTile(
                               material: filtered[i],
                               categoryLabel: _categoryLabels[filtered[i].category] ?? filtered[i].category,
-                              onReturn: _load,
+                              onReturn: _refresh,
                             ),
                           ),
                         ),
