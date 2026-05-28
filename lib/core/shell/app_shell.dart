@@ -128,6 +128,7 @@ class _MoreSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [
       _MoreItem(icon: Icons.description_outlined, label: 'Devis', path: '/quotes', color: AppColors.violet),
+      _MoreItem(icon: Icons.bookmark_outline, label: 'Modèles', path: '/quotes/templates', color: AppColors.amber),
       _MoreItem(icon: Icons.people_outline, label: 'Clients', path: '/clients', color: AppColors.cyan),
       _MoreItem(icon: Icons.inventory_2_outlined, label: 'Matériaux', path: '/materials', color: AppColors.orange),
       _MoreItem(icon: Icons.warehouse_outlined, label: 'Stock', path: '/stock', color: AppColors.green),
