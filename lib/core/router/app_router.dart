@@ -5,6 +5,7 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/signup_page.dart';
 import '../../features/onboarding/data/onboarding_repo.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
+import '../../features/onboarding_company/presentation/onboarding_company_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/projects/presentation/projects_page.dart';
 import '../../features/projects/presentation/project_detail_page.dart';
@@ -44,7 +45,37 @@ final _rootKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
 
 String? _cachedRole;
+String? _cachedCompanyId;
 String? _cachedUid;
+
+/// Force le router à recharger role + company_id au prochain redirect.
+/// À appeler après création de company (onboarding) pour que le redirect
+/// sorte de /onboarding-company vers /dashboard.
+void invalidateProfileCache() {
+  _cachedRole = null;
+  _cachedCompanyId = null;
+  _cachedUid = null;
+}
+
+/// Charge role + company_id pour l'uid courant, met le cache à jour.
+/// Retourne `(role, companyId)`. Sur erreur DB, retourne `(null, null)` —
+/// le redirect tombera alors sur le fallback `/dashboard`.
+Future<(String?, String?)> _loadProfile(String uid) async {
+  if (_cachedUid == uid) return (_cachedRole, _cachedCompanyId);
+  try {
+    final data = await Supabase.instance.client
+        .from('users')
+        .select('role, company_id')
+        .eq('id', uid)
+        .single();
+    _cachedRole = data['role'] as String?;
+    _cachedCompanyId = data['company_id'] as String?;
+    _cachedUid = uid;
+    return (_cachedRole, _cachedCompanyId);
+  } catch (_) {
+    return (null, null);
+  }
+}
 
 GoRouter buildRouter() {
   // Clear role cache on every sign-in so a role change on the backend
@@ -52,8 +83,7 @@ GoRouter buildRouter() {
   Supabase.instance.client.auth.onAuthStateChange.listen((data) {
     if (data.event == AuthChangeEvent.signedIn ||
         data.event == AuthChangeEvent.tokenRefreshed) {
-      _cachedRole = null;
-      _cachedUid = null;
+      invalidateProfileCache();
     }
   });
 
@@ -63,46 +93,54 @@ GoRouter buildRouter() {
       redirect: (context, state) async {
         final session = Supabase.instance.client.auth.currentSession;
         final isAuth = session != null;
-        if (!isAuth) { _cachedRole = null; _cachedUid = null; }
+        if (!isAuth) invalidateProfileCache();
         final loc = state.matchedLocation;
         final isAuthRoute = loc.startsWith('/login') || loc.startsWith('/signup');
-        final isOnboarding = loc.startsWith('/onboarding');
+        final isWelcome = loc == '/onboarding';
+        final isCompanyOnboarding = loc.startsWith('/onboarding-company');
         final isPortal = loc.startsWith('/portal');
 
-        // Premier lancement : afficher l'onboarding avant le login.
-        if (!isAuth && !OnboardingRepo.instance.hasSeenOnboarding && !isOnboarding) {
+        // Premier lancement (pas connecté) : afficher l'onboarding 4 slides.
+        if (!isAuth && !OnboardingRepo.instance.hasSeenOnboarding && !isWelcome) {
           return '/onboarding';
         }
-        // Onboarding déjà vu : pas d'accès à /onboarding (sauf debug)
-        if (isOnboarding && OnboardingRepo.instance.hasSeenOnboarding && isAuth) {
+        // Onboarding bienvenue déjà vu et connecté → /dashboard
+        if (isWelcome && OnboardingRepo.instance.hasSeenOnboarding && isAuth) {
+          return '/dashboard';
+        }
+        // Non connecté → /login
+        if (!isAuth && !isAuthRoute && !isWelcome) return '/login';
+
+        // À partir d'ici, l'utilisateur est connecté.
+        // `session` est forcément non-null ici (sinon redirect vers /login plus haut),
+        // mais la flow analysis Dart ne le voit pas → forcer avec `!`.
+        final uid = session!.user.id;
+        final (role, companyId) = await _loadProfile(uid);
+
+        // Client → portail (priorité sur le check company_id, les clients
+        // sont créés par une admin et ont leur company_id assignée d'avance)
+        if (role == 'client' && !isPortal) return '/portal/quotes';
+
+        // Pas de company → onboarding entreprise (sauf si on y est déjà
+        // ou sur une route auth)
+        if (role != 'client' &&
+            companyId == null &&
+            !isCompanyOnboarding &&
+            !isAuthRoute) {
+          return '/onboarding-company';
+        }
+        // Company déjà créée → bloquer l'accès à /onboarding-company
+        if (isCompanyOnboarding && companyId != null) {
           return '/dashboard';
         }
 
-        if (!isAuth && !isAuthRoute && !isOnboarding) return '/login';
-        if (isAuth && isAuthRoute) {
-          final uid = session.user.id;
-          try {
-            if (_cachedUid != uid) {
-              final data = await Supabase.instance.client.from('users').select('role').eq('id', uid).single();
-              _cachedRole = data['role'] as String?;
-              _cachedUid = uid;
-            }
-            if (_cachedRole == 'client') return '/portal/quotes';
-          } catch (_) {}
+        // Vient de se connecter sur /login ou /signup → router vers la home
+        if (isAuthRoute) {
+          if (role == 'client') return '/portal/quotes';
+          if (companyId == null) return '/onboarding-company';
           return '/dashboard';
         }
-        // Client qui essaie d'accéder au dashboard → portail
-        if (isAuth && !isPortal && !isAuthRoute) {
-          final uid = session.user.id;
-          try {
-            if (_cachedUid != uid) {
-              final data = await Supabase.instance.client.from('users').select('role').eq('id', uid).single();
-              _cachedRole = data['role'] as String?;
-              _cachedUid = uid;
-            }
-            if (_cachedRole == 'client') return '/portal/quotes';
-          } catch (_) {}
-        }
+
         return null;
       },
       refreshListenable: GoRouterRefreshStream(
@@ -110,6 +148,10 @@ GoRouter buildRouter() {
       ),
       routes: [
         GoRoute(path: '/onboarding', builder: (_, $) => const OnboardingPage()),
+        GoRoute(
+          path: '/onboarding-company',
+          builder: (_, $) => const OnboardingCompanyPage(),
+        ),
         GoRoute(path: '/login', builder: (_, $) => const LoginPage()),
         GoRoute(path: '/signup', builder: (_, $) => const SignupPage()),
         ShellRoute(
