@@ -189,11 +189,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with TickerProvid
             .from('stock_movements')
             .select('id, material_id, type, quantity, unit_cost, notes, created_at, materials(name, unit)')
             .eq('project_id', widget.id)
-            .inFilter('type', ['use', 'return'])
+            .inFilter('type', ['purchase', 'use', 'return'])
             .order('created_at', ascending: false),
         client
             .from('materials')
-            .select('id, name, unit, stock_qty, unit_cost')
+            .select('id, name, unit, unit_cost')
             .eq('company_id', _project!.companyId)
             .order('name'),
       ]);
@@ -586,7 +586,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
   bool _showForm = false;
   bool _saving = false;
   String _selectedMatId = '';
-  String _selectedType = 'use';
+  String _selectedType = 'purchase';
   final _qtyCtrl = TextEditingController();
   final _costCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
@@ -622,9 +622,10 @@ class _MaterialsTabState extends State<_MaterialsTab> {
     if (_selectedMatId.isEmpty) return;
     setState(() => _saving = true);
     try {
+      final client = Supabase.instance.client;
       final mat = widget.allMaterials.firstWhere((m) => m.id == _selectedMatId);
       final cost = double.tryParse(_costCtrl.text.replaceAll(',', '.')) ?? mat.unitCost;
-      await Supabase.instance.client.from('stock_movements').insert({
+      await client.from('stock_movements').insert({
         'material_id': _selectedMatId,
         'project_id': widget.projectId,
         'company_id': widget.companyId,
@@ -633,6 +634,13 @@ class _MaterialsTabState extends State<_MaterialsTab> {
         'unit_cost': cost > 0 ? cost : null,
         'notes': _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       });
+      // Déduire du budget lors d'une entrée (achat)
+      if (_selectedType == 'purchase' && cost > 0) {
+        final totalCost = qty * cost;
+        final projData = await client.from('projects').select('spent').eq('id', widget.projectId).single();
+        final currentSpent = (projData['spent'] as num?)?.toDouble() ?? 0;
+        await client.from('projects').update({'spent': currentSpent + totalCost}).eq('id', widget.projectId);
+      }
       _qtyCtrl.clear();
       _costCtrl.clear();
       _notesCtrl.clear();
@@ -646,7 +654,17 @@ class _MaterialsTabState extends State<_MaterialsTab> {
 
   Future<void> _delete(_Movement m) async {
     try {
-      await Supabase.instance.client.from('stock_movements').delete().eq('id', m.id);
+      final client = Supabase.instance.client;
+      await client.from('stock_movements').delete().eq('id', m.id);
+      // Remettre le budget pour un achat supprimé
+      if (m.type == 'purchase' && m.unitCost != null && m.unitCost! > 0) {
+        final totalCost = m.quantity * m.unitCost!;
+        final projData = await client.from('projects').select('spent').eq('id', widget.projectId).single();
+        final currentSpent = (projData['spent'] as num?)?.toDouble() ?? 0;
+        await client.from('projects').update({
+          'spent': (currentSpent - totalCost).clamp(0.0, double.infinity),
+        }).eq('id', widget.projectId);
+      }
       widget.onReload();
     } catch (_) {}
   }
@@ -655,21 +673,35 @@ class _MaterialsTabState extends State<_MaterialsTab> {
   Widget build(BuildContext context) {
     if (widget.loading) return const Center(child: CircularProgressIndicator());
 
-    // Summary by material
+    // Stock par projet par matériau
     final summary = <String, Map<String, dynamic>>{};
     for (final m in widget.movements) {
       summary.putIfAbsent(m.materialId, () => {
-        'name': m.materialName, 'unit': m.unit, 'used': 0.0, 'returned': 0.0, 'cost': 0.0,
+        'name': m.materialName, 'unit': m.unit, 'entries': 0.0, 'exits': 0.0, 'qty': 0.0,
       });
-      if (m.type == 'use') {
-        summary[m.materialId]!['used'] = (summary[m.materialId]!['used'] as double) + m.quantity;
-        summary[m.materialId]!['cost'] = (summary[m.materialId]!['cost'] as double) + m.quantity * (m.unitCost ?? 0);
-      } else {
-        summary[m.materialId]!['returned'] = (summary[m.materialId]!['returned'] as double) + m.quantity;
+      if (m.type == 'purchase' || m.type == 'return') {
+        summary[m.materialId]!['entries'] = (summary[m.materialId]!['entries'] as double) + m.quantity;
+        summary[m.materialId]!['qty'] = (summary[m.materialId]!['qty'] as double) + m.quantity;
+      } else if (m.type == 'use') {
+        summary[m.materialId]!['exits'] = (summary[m.materialId]!['exits'] as double) + m.quantity;
+        summary[m.materialId]!['qty'] = (summary[m.materialId]!['qty'] as double) - m.quantity;
       }
     }
-    final summaryList = summary.values.toList()..sort((a, b) => (b['cost'] as double).compareTo(a['cost'] as double));
-    final totalCost = summaryList.fold(0.0, (s, r) => s + (r['cost'] as double));
+    final summaryList = summary.values.toList()..sort((a, b) => (a['qty'] as double).compareTo(b['qty'] as double));
+    final totalCost = widget.movements
+        .where((m) => m.type == 'purchase')
+        .fold(0.0, (s, m) => s + m.quantity * (m.unitCost ?? 0));
+
+    // Stock par projet calculé depuis les mouvements chargés
+    final projectStock = <String, double>{};
+    for (final m in widget.movements) {
+      projectStock[m.materialId] = projectStock[m.materialId] ?? 0;
+      if (m.type == 'purchase' || m.type == 'return') {
+        projectStock[m.materialId] = projectStock[m.materialId]! + m.quantity;
+      } else if (m.type == 'use') {
+        projectStock[m.materialId] = projectStock[m.materialId]! - m.quantity;
+      }
+    }
 
     final selectedMat = widget.allMaterials.isNotEmpty
         ? widget.allMaterials.firstWhere((m) => m.id == _selectedMatId, orElse: () => widget.allMaterials.first)
@@ -697,28 +729,37 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                     ),
                     const SizedBox(height: 12),
                     ...summaryList.map((row) {
-                      final net = (row['used'] as double) - (row['returned'] as double);
+                      final qty = row['qty'] as double;
+                      final isOut = qty <= 0;
+                      final isLow = qty > 0 && qty < 10;
+                      final dotColor = isOut ? AppColors.red : isLow ? const Color(0xFFF59E0B) : AppColors.green;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: Row(children: [
                           Container(
-                            width: 32, height: 32,
-                            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.primary),
+                            width: 6, height: 36,
+                            decoration: BoxDecoration(color: dotColor, borderRadius: BorderRadius.circular(3)),
                           ),
                           const SizedBox(width: 10),
                           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(row['name'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                            Text(
-                              '${_fmtNum(row['used'] as double)} ${row['unit']} sorti'
-                              '${(row['returned'] as double) > 0 ? ' · ${_fmtNum(row['returned'] as double)} retourné' : ''}'
-                              ' · net: ${_fmtNum(net)} ${row['unit']}',
-                              style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                            ),
+                            Text(row['name'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis),
+                            Row(children: [
+                              Icon(Icons.arrow_downward, size: 12, color: AppColors.green),
+                              Text(' ${_fmtNum(row['entries'] as double)}',
+                                  style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                              const SizedBox(width: 8),
+                              Icon(Icons.arrow_upward, size: 12, color: AppColors.red),
+                              Text(' ${_fmtNum(row['exits'] as double)}',
+                                  style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                            ]),
                           ])),
-                          Text('${_fmtNum(row['cost'] as double)} ${widget.currency}',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                              textAlign: TextAlign.right),
+                          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                            Text('${_fmtNum(qty)} ${row['unit'] as String}',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: dotColor)),
+                            if (isOut) Text('Épuisé', style: TextStyle(fontSize: 10, color: AppColors.red)),
+                            if (isLow) Text('Faible', style: TextStyle(fontSize: 10, color: const Color(0xFFF59E0B))),
+                          ]),
                         ]),
                       );
                     }),
@@ -739,7 +780,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Sorties & retours', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                      Text('Stock chantier', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                       FilledButton.icon(
                         onPressed: widget.allMaterials.isEmpty ? null : () => setState(() => _showForm = !_showForm),
                         icon: Icon(_showForm ? Icons.close : Icons.add, size: 16),
@@ -769,16 +810,19 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                     _FormField(label: 'Matériau *', child: DropdownButtonFormField<String>(
                       initialValue: _selectedMatId.isEmpty ? null : _selectedMatId,
                       decoration: _inputDeco(),
-                      items: widget.allMaterials.map((m) => DropdownMenuItem<String>(
-                        value: m.id,
-                        child: Text('${m.name} — stock: ${_fmtNum(m.stockQty)} ${m.unit}', overflow: TextOverflow.ellipsis),
-                      )).toList(),
+                      items: widget.allMaterials.map((m) {
+                        final projQty = projectStock[m.id] ?? 0;
+                        return DropdownMenuItem<String>(
+                          value: m.id,
+                          child: Text('${m.name} — ${_fmtNum(projQty)} ${m.unit}', overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
                       onChanged: (v) => setState(() => _selectedMatId = v ?? ''),
                     )),
-                    if (selectedMat != null && selectedMat.stockQty <= 0)
+                    if (selectedMat != null && (projectStock[selectedMat.id] ?? 0) <= 0 && _selectedType != 'purchase')
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
-                        child: Text('⚠ Stock épuisé', style: TextStyle(fontSize: 11, color: AppColors.red)),
+                        child: Text('⚠ Stock épuisé sur ce chantier', style: TextStyle(fontSize: 11, color: AppColors.red)),
                       ),
                     const SizedBox(height: 10),
                     Row(children: [
@@ -786,10 +830,11 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                         initialValue: _selectedType,
                         decoration: _inputDeco(),
                         items: const [
+                          DropdownMenuItem(value: 'purchase', child: Text('Entrée (achat)')),
                           DropdownMenuItem(value: 'use', child: Text('Sortie chantier')),
                           DropdownMenuItem(value: 'return', child: Text('Retour stock')),
                         ],
-                        onChanged: (v) => setState(() => _selectedType = v ?? 'use'),
+                        onChanged: (v) => setState(() => _selectedType = v ?? 'purchase'),
                       ))),
                       const SizedBox(width: 10),
                       Expanded(child: _FormField(
@@ -834,7 +879,11 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                     ...widget.movements.asMap().entries.map((entry) {
                       final i = entry.key;
                       final m = entry.value;
-                      final isUse = m.type == 'use';
+                      final isPurchase = m.type == 'purchase';
+                        final isUse = m.type == 'use';
+                        final typeColor = isPurchase ? AppColors.green : isUse ? AppColors.red : AppColors.primary;
+                        final typeLabel = isPurchase ? 'Entrée' : isUse ? 'Sortie' : 'Retour';
+                        final typeIcon = isPurchase ? Icons.arrow_downward : isUse ? Icons.arrow_upward : Icons.replay;
                       return Column(children: [
                         if (i > 0) const Divider(height: 1),
                         ListTile(
@@ -842,18 +891,14 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                           leading: Container(
                             width: 32, height: 32,
                             decoration: BoxDecoration(
-                              color: (isUse ? AppColors.red : AppColors.primary).withValues(alpha: 0.1),
+                              color: typeColor.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(
-                              isUse ? Icons.arrow_upward : Icons.replay,
-                              size: 16,
-                              color: isUse ? AppColors.red : AppColors.primary,
-                            ),
+                            child: Icon(typeIcon, size: 16, color: typeColor),
                           ),
                           title: Text(m.materialName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                           subtitle: Text(
-                            '${isUse ? '−' : '+'}${_fmtNum(m.quantity)} ${m.unit}'
+                            '${isPurchase || !isUse ? '+' : '−'}${_fmtNum(m.quantity)} ${m.unit}'
                             '${m.unitCost != null ? ' · ${_fmtNum(m.quantity * m.unitCost!)} ${widget.currency}' : ''}'
                             ' · ${_fmtShortDate(m.createdAt)}'
                             '${m.notes != null ? ' · ${m.notes}' : ''}',
@@ -865,12 +910,12 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: (isUse ? AppColors.red : AppColors.primary).withValues(alpha: 0.1),
+                                color: typeColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
-                                isUse ? 'Sortie' : 'Retour',
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isUse ? AppColors.red : AppColors.primary),
+                                typeLabel,
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: typeColor),
                               ),
                             ),
                             IconButton(

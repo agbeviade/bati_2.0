@@ -1,53 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../core/theme/app_theme.dart';
+import '../data/quotes_provider.dart';
 
-class QuotesPage extends StatefulWidget {
+const _kPageSize = 20;
+
+class QuotesPage extends ConsumerStatefulWidget {
   const QuotesPage({super.key});
 
   @override
-  State<QuotesPage> createState() => _QuotesPageState();
+  ConsumerState<QuotesPage> createState() => _QuotesPageState();
 }
 
-class _QuotesPageState extends State<QuotesPage> {
-  bool _loading = true;
-  List<Quote> _quotes = [];
+class _QuotesPageState extends ConsumerState<QuotesPage> {
   QuoteStatus? _filter;
+  int _displayCount = _kPageSize;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(quotesProvider.notifier).load();
+    });
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
-    try {
-      final data = await Supabase.instance.client
-          .from('quotes')
-          .select()
-          .order('created_at', ascending: false);
-      setState(() {
-        _quotes = (data as List).map((j) => Quote.fromJson(j)).toList();
-        _loading = false;
-      });
-    } catch (_) {
-      setState(() => _loading = false);
-    }
-  }
-
-  List<Quote> get _filtered =>
-      _filter == null ? _quotes : _quotes.where((q) => q.status == _filter).toList();
-
-  double get _totalApproved => _quotes
-      .where((q) => q.status == QuoteStatus.approved)
-      .fold(0, (s, q) => s + q.total);
-
-  int _count(QuoteStatus s) => _quotes.where((q) => q.status == s).length;
+  List<Quote> _filtered(List<Quote> all) =>
+      _filter == null ? all : all.where((q) => q.status == _filter).toList();
 
   String _fmtShort(double v) {
     if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
@@ -58,11 +40,15 @@ class _QuotesPageState extends State<QuotesPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final visible = _filtered;
+    final state = ref.watch(quotesProvider);
+    final allItems = state.items;
+    final visible = _filtered(allItems);
+    final displayed = visible.take(_displayCount).toList();
+    final hasMore = displayed.length < visible.length;
 
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: () => ref.read(quotesProvider.notifier).load(),
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -71,13 +57,18 @@ class _QuotesPageState extends State<QuotesPage> {
               snap: true,
               actions: [
                 IconButton(
+                  icon: const Icon(Icons.folder_outlined),
+                  tooltip: 'Modèles de devis',
+                  onPressed: () => context.go('/quotes/templates'),
+                ),
+                IconButton(
                   icon: const Icon(Icons.auto_awesome),
                   tooltip: 'Devis IA',
                   onPressed: () => context.go('/quotes/ai'),
                 ),
               ],
             ),
-            if (!_loading) ...[
+            if (!state.loading) ...[
               // ── Stats ──────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
@@ -103,7 +94,7 @@ class _QuotesPageState extends State<QuotesPage> {
                                           .textTheme
                                           .bodySmall
                                           ?.copyWith(color: Colors.white70)),
-                                  Text('${_fmtShort(_totalApproved)} XOF',
+                                  Text('${_fmtShort(state.totalApproved)} XOF',
                                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                           color: Colors.white, fontWeight: FontWeight.bold)),
                                 ],
@@ -117,13 +108,13 @@ class _QuotesPageState extends State<QuotesPage> {
                       // Mini stats
                       Row(
                         children: [
-                          _StatChip(label: 'Brouillons', count: _count(QuoteStatus.draft), color: cs.onSurfaceVariant),
+                          _StatChip(label: 'Brouillons', count: state.count(QuoteStatus.draft), color: cs.onSurfaceVariant),
                           const SizedBox(width: 8),
-                          _StatChip(label: 'Envoyés', count: _count(QuoteStatus.sent), color: Colors.blue),
+                          _StatChip(label: 'Envoyés', count: state.count(QuoteStatus.sent), color: Colors.blue),
                           const SizedBox(width: 8),
-                          _StatChip(label: 'Approuvés', count: _count(QuoteStatus.approved), color: Colors.green),
+                          _StatChip(label: 'Approuvés', count: state.count(QuoteStatus.approved), color: Colors.green),
                           const SizedBox(width: 8),
-                          _StatChip(label: 'Refusés', count: _count(QuoteStatus.rejected), color: AppColors.red),
+                          _StatChip(label: 'Refusés', count: state.count(QuoteStatus.rejected), color: AppColors.red),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -135,7 +126,7 @@ class _QuotesPageState extends State<QuotesPage> {
                             FilterChip(
                               label: const Text('Tous'),
                               selected: _filter == null,
-                              onSelected: (_) => setState(() => _filter = null),
+                              onSelected: (_) => setState(() { _filter = null; _displayCount = _kPageSize; }),
                             ),
                             const SizedBox(width: 8),
                             ...QuoteStatus.values.map((s) => Padding(
@@ -143,7 +134,10 @@ class _QuotesPageState extends State<QuotesPage> {
                                   child: FilterChip(
                                     label: Text(_statusLabel(s)),
                                     selected: _filter == s,
-                                    onSelected: (_) => setState(() => _filter = _filter == s ? null : s),
+                                    onSelected: (_) => setState(() {
+                                      _filter = _filter == s ? null : s;
+                                      _displayCount = _kPageSize;
+                                    }),
                                   ),
                                 )),
                           ],
@@ -164,11 +158,21 @@ class _QuotesPageState extends State<QuotesPage> {
                 )
               else
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, hasMore ? 8 : 100),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
-                      (_, i) => _QuoteTile(quote: visible[i]),
-                      childCount: visible.length,
+                      (_, i) => _QuoteTile(quote: displayed[i]),
+                      childCount: displayed.length,
+                    ),
+                  ),
+                ),
+              if (hasMore)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                    child: OutlinedButton(
+                      onPressed: () => setState(() => _displayCount += _kPageSize),
+                      child: Text('Afficher plus (${visible.length - displayed.length} restants)'),
                     ),
                   ),
                 ),
@@ -182,7 +186,7 @@ class _QuotesPageState extends State<QuotesPage> {
         label: const Text('Nouveau devis'),
         onPressed: () async {
           final result = await context.push('/quotes/new');
-          if (result == true) _load();
+          if (result == true) ref.read(quotesProvider.notifier).load();
         },
       ),
     );

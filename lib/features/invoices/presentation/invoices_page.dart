@@ -1,49 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../core/theme/app_theme.dart';
+import '../data/invoices_provider.dart';
 
-class InvoicesPage extends StatefulWidget {
+const _kPageSize = 20;
+
+class InvoicesPage extends ConsumerStatefulWidget {
   const InvoicesPage({super.key});
 
   @override
-  State<InvoicesPage> createState() => _InvoicesPageState();
+  ConsumerState<InvoicesPage> createState() => _InvoicesPageState();
 }
 
-class _InvoicesPageState extends State<InvoicesPage> {
-  bool _loading = true;
-  List<Invoice> _invoices = [];
-  String _filter = 'all'; // all | draft | sent | paid | overdue
+class _InvoicesPageState extends ConsumerState<InvoicesPage> {
+  String _filter = 'all';
+  int _displayCount = _kPageSize;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(invoicesProvider.notifier).load();
+    });
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
-    try {
-      final data = await Supabase.instance.client
-          .from('invoices')
-          .select()
-          .order('created_at', ascending: false);
-      setState(() {
-        _invoices = (data as List).map((j) => Invoice.fromJson(j as Map<String, dynamic>)).toList();
-        _loading = false;
-      });
-    } catch (_) {
-      setState(() => _loading = false);
-    }
-  }
-
-  List<Invoice> get _filtered {
-    if (_filter == 'all') return _invoices;
-    if (_filter == 'overdue') return _invoices.where((i) => i.isOverdue).toList();
-    return _invoices.where((i) => _statusToFilter(i.status) == _filter).toList();
+  List<Invoice> _filtered(List<Invoice> all) {
+    if (_filter == 'all') return all;
+    if (_filter == 'overdue') return all.where((i) => i.isOverdue).toList();
+    return all.where((i) => _statusToFilter(i.status) == _filter).toList();
   }
 
   String _statusToFilter(InvoiceStatus s) => switch (s) {
@@ -56,28 +44,26 @@ class _InvoicesPageState extends State<InvoicesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final all = _invoices;
-    final overdue = all.where((i) => i.isOverdue).length;
-    final paid = all.where((i) => i.status == InvoiceStatus.paid).length;
-    final draft = all.where((i) => i.status == InvoiceStatus.draft).length;
-    final sent = all.where((i) => i.status == InvoiceStatus.sent && !i.isOverdue).length;
-    final totalPaid = all.where((i) => i.status == InvoiceStatus.paid).fold(0.0, (s, i) => s + i.amount);
-    final filtered = _filtered;
+    final state = ref.watch(invoicesProvider);
+    final all = state.items;
+    final filtered = _filtered(all);
+    final displayed = filtered.take(_displayCount).toList();
+    final hasMore = displayed.length < filtered.length;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Factures')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final result = await context.push('/invoices/new');
-          if (result == true || result == null) _load();
+          if (result == true || result == null) ref.read(invoicesProvider.notifier).load();
         },
         icon: const Icon(Icons.add),
         label: const Text('Nouvelle facture'),
       ),
-      body: _loading
+      body: state.loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _load,
+              onRefresh: () => ref.read(invoicesProvider.notifier).load(),
               child: CustomScrollView(
                 slivers: [
                   // ── Stats ──────────────────────────────────────
@@ -87,7 +73,6 @@ class _InvoicesPageState extends State<InvoicesPage> {
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                         child: Column(
                           children: [
-                            // Total encaissé
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(16),
@@ -100,7 +85,7 @@ class _InvoicesPageState extends State<InvoicesPage> {
                                 children: [
                                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                     const Text('Total encaissé', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                                    Text(_fmtAmount(totalPaid),
+                                    Text(_fmtAmount(state.paidAmount),
                                         style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                                   ]),
                                   Container(
@@ -112,15 +97,14 @@ class _InvoicesPageState extends State<InvoicesPage> {
                               ),
                             ),
                             const SizedBox(height: 10),
-                            // Mini stats
                             Row(children: [
-                              _StatChip(label: 'Brouillons', count: draft, color: const Color(0xFF94A3B8)),
+                              _StatChip(label: 'Brouillons', count: state.countDraft, color: const Color(0xFF94A3B8)),
                               const SizedBox(width: 6),
-                              _StatChip(label: 'Envoyées', count: sent, color: AppColors.primary),
+                              _StatChip(label: 'Envoyées', count: state.countSent, color: AppColors.primary),
                               const SizedBox(width: 6),
-                              _StatChip(label: 'Payées', count: paid, color: AppColors.green),
+                              _StatChip(label: 'Payées', count: state.countPaid, color: AppColors.green),
                               const SizedBox(width: 6),
-                              _StatChip(label: 'En retard', count: overdue, color: AppColors.red),
+                              _StatChip(label: 'En retard', count: state.countOverdue, color: AppColors.red),
                             ]),
                           ],
                         ),
@@ -136,11 +120,11 @@ class _InvoicesPageState extends State<InvoicesPage> {
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                           children: [
-                            _FilterChip(label: 'Toutes', value: 'all', selected: _filter == 'all', onTap: () => setState(() => _filter = 'all')),
-                            _FilterChip(label: 'Brouillons', value: 'draft', selected: _filter == 'draft', onTap: () => setState(() => _filter = 'draft')),
-                            _FilterChip(label: 'Envoyées', value: 'sent', selected: _filter == 'sent', onTap: () => setState(() => _filter = 'sent')),
-                            _FilterChip(label: 'Payées', value: 'paid', selected: _filter == 'paid', onTap: () => setState(() => _filter = 'paid')),
-                            _FilterChip(label: 'En retard', value: 'overdue', selected: _filter == 'overdue', onTap: () => setState(() => _filter = 'overdue')),
+                            _FilterChip(label: 'Toutes', value: 'all', selected: _filter == 'all', onTap: () => setState(() { _filter = 'all'; _displayCount = _kPageSize; })),
+                            _FilterChip(label: 'Brouillons', value: 'draft', selected: _filter == 'draft', onTap: () => setState(() { _filter = 'draft'; _displayCount = _kPageSize; })),
+                            _FilterChip(label: 'Envoyées', value: 'sent', selected: _filter == 'sent', onTap: () => setState(() { _filter = 'sent'; _displayCount = _kPageSize; })),
+                            _FilterChip(label: 'Payées', value: 'paid', selected: _filter == 'paid', onTap: () => setState(() { _filter = 'paid'; _displayCount = _kPageSize; })),
+                            _FilterChip(label: 'En retard', value: 'overdue', selected: _filter == 'overdue', onTap: () => setState(() { _filter = 'overdue'; _displayCount = _kPageSize; })),
                           ],
                         ),
                       ),
@@ -162,11 +146,22 @@ class _InvoicesPageState extends State<InvoicesPage> {
                     )
                   else
                     SliverPadding(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.fromLTRB(16, 8, 16, hasMore ? 8 : 100),
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
-                          (_, i) => _InvoiceTile(invoice: filtered[i]),
-                          childCount: filtered.length,
+                          (_, i) => _InvoiceTile(invoice: displayed[i]),
+                          childCount: displayed.length,
+                        ),
+                      ),
+                    ),
+
+                  if (hasMore)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                        child: OutlinedButton(
+                          onPressed: () => setState(() => _displayCount += _kPageSize),
+                          child: Text('Afficher plus (${filtered.length - displayed.length} restants)'),
                         ),
                       ),
                     ),

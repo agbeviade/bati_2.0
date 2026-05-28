@@ -12,10 +12,13 @@ class ProjectsPage extends StatefulWidget {
   State<ProjectsPage> createState() => _ProjectsPageState();
 }
 
+const _kPageSize = 20;
+
 class _ProjectsPageState extends State<ProjectsPage> {
   bool _loading = true;
   List<Project> _projects = [];
   ProjectStatus? _filter;
+  int _displayCount = _kPageSize;
 
   @override
   void initState() {
@@ -24,7 +27,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _displayCount = _kPageSize; });
     try {
       final client = Supabase.instance.client;
       final List data;
@@ -87,11 +90,26 @@ class _ProjectsPageState extends State<ProjectsPage> {
                         if (created == true) _load();
                       },
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _projects.length,
-                      itemBuilder: (_, i) => _ProjectTile(project: _projects[i]),
-                    ),
+                  : Builder(builder: (_) {
+                        final displayed = _projects.take(_displayCount).toList();
+                        final hasMore = displayed.length < _projects.length;
+                        return ListView.builder(
+                          padding: EdgeInsets.fromLTRB(16, 16, 16, hasMore ? 8 : 100),
+                          itemCount: displayed.length + (hasMore ? 1 : 0),
+                          itemBuilder: (_, i) {
+                            if (i == displayed.length) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 100),
+                                child: OutlinedButton(
+                                  onPressed: () => setState(() => _displayCount += _kPageSize),
+                                  child: Text('Afficher plus (${_projects.length - displayed.length} restants)'),
+                                ),
+                              );
+                            }
+                            return _ProjectTile(project: displayed[i]);
+                          },
+                        );
+                      }),
             ),
     );
   }

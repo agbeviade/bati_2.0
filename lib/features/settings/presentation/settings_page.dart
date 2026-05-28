@@ -5,7 +5,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/models/models.dart';
 import '../../../core/theme/app_theme.dart';
 
-const _kCurrencies = ['XOF', 'XAF', 'MAD', 'GNF', 'EUR', 'USD'];
+const _kCurrencies = [
+  ('XOF', 'XOF — Franc CFA (UEMOA)'),
+  ('XAF', 'XAF — Franc CFA (CEMAC)'),
+  ('MAD', 'MAD — Dirham marocain'),
+  ('EUR', 'EUR — Euro'),
+  ('USD', 'USD — Dollar américain'),
+  ('GHS', 'GHS — Cedi ghanéen'),
+  ('NGN', 'NGN — Naira nigérian'),
+];
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -424,27 +432,28 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
-                    controller: _coAddressCtrl,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                        labelText: 'Adresse',
-                        prefixIcon: Icon(Icons.location_on_outlined)),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
                     controller: _coPhoneCtrl,
                     keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(
                         labelText: 'Téléphone',
-                        prefixIcon: Icon(Icons.phone_outlined)),
+                        prefixIcon: Icon(Icons.phone_outlined),
+                        hintText: '+225 07 00 00 00 00'),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _coEmailCtrl,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
-                        labelText: 'Email',
+                        labelText: 'Email professionnel',
                         prefixIcon: Icon(Icons.email_outlined)),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _coAddressCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                        labelText: 'Adresse',
+                        prefixIcon: Icon(Icons.location_on_outlined)),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
@@ -454,7 +463,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         prefixIcon: Icon(Icons.currency_exchange_outlined)),
                     items: _kCurrencies
                         .map((c) =>
-                            DropdownMenuItem(value: c, child: Text(c)))
+                            DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                         .toList(),
                     onChanged: (v) => setState(() => _currency = v!),
                   ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:timeago/timeago.dart' as timeago;
 import '../../../shared/models/models.dart' as models;
 import '../../../core/theme/app_theme.dart';
 
@@ -19,7 +18,6 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
   bool _loading = true;
   models.Material? _material;
   List<Map<String, dynamic>> _categories = [];
-  List<Map<String, dynamic>> _movements = [];
 
   bool _editing = false;
   bool _saving = false;
@@ -48,12 +46,6 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
       final results = await Future.wait<dynamic>([
         client.from('materials').select().eq('id', widget.id).single(),
         client.from('material_categories').select('slug, label').order('label'),
-        client.from('stock_movements')
-            .select('id, type, quantity, unit_cost, notes, created_at')
-            .eq('material_id', widget.id)
-            .inFilter('type', ['purchase', 'adjustment'])
-            .order('created_at', ascending: false)
-            .limit(50),
       ]);
 
       final mat = models.Material.fromJson(results[0] as Map<String, dynamic>);
@@ -62,7 +54,6 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
       setState(() {
         _material = mat;
         _categories = cats;
-        _movements = (results[2] as List).cast<Map<String, dynamic>>();
         _nameCtrl.text = mat.name;
         _costCtrl.text = mat.unitCost > 0 ? '${mat.unitCost.toInt()}' : '';
         _editCategory = mat.category;
@@ -118,10 +109,7 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
     );
     if (confirmed != true) return;
     try {
-      await Supabase.instance.client
-          .from('materials')
-          .delete()
-          .eq('id', widget.id);
+      await Supabase.instance.client.from('materials').delete().eq('id', widget.id);
       if (mounted) context.pop(true);
     } catch (e) {
       _showError(e);
@@ -135,14 +123,7 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
     );
   }
 
-  String _fmtNum(double v) =>
-      v % 1 == 0 ? v.toInt().toString() : v.toStringAsFixed(1);
-
-  String _movLabel(String type) => switch (type) {
-        'purchase' => 'Achat',
-        'adjustment' => 'Ajustement',
-        _ => type,
-      };
+  String _fmtNum(double v) => v % 1 == 0 ? v.toInt().toString() : v.toStringAsFixed(1);
 
   @override
   Widget build(BuildContext context) {
@@ -156,8 +137,10 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
           body: const Center(child: Text('Matériau introuvable')));
     }
     final m = _material!;
-    final stockValue = m.stockQty * m.unitCost;
-    final isLowStock = m.stockQty <= 0;
+    final categoryLabel = _categories.firstWhere(
+      (c) => c['slug'] == m.category,
+      orElse: () => {'label': m.category},
+    )['label'] as String;
 
     return Scaffold(
       appBar: AppBar(
@@ -185,68 +168,21 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.add_shopping_cart_outlined),
-        label: const Text('Achat / Ajustement'),
-        onPressed: () async {
-          final done = await context.push(
-            '/materials/movement',
-            extra: {'materialId': m.id, 'materialName': m.name},
-          );
-          if (done == true) _load();
-        },
-      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            // ── KPI cards ────────────────────────────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: _KpiCard(
-                    label: 'Stock (${m.unit})',
-                    value: _fmtNum(m.stockQty),
-                    color: isLowStock ? AppColors.red : AppColors.green,
-                    icon: Icons.inventory_2_outlined,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _KpiCard(
-                    label: 'Prix / ${m.unit}',
-                    value: _fmtNum(m.unitCost),
-                    color: cs.primary,
-                    icon: Icons.payments_outlined,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _KpiCard(
-                    label: 'Valeur stock',
-                    value: _fmtNum(stockValue),
-                    color: const Color(0xFF7C3AED),
-                    icon: Icons.account_balance_wallet_outlined,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
+            // Catégorie & unité
             Card(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
                     Icon(Icons.category_outlined, size: 16, color: cs.onSurfaceVariant),
                     const SizedBox(width: 8),
-                    Text(
-                      _categories.firstWhere(
-                        (c) => c['slug'] == m.category,
-                        orElse: () => {'label': m.category},
-                      )['label'] as String,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface),
-                    ),
+                    Text(categoryLabel,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface)),
                     const SizedBox(width: 16),
                     Icon(Icons.straighten_outlined, size: 16, color: cs.onSurfaceVariant),
                     const SizedBox(width: 8),
@@ -256,44 +192,36 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
                 ),
               ),
             ),
-            if (isLowStock) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.red.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
-                ),
+            const SizedBox(height: 8),
+
+            // Prix unitaire de référence
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(Icons.warning_amber_outlined,
-                        size: 16, color: AppColors.red),
-                    const SizedBox(width: 8),
-                    Text('Stock épuisé',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.red,
-                            fontWeight: FontWeight.w500)),
+                    Text('Prix unitaire de référence',
+                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+                    Text(
+                      m.unitCost > 0 ? '${_fmtNum(m.unitCost)} / ${m.unit}' : 'Non défini',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
                   ],
                 ),
               ),
-            ],
+            ),
 
-            // ── Edit form ────────────────────────────────────────
+            // Formulaire d'édition
             if (_editing) ...[
               const SizedBox(height: 20),
               Text('Modifier',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700)),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _nameCtrl,
                 decoration: const InputDecoration(
-                    labelText: 'Nom *',
-                    prefixIcon: Icon(Icons.inventory_2_outlined)),
+                    labelText: 'Nom *', prefixIcon: Icon(Icons.inventory_2_outlined)),
               ),
               const SizedBox(height: 12),
               Row(
@@ -309,8 +237,7 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
                                     overflow: TextOverflow.ellipsis),
                               ))
                           .toList(),
-                      onChanged: (v) =>
-                          setState(() => _editCategory = v ?? _editCategory),
+                      onChanged: (v) => setState(() => _editCategory = v ?? _editCategory),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -319,11 +246,9 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
                       initialValue: _editUnit,
                       decoration: const InputDecoration(labelText: 'Unité'),
                       items: _kUnits
-                          .map((u) =>
-                              DropdownMenuItem(value: u, child: Text(u)))
+                          .map((u) => DropdownMenuItem(value: u, child: Text(u)))
                           .toList(),
-                      onChanged: (v) =>
-                          setState(() => _editUnit = v ?? _editUnit),
+                      onChanged: (v) => setState(() => _editUnit = v ?? _editUnit),
                     ),
                   ),
                 ],
@@ -331,11 +256,9 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _costCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
-                    labelText: 'Prix unitaire',
-                    prefixIcon: Icon(Icons.payments_outlined)),
+                    labelText: 'Prix unitaire', prefixIcon: Icon(Icons.payments_outlined)),
               ),
               const SizedBox(height: 16),
               Row(
@@ -345,10 +268,8 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
                       onPressed: _saving ? null : _save,
                       child: _saving
                           ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
+                              height: 18, width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Text('Enregistrer'),
                     ),
                   ),
@@ -362,129 +283,6 @@ class _MaterialDetailPageState extends State<MaterialDetailPage> {
                 ],
               ),
             ],
-
-            const SizedBox(height: 24),
-
-            // ── Movements history ────────────────────────────────
-            Row(
-              children: [
-                Text('Historique (achats & ajustements)',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w600)),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            if (_movements.isEmpty)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Center(
-                    child: Text(
-                      'Aucun mouvement enregistré.',
-                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-                    ),
-                  ),
-                ),
-              )
-            else
-              Card(
-                child: Column(
-                  children: _movements.map((mv) {
-                    final type = mv['type'] as String;
-                    final qty = (mv['quantity'] as num).toDouble();
-                    final cost = (mv['unit_cost'] as num?)?.toDouble() ?? 0;
-                    final note = mv['notes'] as String?;
-                    final createdAt = DateTime.parse(mv['created_at'] as String).toLocal();
-                    final isPositive = type == 'purchase' || (type == 'adjustment' && qty >= 0);
-                    final qtyColor = isPositive ? AppColors.green : AppColors.red;
-
-                    return ListTile(
-                      dense: true,
-                      leading: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: (isPositive ? AppColors.green : AppColors.red)
-                            .withValues(alpha: 0.12),
-                        child: Icon(
-                          type == 'purchase'
-                              ? Icons.add_shopping_cart_outlined
-                              : Icons.tune_outlined,
-                          size: 14,
-                          color: isPositive ? AppColors.green : AppColors.red,
-                        ),
-                      ),
-                      title: Text(
-                        _movLabel(type),
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                      subtitle: Text(
-                        [
-                          timeago.format(createdAt, locale: 'fr'),
-                          if (note != null && note.isNotEmpty) note,
-                        ].join(' · '),
-                        style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '${qty >= 0 ? '+' : ''}${_fmtNum(qty)} ${m.unit}',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: qtyColor),
-                          ),
-                          if (cost > 0)
-                            Text(
-                              '${_fmtNum(cost)} / ${m.unit}',
-                              style: TextStyle(
-                                  fontSize: 11, color: cs.onSurfaceVariant),
-                            ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _KpiCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-  final IconData icon;
-  const _KpiCard(
-      {required this.label,
-      required this.value,
-      required this.color,
-      required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(height: 6),
-            Text(value,
-                style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-            const SizedBox(height: 2),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 10,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),
       ),

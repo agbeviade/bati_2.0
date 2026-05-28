@@ -15,6 +15,7 @@ import '../../features/quotes/presentation/quotes_page.dart';
 import '../../features/quotes/presentation/quote_detail_page.dart';
 import '../../features/quotes/presentation/quote_ai_page.dart';
 import '../../features/quotes/presentation/quote_form_page.dart';
+import '../../features/quotes/presentation/quote_templates_page.dart';
 import '../../features/invoices/presentation/invoices_page.dart';
 import '../../features/invoices/presentation/invoice_detail_page.dart';
 import '../../features/invoices/presentation/invoice_form_page.dart';
@@ -28,6 +29,7 @@ import '../../features/portal/presentation/portal_quotes_page.dart';
 import '../../features/portal/presentation/portal_invoices_page.dart';
 import '../../features/reports/presentation/reports_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
+import '../../features/stock/presentation/stock_page.dart';
 import '../../features/metres/presentation/metres_page.dart';
 import '../../features/metres/presentation/ouvrage_form_page.dart';
 import '../../features/clients/presentation/clients_page.dart';
@@ -154,6 +156,7 @@ GoRouter buildRouter() {
               builder: (_, $) => const QuotesPage(),
               routes: [
                 GoRoute(path: 'ai', builder: (_, $) => const QuoteAiPage()),
+                GoRoute(path: 'templates', builder: (_, $) => const QuoteTemplatesPage()),
                 GoRoute(path: 'new', builder: (_, $) => const QuoteFormPage()),
                 GoRoute(
                   path: ':id',
@@ -223,6 +226,7 @@ GoRouter buildRouter() {
             GoRoute(path: '/notifications', builder: (_, $) => const NotificationsPage()),
             GoRoute(path: '/reports', builder: (_, $) => const ReportsPage()),
             GoRoute(path: '/settings', builder: (_, $) => const SettingsPage()),
+            GoRoute(path: '/stock', builder: (_, $) => const StockPage()),
           ],
         ),
         // ── Portail client ──────────────────────────────────────

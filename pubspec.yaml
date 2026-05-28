@@ -27,8 +27,9 @@ dependencies:
   geolocator: ^13.0.4
   permission_handler: ^11.3.1
 
-  # Caméra / Photos
+  # Caméra / Photos & Fichiers
   image_picker: ^1.1.2
+  file_picker: ^8.1.2
 
   # PDF / URLs
   url_launcher: ^6.3.1

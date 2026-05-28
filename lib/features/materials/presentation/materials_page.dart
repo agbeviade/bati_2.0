@@ -29,7 +29,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
     try {
       final client = Supabase.instance.client;
       final results = await Future.wait([
-        client.from('materials').select('id, name, category, unit, stock_qty, unit_cost').order('name'),
+        client.from('materials').select('id, name, category, unit, unit_cost').order('name'),
         client.from('material_categories').select('slug, label').order('label'),
       ]);
 
@@ -64,7 +64,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
     final categories = _categoryLabels.entries.toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Matériaux & Stock')),
+      appBar: AppBar(title: const Text('Matériaux')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final router = GoRouter.of(context);
@@ -80,28 +80,6 @@ class _MaterialsPageState extends State<MaterialsPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Info banner: exits are managed from projects
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFBFDBFE)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.info_outline, size: 15, color: Color(0xFF2563EB)),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Les sorties chantier se saisissent depuis l\'onglet Matériaux de chaque chantier.',
-                          style: TextStyle(fontSize: 12, color: Color(0xFF1D4ED8)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: TextField(
@@ -246,11 +224,11 @@ class _MaterialTile extends StatelessWidget {
                 ),
               ),
               Text(
-                '${m.stockQty.toStringAsFixed(m.stockQty % 1 == 0 ? 0 : 1)} ${m.unit}',
+                m.unitCost > 0 ? '${m.unitCost.toInt()} / ${m.unit}' : 'Prix non défini',
                 style: Theme.of(context)
                     .textTheme
-                    .bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                    .bodySmall
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
           ),
