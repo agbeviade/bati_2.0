@@ -23,17 +23,21 @@ export async function createInvoice(formData: FormData) {
   if (!parsed.ok) return { error: parsed.error };
   const input = parsed.data;
 
-  const { data: invoice, error } = await supabase.from("invoices").insert({
-    company_id: companyId,
-    invoice_number,
-    client_name: input.client_name,
-    amount: input.amount,
-    due_date: input.due_date,
-    notes: input.notes,
-    project_id: input.project_id,
-    quote_id: input.quote_id,
-    created_by: user.id,
-  }).select("id").single();
+  const { data: invoice, error } = await supabase
+    .from("invoices")
+    .insert({
+      company_id: companyId,
+      invoice_number,
+      client_name: input.client_name,
+      amount: input.amount,
+      due_date: input.due_date,
+      notes: input.notes,
+      project_id: input.project_id,
+      quote_id: input.quote_id,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
 
   if (error || !invoice) {
     logger.error("createInvoice insert failed", error, { companyId });

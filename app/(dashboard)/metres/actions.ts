@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthedProfile } from "@/lib/auth/profile";
-import type { TypeGeometrie, DimensionsOuvrage, VideDeduit, ComposantRecette, ComposantRecetteCalcule } from "@/lib/calcul-ouvrage";
+import type {
+  TypeGeometrie,
+  DimensionsOuvrage,
+  VideDeduit,
+  ComposantRecette,
+  ComposantRecetteCalcule,
+} from "@/lib/calcul-ouvrage";
 import type { Json } from "@/lib/supabase/types";
 
 function toJson<T>(v: T): Json {
@@ -46,30 +52,36 @@ export async function createOuvrage(data: {
   redirect("/metres");
 }
 
-export async function updateOuvrage(id: string, data: {
-  designation: string;
-  type_geometrie: TypeGeometrie;
-  dimensions: DimensionsOuvrage;
-  vides_deduits: VideDeduit[];
-  quantite_brute: number;
-  quantite_nette: number;
-  unite_principale: string;
-  recette: ComposantRecette[];
-  recette_calculee: ComposantRecetteCalcule[];
-}) {
+export async function updateOuvrage(
+  id: string,
+  data: {
+    designation: string;
+    type_geometrie: TypeGeometrie;
+    dimensions: DimensionsOuvrage;
+    vides_deduits: VideDeduit[];
+    quantite_brute: number;
+    quantite_nette: number;
+    unite_principale: string;
+    recette: ComposantRecette[];
+    recette_calculee: ComposantRecetteCalcule[];
+  },
+) {
   const { supabase } = await getAuthedProfile();
 
-  const { error } = await supabase.from("project_ouvrages").update({
-    designation: data.designation,
-    type_geometrie: data.type_geometrie,
-    dimensions: toJson(data.dimensions),
-    vides_deduits: toJson(data.vides_deduits),
-    quantite_brute: data.quantite_brute,
-    quantite_nette: data.quantite_nette,
-    unite_principale: data.unite_principale,
-    recette: toJson(data.recette),
-    recette_calculee: toJson(data.recette_calculee),
-  }).eq("id", id);
+  const { error } = await supabase
+    .from("project_ouvrages")
+    .update({
+      designation: data.designation,
+      type_geometrie: data.type_geometrie,
+      dimensions: toJson(data.dimensions),
+      vides_deduits: toJson(data.vides_deduits),
+      quantite_brute: data.quantite_brute,
+      quantite_nette: data.quantite_nette,
+      unite_principale: data.unite_principale,
+      recette: toJson(data.recette),
+      recette_calculee: toJson(data.recette_calculee),
+    })
+    .eq("id", id);
 
   if (error) return { error: error.message };
 
@@ -111,11 +123,7 @@ export async function listModels(): Promise<{ id: string; name: string; created_
 
 export async function loadModel(id: string) {
   const { supabase } = await getAuthedProfile();
-  const { data } = await supabase
-    .from("debourses_models")
-    .select("inputs")
-    .eq("id", id)
-    .single();
+  const { data } = await supabase.from("debourses_models").select("inputs").eq("id", id).single();
   return data?.inputs ?? null;
 }
 
@@ -127,7 +135,7 @@ export async function deleteModel(id: string) {
 
 export async function generateQuoteFromDebourseModel(
   modelId: string,
-  description: string
+  description: string,
 ): Promise<{
   items: Array<{
     category: "material" | "labor" | "transport" | "equipment" | "other";
@@ -142,14 +150,17 @@ export async function generateQuoteFromDebourseModel(
 }> {
   const { supabase } = await getAuthedProfile();
   const { data } = await supabase
-    .from("debourses_models").select("inputs").eq("id", modelId).single();
+    .from("debourses_models")
+    .select("inputs")
+    .eq("id", modelId)
+    .single();
   if (!data?.inputs) return { items: [], notes: "", error: "Modele introuvable." };
 
   const { computeRecap, RECAP_LABELS, RECAP_UNITS } = await import("@/lib/debourses-calc");
   const recap = computeRecap(data.inputs as unknown as Parameters<typeof computeRecap>[0]);
   const lignes = (Object.keys(recap) as (keyof typeof recap)[])
-    .filter(k => recap[k] > 0)
-    .map(k => ({ label: RECAP_LABELS[k], quantity: recap[k], unit: RECAP_UNITS[k] }));
+    .filter((k) => recap[k] > 0)
+    .map((k) => ({ label: RECAP_LABELS[k], quantity: recap[k], unit: RECAP_UNITS[k] }));
 
   const { genererDevisDepuisDebourses } = await import("./ai-actions");
   return genererDevisDepuisDebourses(lignes, description);
@@ -158,7 +169,7 @@ export async function generateQuoteFromDebourseModel(
 export async function generateQuoteFromTemplate(
   templateId: string,
   description: string,
-  debourseModelId?: string
+  debourseModelId?: string,
 ): Promise<{
   items: Array<{
     category: "material" | "labor" | "transport" | "equipment" | "other";
@@ -178,18 +189,28 @@ export async function generateQuoteFromTemplate(
   let debourseContext: Array<{ label: string; quantity: number; unit: string }> | undefined;
   if (debourseModelId) {
     const { supabase } = await getAuthedProfile();
-    const { data } = await supabase.from("debourses_models").select("inputs").eq("id", debourseModelId).single();
+    const { data } = await supabase
+      .from("debourses_models")
+      .select("inputs")
+      .eq("id", debourseModelId)
+      .single();
     if (data?.inputs) {
       const { computeRecap, RECAP_LABELS, RECAP_UNITS } = await import("@/lib/debourses-calc");
       const recap = computeRecap(data.inputs as unknown as Parameters<typeof computeRecap>[0]);
       debourseContext = (Object.keys(recap) as (keyof typeof recap)[])
-        .filter(k => recap[k] > 0)
-        .map(k => ({ label: RECAP_LABELS[k], quantity: recap[k], unit: RECAP_UNITS[k] }));
+        .filter((k) => recap[k] > 0)
+        .map((k) => ({ label: RECAP_LABELS[k], quantity: recap[k], unit: RECAP_UNITS[k] }));
     }
   }
 
   const { genererDevisDepuisTemplate } = await import("./ai-actions");
-  return genererDevisDepuisTemplate(base64, mimeType, fileType as "pdf" | "image", description, debourseContext);
+  return genererDevisDepuisTemplate(
+    base64,
+    mimeType,
+    fileType as "pdf" | "image",
+    description,
+    debourseContext,
+  );
 }
 
 export async function saveOuvrageType(data: {

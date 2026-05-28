@@ -39,13 +39,13 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden lg:flex w-64 border-r bg-card flex-col h-screen sticky top-0">
-      <div className="p-6 border-b">
-        <Link href="/dashboard" className="font-bold text-xl">
+    <aside className="bg-card sticky top-0 hidden h-screen w-64 flex-col border-r lg:flex">
+      <div className="border-b p-6">
+        <Link href="/dashboard" className="text-xl font-bold">
           BatiFlow
         </Link>
       </div>
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {items.map((item) => {
           const Icon = item.icon;
           const active =
@@ -56,10 +56,10 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                 active
                   ? "bg-primary text-primary-foreground"
-                  : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                  : "hover:bg-accent hover:text-accent-foreground text-muted-foreground",
               )}
             >
               <Icon className="h-4 w-4" />

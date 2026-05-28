@@ -10,10 +10,16 @@ import type { CategoryRow } from "@/components/materials/category-manager";
 
 export default async function MaterialsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
   if (!profile?.company_id) redirect("/onboarding");
 
   const [{ data: materialsData }, { data: categoriesData }] = await Promise.all([
@@ -29,7 +35,10 @@ export default async function MaterialsPage() {
       .order("label"),
   ]);
 
-  const materials = (materialsData ?? []) as Pick<Material, "id" | "name" | "category" | "unit" | "stock_qty" | "unit_cost">[];
+  const materials = (materialsData ?? []) as Pick<
+    Material,
+    "id" | "name" | "category" | "unit" | "stock_qty" | "unit_cost"
+  >[];
   const categories = (categoriesData ?? []) as CategoryRow[];
 
   return (
@@ -43,11 +52,11 @@ export default async function MaterialsPage() {
               : `${materials.length} référence${materials.length > 1 ? "s" : ""}`}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center gap-2">
           <CategoryManager categories={categories} />
           <Button asChild>
             <Link href="/materials/new">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 h-4 w-4" />
               Nouveau matériau
             </Link>
           </Button>

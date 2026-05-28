@@ -17,18 +17,32 @@ function formatAmount(amount: number, currency: string) {
 
 function formatDate(d: string | null) {
   if (!d) return null;
-  return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(d).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export default async function QuotesPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
   if (!profile?.company_id) redirect("/onboarding");
 
-  const { data: company } = await supabase.from("companies").select("currency").eq("id", profile.company_id).single();
+  const { data: company } = await supabase
+    .from("companies")
+    .select("currency")
+    .eq("id", profile.company_id)
+    .single();
   const currency = (company as { currency?: string } | null)?.currency ?? "XOF";
 
   const { data: quotesData } = await supabase
@@ -37,13 +51,23 @@ export default async function QuotesPage() {
     .eq("company_id", profile.company_id)
     .order("created_at", { ascending: false });
 
-  const quotes = (quotesData ?? []) as Pick<Quote, "id" | "quote_number" | "client_name" | "project_type" | "total" | "status" | "valid_until" | "created_at">[];
+  const quotes = (quotesData ?? []) as Pick<
+    Quote,
+    | "id"
+    | "quote_number"
+    | "client_name"
+    | "project_type"
+    | "total"
+    | "status"
+    | "valid_until"
+    | "created_at"
+  >[];
 
   const stats = {
     total: quotes.length,
-    draft: quotes.filter(q => q.status === "draft").length,
-    sent: quotes.filter(q => q.status === "sent").length,
-    approved: quotes.filter(q => q.status === "approved").length,
+    draft: quotes.filter((q) => q.status === "draft").length,
+    sent: quotes.filter((q) => q.status === "sent").length,
+    approved: quotes.filter((q) => q.status === "approved").length,
   };
 
   return (
@@ -52,12 +76,14 @@ export default async function QuotesPage() {
         <div>
           <h2 className="text-2xl font-bold">Devis</h2>
           <p className="text-muted-foreground">
-            {stats.total === 0 ? "Aucun devis pour l'instant." : `${stats.total} devis — ${stats.approved} approuvé${stats.approved > 1 ? "s" : ""}`}
+            {stats.total === 0
+              ? "Aucun devis pour l'instant."
+              : `${stats.total} devis — ${stats.approved} approuvé${stats.approved > 1 ? "s" : ""}`}
           </p>
         </div>
         <Button asChild>
           <Link href="/quotes/new">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Nouveau devis
           </Link>
         </Button>
@@ -74,7 +100,7 @@ export default async function QuotesPage() {
             <Card key={s.label}>
               <CardContent className="px-3 pt-3 pb-3 text-center">
                 <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
+                <p className="text-muted-foreground text-xs">{s.label}</p>
               </CardContent>
             </Card>
           ))}

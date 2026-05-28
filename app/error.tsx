@@ -20,30 +20,28 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center p-6">
-      <div className="max-w-md text-center space-y-4">
-        <div className="mx-auto h-12 w-12 rounded-full bg-red-50 flex items-center justify-center">
+    <div className="flex min-h-[60vh] items-center justify-center p-6">
+      <div className="max-w-md space-y-4 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
           <AlertTriangle className="h-6 w-6 text-red-500" />
         </div>
         <div>
           <h1 className="text-xl font-bold">Une erreur est survenue</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm">
             Le problème a été enregistré. Vous pouvez réessayer ou revenir à l&apos;accueil.
           </p>
         </div>
         {error.digest && (
-          <p className="text-xs text-muted-foreground font-mono">
-            Référence : {error.digest}
-          </p>
+          <p className="text-muted-foreground font-mono text-xs">Référence : {error.digest}</p>
         )}
-        <div className="flex gap-2 justify-center pt-2">
+        <div className="flex justify-center gap-2 pt-2">
           <Button onClick={reset} variant="default" size="sm">
-            <RotateCw className="h-3.5 w-3.5 mr-1.5" />
+            <RotateCw className="mr-1.5 h-3.5 w-3.5" />
             Réessayer
           </Button>
           <Button asChild variant="outline" size="sm">
             <Link href="/dashboard">
-              <Home className="h-3.5 w-3.5 mr-1.5" />
+              <Home className="mr-1.5 h-3.5 w-3.5" />
               Tableau de bord
             </Link>
           </Button>

@@ -1,28 +1,28 @@
 // Moteur de calcul métré BTP — toutes les fonctions sont pures (sans side effects)
 
 export type TypeGeometrie =
-  | "surface_l_h"     // L × H → m²
-  | "volume_l_l_h"    // L × l × H → m³
-  | "cylindre"        // π × (D/2)² × H → m³
-  | "toiture_pente"   // surface_sol / cos(arctan(pente/100)) → m²
-  | "toiture_croupe"  // toiture 4 pans → m²
-  | "lineaire"        // L → ml
-  | "unite"           // comptage → u
-  | "escalier"        // nb_marches × L × (giron + contremarche) → m²
-  | "trapeze";        // (a+b)/2 × H → m²
+  | "surface_l_h" // L × H → m²
+  | "volume_l_l_h" // L × l × H → m³
+  | "cylindre" // π × (D/2)² × H → m³
+  | "toiture_pente" // surface_sol / cos(arctan(pente/100)) → m²
+  | "toiture_croupe" // toiture 4 pans → m²
+  | "lineaire" // L → ml
+  | "unite" // comptage → u
+  | "escalier" // nb_marches × L × (giron + contremarche) → m²
+  | "trapeze"; // (a+b)/2 × H → m²
 
 export interface DimensionsOuvrage {
   longueur?: number;
   largeur?: number;
   hauteur?: number;
   diametre?: number;
-  pente?: number;        // en %
+  pente?: number; // en %
   surface_sol?: number;
   nb_marches?: number;
-  giron?: number;        // profondeur d'une marche (m)
+  giron?: number; // profondeur d'une marche (m)
   contremarche?: number; // hauteur d'une marche (m)
-  a?: number;            // grande base trapèze
-  b?: number;            // petite base trapèze
+  a?: number; // grande base trapèze
+  b?: number; // petite base trapèze
 }
 
 export interface VideDeduit {
@@ -37,13 +37,13 @@ export interface ComposantRecette {
   materiau_id: string;
   materiau_nom: string;
   unite: string;
-  coefficient: number;  // quantité par unité d'ouvrage
-  taux_perte: number;   // ex: 0.05 = 5% de perte/chutes
+  coefficient: number; // quantité par unité d'ouvrage
+  taux_perte: number; // ex: 0.05 = 5% de perte/chutes
   type: "materiau" | "main_oeuvre";
 }
 
 export interface ComposantRecetteCalcule extends ComposantRecette {
-  quantite_nette: number;    // coefficient × qté nette ouvrage
+  quantite_nette: number; // coefficient × qté nette ouvrage
   quantite_commande: number; // quantite_nette × (1 + taux_perte)
 }
 
@@ -142,7 +142,7 @@ export function getUnitePrincipale(type: TypeGeometrie): string {
 }
 
 export function calculerOuvrage(
-  ouvrage: Omit<OuvrageMetre, "quantite_brute" | "quantite_nette" | "recette_calculee">
+  ouvrage: Omit<OuvrageMetre, "quantite_brute" | "quantite_nette" | "recette_calculee">,
 ): OuvrageMetre {
   const brut = calculerBrut(ouvrage.type_geometrie, ouvrage.dimensions);
 
@@ -227,12 +227,8 @@ export const CHAMPS_PAR_TYPE: Record<TypeGeometrie, ChampDimension[]> = {
     { key: "surface_sol", label: "Surface au sol (m²)", placeholder: "ex: 80" },
     { key: "pente", label: "Pente (%)", placeholder: "ex: 35" },
   ],
-  lineaire: [
-    { key: "longueur", label: "Longueur (m)", placeholder: "ex: 25" },
-  ],
-  unite: [
-    { key: "longueur", label: "Quantité", placeholder: "ex: 3", step: "1" },
-  ],
+  lineaire: [{ key: "longueur", label: "Longueur (m)", placeholder: "ex: 25" }],
+  unite: [{ key: "longueur", label: "Quantité", placeholder: "ex: 3", step: "1" }],
   escalier: [
     { key: "nb_marches", label: "Nombre de marches", placeholder: "ex: 14", step: "1" },
     { key: "giron", label: "Giron (m)", placeholder: "0.28" },

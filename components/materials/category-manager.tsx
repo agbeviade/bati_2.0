@@ -34,7 +34,10 @@ export function CategoryManager({ categories }: { categories: CategoryRow[] }) {
       fd.append("label", newLabel.trim());
       const result = await createCategory(fd);
       if (result?.error) toast.error(result.error);
-      else { setNewLabel(""); toast.success("Catégorie ajoutée."); }
+      else {
+        setNewLabel("");
+        toast.success("Catégorie ajoutée.");
+      }
     });
   }
 
@@ -50,7 +53,10 @@ export function CategoryManager({ categories }: { categories: CategoryRow[] }) {
       fd.append("label", editLabel.trim());
       const result = await updateCategory(id, fd);
       if (result?.error) toast.error(result.error);
-      else { setEditingId(null); toast.success("Catégorie modifiée."); }
+      else {
+        setEditingId(null);
+        toast.success("Catégorie modifiée.");
+      }
     });
   }
 
@@ -66,11 +72,11 @@ export function CategoryManager({ categories }: { categories: CategoryRow[] }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Settings className="h-4 w-4 mr-2" />
+          <Settings className="mr-2 h-4 w-4" />
           Catégories
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md flex flex-col max-h-[80vh]">
+      <DialogContent className="flex max-h-[80vh] max-w-md flex-col">
         <DialogHeader>
           <DialogTitle>Gérer les catégories</DialogTitle>
         </DialogHeader>
@@ -87,18 +93,18 @@ export function CategoryManager({ categories }: { categories: CategoryRow[] }) {
           </Button>
         </div>
 
-        <div className="overflow-y-auto flex-1 space-y-0.5 pr-1">
+        <div className="flex-1 space-y-0.5 overflow-y-auto pr-1">
           {categories.map((cat) => (
             <div
               key={cat.id}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 group"
+              className="hover:bg-muted/50 group flex items-center gap-2 rounded-md px-2 py-1.5"
             >
               {editingId === cat.id ? (
                 <>
                   <Input
                     value={editLabel}
                     onChange={(e) => setEditLabel(e.target.value)}
-                    className="h-7 text-sm flex-1"
+                    className="h-7 flex-1 text-sm"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSaveEdit(cat.id);
@@ -129,7 +135,7 @@ export function CategoryManager({ categories }: { categories: CategoryRow[] }) {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground h-7 w-7 opacity-0 group-hover:opacity-100"
                     onClick={() => startEdit(cat)}
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -137,7 +143,7 @@ export function CategoryManager({ categories }: { categories: CategoryRow[] }) {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive h-7 w-7 opacity-0 group-hover:opacity-100"
                     onClick={() => handleDelete(cat.id)}
                     disabled={isPending}
                   >

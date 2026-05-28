@@ -37,10 +37,7 @@ export async function updateCategory(id: string, formData: FormData) {
   const label = (formData.get("label") as string)?.trim();
   if (!label) return { error: "Le libellé est requis." };
 
-  const { error } = await supabase
-    .from("material_categories")
-    .update({ label })
-    .eq("id", id);
+  const { error } = await supabase.from("material_categories").update({ label }).eq("id", id);
 
   if (error) return { error: error.message };
   revalidatePath("/materials");
@@ -63,7 +60,9 @@ export async function deleteCategory(id: string) {
     .eq("category", cat.slug);
 
   if (count && count > 0)
-    return { error: `Impossible : ${count} matériau${count > 1 ? "x" : ""} utilisent cette catégorie.` };
+    return {
+      error: `Impossible : ${count} matériau${count > 1 ? "x" : ""} utilisent cette catégorie.`,
+    };
 
   await supabase.from("material_categories").delete().eq("id", id);
   revalidatePath("/materials");

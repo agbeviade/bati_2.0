@@ -11,7 +11,21 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import type { Material } from "@/lib/supabase/types";
 import type { CategoryRow } from "@/components/materials/category-manager";
 
-const UNITS = ["u", "kg", "t", "m", "m²", "m³", "L", "ml", "sac", "barre", "planche", "rouleau", "boîte"];
+const UNITS = [
+  "u",
+  "kg",
+  "t",
+  "m",
+  "m²",
+  "m³",
+  "L",
+  "ml",
+  "sac",
+  "barre",
+  "planche",
+  "rouleau",
+  "boîte",
+];
 
 export default async function MaterialDetailPage({
   params,
@@ -24,7 +38,9 @@ export default async function MaterialDetailPage({
   const { edit } = await searchParams;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { data: matData } = await supabase.from("materials").select("*").eq("id", id).maybeSingle();
@@ -47,13 +63,15 @@ export default async function MaterialDetailPage({
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/materials"><ArrowLeft className="h-4 w-4" /></Link>
+          <Link href="/materials">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
         </Button>
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold truncate">{mat.name}</h2>
+            <h2 className="truncate text-2xl font-bold">{mat.name}</h2>
           </div>
-          <p className="text-sm text-muted-foreground">{categoryLabel}</p>
+          <p className="text-muted-foreground text-sm">{categoryLabel}</p>
         </div>
         <Button variant="outline" size="sm" asChild>
           <Link href={`/materials/${id}?edit=1`}>Modifier</Link>
@@ -62,10 +80,12 @@ export default async function MaterialDetailPage({
 
       {/* Prix de référence */}
       <Card>
-        <CardContent className="py-3 px-4">
+        <CardContent className="px-4 py-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm text-muted-foreground">Prix unitaire de référence</span>
-            <span className="font-bold">{mat.unit_cost.toLocaleString("fr-FR")} / {mat.unit}</span>
+            <span className="text-muted-foreground text-sm">Prix unitaire de référence</span>
+            <span className="font-bold">
+              {mat.unit_cost.toLocaleString("fr-FR")} / {mat.unit}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -83,35 +103,56 @@ export default async function MaterialDetailPage({
                 <div className="space-y-1.5">
                   <Label htmlFor="category">Catégorie</Label>
                   <select
-                    name="category" id="category" defaultValue={mat.category}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    name="category"
+                    id="category"
+                    defaultValue={mat.category}
+                    className="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
                   >
-                    {categories.map(c => <option key={c.id} value={c.slug}>{c.label}</option>)}
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.slug}>
+                        {c.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="unit">Unité</Label>
                   <select
-                    name="unit" id="unit" defaultValue={mat.unit}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    name="unit"
+                    id="unit"
+                    defaultValue={mat.unit}
+                    className="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
                   >
-                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                    {UNITS.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="unit_cost">Prix unitaire</Label>
-                <Input id="unit_cost" name="unit_cost" type="number" min="0" step="1" defaultValue={mat.unit_cost} />
+                <Input
+                  id="unit_cost"
+                  name="unit_cost"
+                  type="number"
+                  min="0"
+                  step="1"
+                  defaultValue={mat.unit_cost}
+                />
               </div>
               <div className="flex gap-2 pt-1">
-                <Button type="submit" size="sm">Enregistrer</Button>
+                <Button type="submit" size="sm">
+                  Enregistrer
+                </Button>
                 <Button type="button" size="sm" variant="ghost" asChild>
                   <Link href={`/materials/${id}`}>Annuler</Link>
                 </Button>
               </div>
             </form>
 
-            <div className="mt-6 pt-6 border-t">
+            <div className="mt-6 border-t pt-6">
               <DeleteButton
                 onConfirm={deleteWithId}
                 title="Supprimer ce matériau"
@@ -121,7 +162,6 @@ export default async function MaterialDetailPage({
           </CardContent>
         </Card>
       )}
-
     </div>
   );
 }

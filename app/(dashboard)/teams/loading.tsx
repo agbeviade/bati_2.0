@@ -15,7 +15,7 @@ export default function TeamsLoading() {
 
       <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="rounded-lg border bg-card p-4 flex items-center gap-4">
+          <div key={i} className="bg-card flex items-center gap-4 rounded-lg border p-4">
             <div className="flex-1 space-y-1.5">
               <Skeleton className="h-4 w-40" />
               <div className="flex gap-4">

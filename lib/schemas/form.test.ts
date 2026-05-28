@@ -33,7 +33,10 @@ describe("parseFormData", () => {
 describe("coercitions", () => {
   it("optionalText : null si vide ou whitespace", () => {
     const schema = z.object({ x: optionalText });
-    expect(parseFormData(schema, fd({ x: "  " })).ok && (parseFormData(schema, fd({ x: "  " })) as { ok: true; data: { x: string | null } }).data.x).toBe(null);
+    expect(
+      parseFormData(schema, fd({ x: "  " })).ok &&
+        (parseFormData(schema, fd({ x: "  " })) as { ok: true; data: { x: string | null } }).data.x,
+    ).toBe(null);
     const r = parseFormData(schema, fd({ x: "  hello  " }));
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.data.x).toBe("hello");

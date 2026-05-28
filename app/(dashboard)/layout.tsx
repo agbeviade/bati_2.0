@@ -4,11 +4,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { Toaster } from "@/components/ui/sonner";
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,12 +29,9 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Topbar
-          email={user.email!}
-          fullName={typedProfile?.full_name}
-        />
-        <main className="flex-1 p-4 lg:p-6 bg-muted/30 min-w-0">{children}</main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Topbar email={user.email!} fullName={typedProfile?.full_name} />
+        <main className="bg-muted/30 min-w-0 flex-1 p-4 lg:p-6">{children}</main>
       </div>
       <Toaster />
     </div>

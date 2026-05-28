@@ -6,7 +6,9 @@ import type { User, Company } from "@/lib/supabase/types";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { data: profileData } = await supabase
@@ -15,23 +17,41 @@ export default async function SettingsPage() {
     .eq("id", user.id)
     .single();
 
-  const profile = profileData as Pick<User, "full_name" | "phone" | "specialty" | "daily_rate"> & { company_id: string };
+  const profile = profileData as Pick<User, "full_name" | "phone" | "specialty" | "daily_rate"> & {
+    company_id: string;
+  };
   if (!profile?.company_id) redirect("/onboarding");
 
   const { data: companyData } = await supabase
     .from("companies")
-    .select("id, name, address, phone, email, currency, plan, subscription_status, header_url, footer_url")
+    .select(
+      "id, name, address, phone, email, currency, plan, subscription_status, header_url, footer_url",
+    )
     .eq("id", profile.company_id)
     .single();
 
   if (!companyData) redirect("/onboarding");
-  const company = companyData as Pick<Company, "id" | "name" | "address" | "phone" | "email" | "currency" | "plan" | "subscription_status" | "header_url" | "footer_url">;
+  const company = companyData as Pick<
+    Company,
+    | "id"
+    | "name"
+    | "address"
+    | "phone"
+    | "email"
+    | "currency"
+    | "plan"
+    | "subscription_status"
+    | "header_url"
+    | "footer_url"
+  >;
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Paramètres</h2>
-        <p className="text-muted-foreground">Gérez votre profil et les informations de votre entreprise.</p>
+        <p className="text-muted-foreground">
+          Gérez votre profil et les informations de votre entreprise.
+        </p>
       </div>
 
       <ProfileForm profile={profile} />

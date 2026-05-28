@@ -42,7 +42,13 @@ INSTRUCTIONS GÉNÉRALES :
 // ── Tool definition (JSON schema strict) ───────────────────────
 // Anthropic exécute le tool_choice forcé → garantit qu'on récupère
 // directement un objet JSON validé, sans regex parsing fragile.
-export const QUOTE_ITEM_CATEGORIES = ["material", "labor", "transport", "equipment", "other"] as const;
+export const QUOTE_ITEM_CATEGORIES = [
+  "material",
+  "labor",
+  "transport",
+  "equipment",
+  "other",
+] as const;
 
 export type GeneratedQuoteItem = {
   category: (typeof QUOTE_ITEM_CATEGORIES)[number];
@@ -97,9 +103,7 @@ export const GENERATE_QUOTE_TOOL: Anthropic.Tool = {
  * Lance si la réponse ne contient pas de tool_use (ne devrait jamais
  * arriver avec tool_choice forcé, mais on garde la garde).
  */
-export function extractToolResult(
-  response: Anthropic.Message
-): GeneratedQuoteResult {
+export function extractToolResult(response: Anthropic.Message): GeneratedQuoteResult {
   for (const block of response.content) {
     if (block.type === "tool_use" && block.name === "generate_quote") {
       return block.input as GeneratedQuoteResult;

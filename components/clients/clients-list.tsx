@@ -23,16 +23,21 @@ const STATUS_OPTIONS = [
 
 export function ClientsList({ clients }: { clients: ClientRow[] }) {
   const emptyState = (
-    <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-      <div className="p-4 rounded-full bg-muted">
-        <UserCircle className="h-10 w-10 text-muted-foreground" />
+    <div className="flex flex-col items-center justify-center space-y-4 py-24 text-center">
+      <div className="bg-muted rounded-full p-4">
+        <UserCircle className="text-muted-foreground h-10 w-10" />
       </div>
       <div>
         <p className="font-medium">Aucun client</p>
-        <p className="text-sm text-muted-foreground">Ajoutez vos clients pour leur partager devis et factures.</p>
+        <p className="text-muted-foreground text-sm">
+          Ajoutez vos clients pour leur partager devis et factures.
+        </p>
       </div>
       <Button asChild>
-        <Link href="/clients/new"><Plus className="h-4 w-4 mr-2" />Nouveau client</Link>
+        <Link href="/clients/new">
+          <Plus className="mr-2 h-4 w-4" />
+          Nouveau client
+        </Link>
       </Button>
     </div>
   );
@@ -48,30 +53,39 @@ export function ClientsList({ clients }: { clients: ClientRow[] }) {
       placeholder="Rechercher par nom, email, téléphone..."
       emptyState={emptyState}
       renderItem={(c) => (
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="transition-shadow hover:shadow-md">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-primary font-bold text-sm">
-                  {c.full_name?.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase() ?? "?"}
+              <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+                <span className="text-primary text-sm font-bold">
+                  {c.full_name
+                    ?.split(" ")
+                    .map((w) => w[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase() ?? "?"}
                 </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold">{c.full_name ?? "—"}</span>
                   {!c.is_active && (
-                    <Badge variant="outline" className="text-xs text-muted-foreground">Inactif</Badge>
+                    <Badge variant="outline" className="text-muted-foreground text-xs">
+                      Inactif
+                    </Badge>
                   )}
                 </div>
-                <div className="flex gap-4 mt-1 flex-wrap">
+                <div className="mt-1 flex flex-wrap gap-4">
                   {c.email && (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Mail className="h-3 w-3" />{c.email}
+                    <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                      <Mail className="h-3 w-3" />
+                      {c.email}
                     </span>
                   )}
                   {c.phone && (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Phone className="h-3 w-3" />{c.phone}
+                    <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                      <Phone className="h-3 w-3" />
+                      {c.phone}
                     </span>
                   )}
                 </div>

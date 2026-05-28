@@ -6,15 +6,18 @@ import { genererDevisDepuisMetres } from "./ai-actions";
 import type { ProjectOuvrage } from "@/lib/supabase/types";
 import type { ComposantRecetteCalcule } from "@/lib/calcul-ouvrage";
 
-export async function generateQuoteFromMetres(
-  ouvrageIds: string[],
-  projectId: string
-) {
+export async function generateQuoteFromMetres(ouvrageIds: string[], projectId: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
   if (!profile?.company_id) redirect("/onboarding");
 
   // Charger les ouvrages sélectionnés
@@ -31,7 +34,11 @@ export async function generateQuoteFromMetres(
   // Charger le nom du projet
   let projectName = "Projet BatiFlow";
   if (projectId) {
-    const { data: proj } = await supabase.from("projects").select("name").eq("id", projectId).single();
+    const { data: proj } = await supabase
+      .from("projects")
+      .select("name")
+      .eq("id", projectId)
+      .single();
     if (proj?.name) projectName = proj.name;
   }
 
@@ -39,7 +46,9 @@ export async function generateQuoteFromMetres(
   const aiResult = await genererDevisDepuisMetres(
     (ouvrages as ProjectOuvrage[]).map((o) => ({
       designation: o.designation,
-      type_geometrie: o.type_geometrie as Parameters<typeof genererDevisDepuisMetres>[0][0]["type_geometrie"],
+      type_geometrie: o.type_geometrie as Parameters<
+        typeof genererDevisDepuisMetres
+      >[0][0]["type_geometrie"],
       quantite_nette: o.quantite_nette,
       unite_principale: o.unite_principale,
       recette_calculee: (o.recette_calculee as ComposantRecetteCalcule[]).map((c) => ({
@@ -49,7 +58,7 @@ export async function generateQuoteFromMetres(
         type: c.type,
       })),
     })),
-    projectName
+    projectName,
   );
 
   if (aiResult.error || aiResult.items.length === 0) {
@@ -105,7 +114,7 @@ export async function generateQuoteFromMetres(
       unit_price: item.unit_price,
       total: item.total,
       sort_order: i,
-    }))
+    })),
   );
 
   redirect(`/quotes/${quote.id}`);

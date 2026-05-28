@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function SettingsLoading() {
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl space-y-6">
       <div className="space-y-1">
         <Skeleton className="h-8 w-36" />
         <Skeleton className="h-4 w-64" />

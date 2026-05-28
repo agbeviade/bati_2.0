@@ -12,8 +12,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CategoryRow } from "@/components/materials/category-manager";
 
 const UNITS = [
-  "unité", "sac", "kg", "tonne", "m", "m²", "m³", "L", "ml",
-  "barre", "botte", "rouleau", "panneau", "plaque", "bidon", "pot", "seau", "ensemble",
+  "unité",
+  "sac",
+  "kg",
+  "tonne",
+  "m",
+  "m²",
+  "m³",
+  "L",
+  "ml",
+  "barre",
+  "botte",
+  "rouleau",
+  "panneau",
+  "plaque",
+  "bidon",
+  "pot",
+  "seau",
+  "ensemble",
 ];
 
 export function NewMaterialForm({ categories }: { categories: CategoryRow[] }) {
@@ -28,16 +44,20 @@ export function NewMaterialForm({ categories }: { categories: CategoryRow[] }) {
   }
 
   return (
-    <div className="space-y-4 max-w-lg">
+    <div className="max-w-lg space-y-4">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/materials"><ArrowLeft className="h-4 w-4" /></Link>
+          <Link href="/materials">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
         </Button>
         <h2 className="text-2xl font-bold">Nouveau matériau</h2>
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Informations</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Informations</CardTitle>
+        </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
@@ -51,10 +71,12 @@ export function NewMaterialForm({ categories }: { categories: CategoryRow[] }) {
                 <select
                   name="category"
                   id="category"
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
                 >
                   {categories.map((c) => (
-                    <option key={c.id} value={c.slug}>{c.label}</option>
+                    <option key={c.id} value={c.slug}>
+                      {c.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -63,10 +85,12 @@ export function NewMaterialForm({ categories }: { categories: CategoryRow[] }) {
                 <select
                   name="unit"
                   id="unit"
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
                 >
                   {UNITS.map((u) => (
-                    <option key={u} value={u}>{u}</option>
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -74,7 +98,14 @@ export function NewMaterialForm({ categories }: { categories: CategoryRow[] }) {
 
             <div className="space-y-1.5">
               <Label htmlFor="unit_cost">Prix unitaire</Label>
-              <Input id="unit_cost" name="unit_cost" type="number" min="0" step="1" placeholder="0" />
+              <Input
+                id="unit_cost"
+                name="unit_cost"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="0"
+              />
             </div>
 
             <div className="flex gap-2 pt-2">

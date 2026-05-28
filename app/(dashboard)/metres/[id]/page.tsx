@@ -13,26 +13,52 @@ export default async function EditOuvragePage({ params }: Props) {
   const { id } = await params;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
   if (!profile?.company_id) redirect("/onboarding");
 
-  const [{ data: ouvrage }, { data: projects }, { data: materials }, { data: ouvrageTypes }] = await Promise.all([
-    supabase.from("project_ouvrages").select("*").eq("id", id).eq("company_id", profile.company_id).single(),
-    supabase.from("projects").select("id, name").eq("company_id", profile.company_id).order("name"),
-    supabase.from("materials").select("id, name, unit, unit_cost").eq("company_id", profile.company_id).order("name"),
-    supabase.from("ouvrage_types").select("*").eq("company_id", profile.company_id).order("designation"),
-  ]);
+  const [{ data: ouvrage }, { data: projects }, { data: materials }, { data: ouvrageTypes }] =
+    await Promise.all([
+      supabase
+        .from("project_ouvrages")
+        .select("*")
+        .eq("id", id)
+        .eq("company_id", profile.company_id)
+        .single(),
+      supabase
+        .from("projects")
+        .select("id, name")
+        .eq("company_id", profile.company_id)
+        .order("name"),
+      supabase
+        .from("materials")
+        .select("id, name, unit, unit_cost")
+        .eq("company_id", profile.company_id)
+        .order("name"),
+      supabase
+        .from("ouvrage_types")
+        .select("*")
+        .eq("company_id", profile.company_id)
+        .order("designation"),
+    ]);
 
   if (!ouvrage) notFound();
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6 p-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/metres"><ArrowLeft className="h-4 w-4" /></Link>
+          <Link href="/metres">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold">Modifier l&apos;ouvrage</h1>

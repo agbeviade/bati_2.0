@@ -43,6 +43,8 @@ export async function recordAiUsage(ctx: AiLogContext): Promise<void> {
     });
   } catch (err) {
     // Ne jamais faire échouer l'appel principal à cause du logging
-    logger.warn("recordAiUsage failed (non-fatal)", { error: err instanceof Error ? err.message : String(err) });
+    logger.warn("recordAiUsage failed (non-fatal)", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }

@@ -32,7 +32,7 @@ export function TaskForm({ projectId }: { projectId: string }) {
   if (!open) {
     return (
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <Plus className="h-3.5 w-3.5 mr-1.5" />
+        <Plus className="mr-1.5 h-3.5 w-3.5" />
         Ajouter une tâche
       </Button>
     );
@@ -52,12 +52,7 @@ export function TaskForm({ projectId }: { projectId: string }) {
       <Button type="submit" size="sm" disabled={isPending}>
         {isPending ? "..." : "Ajouter"}
       </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => setOpen(false)}
-      >
+      <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
         Annuler
       </Button>
     </form>

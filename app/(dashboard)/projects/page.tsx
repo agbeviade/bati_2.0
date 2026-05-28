@@ -55,7 +55,15 @@ export default async function ProjectsPage() {
 
   const projectList = (projects ?? []) as Pick<
     Project,
-    "id" | "name" | "status" | "address" | "budget" | "spent" | "progress_pct" | "start_date" | "end_date"
+    | "id"
+    | "name"
+    | "status"
+    | "address"
+    | "budget"
+    | "spent"
+    | "progress_pct"
+    | "start_date"
+    | "end_date"
   >[];
 
   return (
@@ -71,7 +79,7 @@ export default async function ProjectsPage() {
         </div>
         <Button asChild className="self-start sm:self-auto">
           <Link href="/projects/new">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Nouveau chantier
           </Link>
         </Button>

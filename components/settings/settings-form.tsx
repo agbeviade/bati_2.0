@@ -21,11 +21,23 @@ const CURRENCIES = [
 ];
 
 const SPECIALTIES = [
-  "Maçonnerie", "Charpente / Toiture", "Électricité", "Plomberie",
-  "Carrelage", "Peinture", "Menuiserie", "Gros œuvre", "Génie civil", "Autre",
+  "Maçonnerie",
+  "Charpente / Toiture",
+  "Électricité",
+  "Plomberie",
+  "Carrelage",
+  "Peinture",
+  "Menuiserie",
+  "Gros œuvre",
+  "Génie civil",
+  "Autre",
 ];
 
-export function ProfileForm({ profile }: { profile: Pick<User, "full_name" | "phone" | "specialty" | "daily_rate"> }) {
+export function ProfileForm({
+  profile,
+}: {
+  profile: Pick<User, "full_name" | "phone" | "specialty" | "daily_rate">;
+}) {
   const [isPending, startTransition] = useTransition();
   const [isPwPending, startPwTransition] = useTransition();
   const pwFormRef = useRef<HTMLFormElement>(null);
@@ -35,7 +47,10 @@ export function ProfileForm({ profile }: { profile: Pick<User, "full_name" | "ph
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
       const result = await updateProfile(fd);
-      if (result?.error) { toast.error(result.error); return; }
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Profil mis à jour.");
     });
   }
@@ -51,11 +66,21 @@ export function ProfileForm({ profile }: { profile: Pick<User, "full_name" | "ph
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="full_name">Nom complet</Label>
-              <Input id="full_name" name="full_name" defaultValue={profile.full_name ?? ""} placeholder="Kofi Mensah" />
+              <Input
+                id="full_name"
+                name="full_name"
+                defaultValue={profile.full_name ?? ""}
+                placeholder="Kofi Mensah"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="phone">Téléphone</Label>
-              <Input id="phone" name="phone" defaultValue={profile.phone ?? ""} placeholder="+225 07 00 00 00 00" />
+              <Input
+                id="phone"
+                name="phone"
+                defaultValue={profile.phone ?? ""}
+                placeholder="+225 07 00 00 00 00"
+              />
             </div>
           </div>
 
@@ -63,18 +88,27 @@ export function ProfileForm({ profile }: { profile: Pick<User, "full_name" | "ph
             <div className="space-y-1.5">
               <Label htmlFor="specialty">Spécialité</Label>
               <select
-                name="specialty" id="specialty"
+                name="specialty"
+                id="specialty"
                 defaultValue={profile.specialty ?? ""}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
               >
                 <option value="">Non définie</option>
-                {SPECIALTIES.map(s => <option key={s} value={s}>{s}</option>)}
+                {SPECIALTIES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="daily_rate">Taux journalier</Label>
               <Input
-                id="daily_rate" name="daily_rate" type="number" min="0" step="100"
+                id="daily_rate"
+                name="daily_rate"
+                type="number"
+                min="0"
+                step="100"
                 defaultValue={profile.daily_rate ?? ""}
                 placeholder="25000"
               />
@@ -89,7 +123,7 @@ export function ProfileForm({ profile }: { profile: Pick<User, "full_name" | "ph
         <Separator />
 
         <div>
-          <p className="text-sm font-medium mb-3">Changer le mot de passe</p>
+          <p className="mb-3 text-sm font-medium">Changer le mot de passe</p>
           <form
             ref={pwFormRef}
             onSubmit={(e) => {
@@ -97,20 +131,37 @@ export function ProfileForm({ profile }: { profile: Pick<User, "full_name" | "ph
               const fd = new FormData(e.currentTarget);
               startPwTransition(async () => {
                 const result = await updatePassword(fd);
-                if (result?.error) { toast.error(result.error); return; }
+                if (result?.error) {
+                  toast.error(result.error);
+                  return;
+                }
                 toast.success("Mot de passe modifié.");
                 pwFormRef.current?.reset();
               });
             }}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
           >
             <div className="space-y-1.5">
               <Label htmlFor="password">Nouveau mot de passe</Label>
-              <Input id="password" name="password" type="password" minLength={6} required placeholder="••••••••" />
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                minLength={6}
+                required
+                placeholder="••••••••"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="confirm">Confirmer</Label>
-              <Input id="confirm" name="confirm" type="password" minLength={6} required placeholder="••••••••" />
+              <Input
+                id="confirm"
+                name="confirm"
+                type="password"
+                minLength={6}
+                required
+                placeholder="••••••••"
+              />
             </div>
             <div className="sm:col-span-2">
               <Button type="submit" size="sm" variant="outline" disabled={isPwPending}>
@@ -124,7 +175,14 @@ export function ProfileForm({ profile }: { profile: Pick<User, "full_name" | "ph
   );
 }
 
-export function CompanyForm({ company }: { company: Pick<Company, "id" | "name" | "address" | "phone" | "email" | "currency" | "plan" | "subscription_status"> }) {
+export function CompanyForm({
+  company,
+}: {
+  company: Pick<
+    Company,
+    "id" | "name" | "address" | "phone" | "email" | "currency" | "plan" | "subscription_status"
+  >;
+}) {
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -132,13 +190,25 @@ export function CompanyForm({ company }: { company: Pick<Company, "id" | "name" 
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
       const result = await updateCompany(fd);
-      if (result?.error) { toast.error(result.error); return; }
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Entreprise mise à jour.");
     });
   }
 
-  const PLAN_LABELS: Record<string, string> = { free: "Gratuit", pro: "Pro", enterprise: "Enterprise" };
-  const STATUS_LABELS: Record<string, string> = { active: "Actif", past_due: "Impayé", canceled: "Annulé", trialing: "Essai" };
+  const PLAN_LABELS: Record<string, string> = {
+    free: "Gratuit",
+    pro: "Pro",
+    enterprise: "Enterprise",
+  };
+  const STATUS_LABELS: Record<string, string> = {
+    active: "Actif",
+    past_due: "Impayé",
+    canceled: "Annulé",
+    trialing: "Essai",
+  };
 
   return (
     <Card>
@@ -156,27 +226,48 @@ export function CompanyForm({ company }: { company: Pick<Company, "id" | "name" 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="company_phone">Téléphone</Label>
-              <Input id="company_phone" name="phone" defaultValue={company.phone ?? ""} placeholder="+225 07 00 00 00 00" />
+              <Input
+                id="company_phone"
+                name="phone"
+                defaultValue={company.phone ?? ""}
+                placeholder="+225 07 00 00 00 00"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="company_email">Email professionnel</Label>
-              <Input id="company_email" name="email" type="email" defaultValue={company.email ?? ""} placeholder="contact@monentreprise.ci" />
+              <Input
+                id="company_email"
+                name="email"
+                type="email"
+                defaultValue={company.email ?? ""}
+                placeholder="contact@monentreprise.ci"
+              />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="company_address">Adresse</Label>
-            <Input id="company_address" name="address" defaultValue={company.address ?? ""} placeholder="Abidjan, Cocody Riviera 3..." />
+            <Input
+              id="company_address"
+              name="address"
+              defaultValue={company.address ?? ""}
+              placeholder="Abidjan, Cocody Riviera 3..."
+            />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="currency">Devise</Label>
             <select
-              name="currency" id="currency"
+              name="currency"
+              id="currency"
               defaultValue={company.currency}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
             >
-              {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              {CURRENCIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -190,10 +281,12 @@ export function CompanyForm({ company }: { company: Pick<Company, "id" | "name" 
         {/* Plan */}
         <div className="space-y-3">
           <p className="text-sm font-medium">Abonnement</p>
-          <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+          <div className="bg-muted/30 flex items-center justify-between rounded-lg border p-3">
             <div>
               <p className="font-medium">{PLAN_LABELS[company.plan] ?? company.plan}</p>
-              <p className="text-xs text-muted-foreground">{STATUS_LABELS[company.subscription_status] ?? company.subscription_status}</p>
+              <p className="text-muted-foreground text-xs">
+                {STATUS_LABELS[company.subscription_status] ?? company.subscription_status}
+              </p>
             </div>
             {company.plan === "free" && (
               <Button size="sm" variant="outline" disabled>

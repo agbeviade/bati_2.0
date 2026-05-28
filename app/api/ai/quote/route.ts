@@ -45,12 +45,13 @@ async function fromDescription(description: string): Promise<Anthropic.Message> 
 }
 
 // ── Chemin 2 : modèle de débours secs ──────────────────────────
-async function fromDebourseModel(
-  modelId: string,
-  description: string,
-): Promise<Anthropic.Message> {
+async function fromDebourseModel(modelId: string, description: string): Promise<Anthropic.Message> {
   const supabase = await createClient();
-  const { data } = await supabase.from("debourses_models").select("inputs").eq("id", modelId).single();
+  const { data } = await supabase
+    .from("debourses_models")
+    .select("inputs")
+    .eq("id", modelId)
+    .single();
   if (!data?.inputs) throw new Error("Modèle de débours introuvable.");
 
   const { computeRecap, RECAP_LABELS, RECAP_UNITS } = await import("@/lib/debourses-calc");
@@ -113,7 +114,11 @@ async function fromTemplate(
 
   let debourseContext: Array<{ label: string; quantity: number; unit: string }> | undefined;
   if (debourseModelId) {
-    const { data: dm } = await supabase.from("debourses_models").select("inputs").eq("id", debourseModelId).single();
+    const { data: dm } = await supabase
+      .from("debourses_models")
+      .select("inputs")
+      .eq("id", debourseModelId)
+      .single();
     if (dm?.inputs) {
       const { computeRecap, RECAP_LABELS, RECAP_UNITS } = await import("@/lib/debourses-calc");
       const recap = computeRecap(dm.inputs as unknown as Parameters<typeof computeRecap>[0]);
@@ -131,8 +136,14 @@ async function fromTemplate(
   const imageMediaType = mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
   const contentBlock =
     fileType === "pdf"
-      ? { type: "document" as const, source: { type: "base64" as const, media_type: "application/pdf" as const, data: base64 } }
-      : { type: "image" as const, source: { type: "base64" as const, media_type: imageMediaType, data: base64 } };
+      ? {
+          type: "document" as const,
+          source: { type: "base64" as const, media_type: "application/pdf" as const, data: base64 },
+        }
+      : {
+          type: "image" as const,
+          source: { type: "base64" as const, media_type: imageMediaType, data: base64 },
+        };
 
   const ai = getAI();
   return ai.messages.create({
@@ -165,16 +176,21 @@ ${
 // ── Handler ────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
   const { data: profile } = await supabase
-    .from("users").select("company_id").eq("id", user.id).maybeSingle();
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .maybeSingle();
   const companyId = (profile as { company_id?: string | null } | null)?.company_id ?? null;
 
-  const body = await request.json() as {
+  const body = (await request.json()) as {
     description?: string;
     template_id?: string;
     debourse_model_id?: string;
@@ -186,7 +202,10 @@ export async function POST(request: NextRequest) {
 
   if (!templateId && !debourseModelId && description.length < 10) {
     return NextResponse.json(
-      { error: "Fournissez un template_id, un debourse_model_id, ou une description (min 10 caractères)." },
+      {
+        error:
+          "Fournissez un template_id, un debourse_model_id, ou une description (min 10 caractères).",
+      },
       { status: 400 },
     );
   }

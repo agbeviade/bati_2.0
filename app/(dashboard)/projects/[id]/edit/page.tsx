@@ -10,13 +10,7 @@ import { updateProject, deleteProject } from "../../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteButton } from "@/components/ui/delete-button";
 import type { Project, ProjectStatus } from "@/lib/supabase/types";
 
@@ -66,7 +60,7 @@ export default function EditProjectPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
           <Link href={`/projects/${params.id}`}>
@@ -87,13 +81,7 @@ export default function EditProjectPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nom *</Label>
-              <Input
-                id="name"
-                name="name"
-                defaultValue={project.name}
-                required
-                minLength={2}
-              />
+              <Input id="name" name="name" defaultValue={project.name} required minLength={2} />
             </div>
 
             <div className="space-y-2">
@@ -102,7 +90,7 @@ export default function EditProjectPage() {
                 id="status"
                 name="status"
                 defaultValue={project.status}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s.value} value={s.value}>
@@ -131,17 +119,13 @@ export default function EditProjectPage() {
                 name="description"
                 defaultValue={project.description ?? ""}
                 rows={3}
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+                className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[80px] w-full resize-none rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="address">Adresse</Label>
-              <Input
-                id="address"
-                name="address"
-                defaultValue={project.address ?? ""}
-              />
+              <Input id="address" name="address" defaultValue={project.address ?? ""} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

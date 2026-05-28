@@ -13,9 +13,9 @@ export default function QuotesLoading() {
 
       <div className="grid grid-cols-3 gap-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="rounded-lg border bg-card p-4 text-center space-y-2">
-            <Skeleton className="h-8 w-10 mx-auto" />
-            <Skeleton className="h-3 w-20 mx-auto" />
+          <div key={i} className="bg-card space-y-2 rounded-lg border p-4 text-center">
+            <Skeleton className="mx-auto h-8 w-10" />
+            <Skeleton className="mx-auto h-3 w-20" />
           </div>
         ))}
       </div>
@@ -27,7 +27,7 @@ export default function QuotesLoading() {
 
       <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="rounded-lg border bg-card p-4 flex items-center gap-4">
+          <div key={i} className="bg-card flex items-center gap-4 rounded-lg border p-4">
             <div className="flex-1 space-y-1.5">
               <div className="flex items-center gap-3">
                 <Skeleton className="h-4 w-24" />

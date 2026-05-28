@@ -14,7 +14,9 @@ export default async function EditTeamPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { data: teamData } = await supabase.from("teams").select("*").eq("id", id).maybeSingle();
@@ -31,17 +33,21 @@ export default async function EditTeamPage({ params }: { params: Promise<{ id: s
   const potentialLeads = (usersData ?? []) as Pick<User, "id" | "full_name" | "role">[];
 
   const ROLE_LABELS: Record<string, string> = {
-    admin: "Admin", manager: "Manager", foreman: "Chef chantier",
+    admin: "Admin",
+    manager: "Manager",
+    foreman: "Chef chantier",
   };
 
   const updateTeamWithId = updateTeam.bind(null, id);
   const deleteTeamWithId = deleteTeam.bind(null, id);
 
   return (
-    <div className="space-y-4 max-w-lg">
+    <div className="max-w-lg space-y-4">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={`/teams/${id}`}><ArrowLeft className="h-4 w-4" /></Link>
+          <Link href={`/teams/${id}`}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
         </Button>
         <h2 className="text-2xl font-bold">Modifier l'équipe</h2>
       </div>
@@ -63,10 +69,10 @@ export default async function EditTeamPage({ params }: { params: Promise<{ id: s
                 name="lead_id"
                 id="lead_id"
                 defaultValue={team.lead_id ?? ""}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
               >
                 <option value="">Aucun</option>
-                {potentialLeads.map(u => (
+                {potentialLeads.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.full_name ?? "—"} ({ROLE_LABELS[u.role] ?? u.role})
                   </option>
@@ -86,7 +92,7 @@ export default async function EditTeamPage({ params }: { params: Promise<{ id: s
 
       <Card className="border-destructive/40">
         <CardHeader>
-          <CardTitle className="text-base text-destructive">Zone dangereuse</CardTitle>
+          <CardTitle className="text-destructive text-base">Zone dangereuse</CardTitle>
         </CardHeader>
         <CardContent>
           <DeleteButton

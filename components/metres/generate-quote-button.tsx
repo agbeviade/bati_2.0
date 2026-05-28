@@ -26,7 +26,7 @@ export function GenerateQuoteButton({ ouvrages, projects }: Props) {
     startTransition(async () => {
       const res = await generateQuoteFromMetres(
         projectOuvrages.map((o) => o.id),
-        selectedProject
+        selectedProject,
       );
       if (res?.error) setError(res.error);
     });
@@ -35,12 +35,12 @@ export function GenerateQuoteButton({ ouvrages, projects }: Props) {
   if (ouvrages.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-3 flex-wrap">
+    <div className="flex flex-wrap items-center gap-3">
       {projects.length > 1 && (
         <select
           value={selectedProject}
           onChange={(e) => setSelectedProject(e.target.value)}
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
           disabled={isPending}
         >
           <option value="">Tous les ouvrages</option>
@@ -59,18 +59,16 @@ export function GenerateQuoteButton({ ouvrages, projects }: Props) {
         disabled={isPending || projectOuvrages.length === 0}
       >
         {isPending ? (
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
-          <Sparkles className="h-4 w-4 mr-2" />
+          <Sparkles className="mr-2 h-4 w-4" />
         )}
         {isPending
           ? "Génération du devis..."
           : `Générer devis IA (${projectOuvrages.length} ouvrage${projectOuvrages.length > 1 ? "s" : ""})`}
       </Button>
 
-      {error && (
-        <span className="text-sm text-destructive">{error}</span>
-      )}
+      {error && <span className="text-destructive text-sm">{error}</span>}
     </div>
   );
 }

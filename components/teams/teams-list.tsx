@@ -15,16 +15,21 @@ export type TeamRow = {
 
 export function TeamsList({ teams }: { teams: TeamRow[] }) {
   const emptyState = (
-    <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-      <div className="p-4 rounded-full bg-muted">
-        <Users className="h-10 w-10 text-muted-foreground" />
+    <div className="flex flex-col items-center justify-center space-y-4 py-24 text-center">
+      <div className="bg-muted rounded-full p-4">
+        <Users className="text-muted-foreground h-10 w-10" />
       </div>
       <div>
         <p className="font-medium">Aucune équipe</p>
-        <p className="text-sm text-muted-foreground">Créez votre première équipe pour organiser vos ouvriers.</p>
+        <p className="text-muted-foreground text-sm">
+          Créez votre première équipe pour organiser vos ouvriers.
+        </p>
       </div>
       <Button asChild>
-        <Link href="/teams/new"><Plus className="h-4 w-4 mr-2" />Créer une équipe</Link>
+        <Link href="/teams/new">
+          <Plus className="mr-2 h-4 w-4" />
+          Créer une équipe
+        </Link>
       </Button>
     </div>
   );
@@ -37,18 +42,18 @@ export function TeamsList({ teams }: { teams: TeamRow[] }) {
       placeholder="Rechercher par nom, chef d'équipe..."
       emptyState={emptyState}
       renderItem={(team) => (
-        <Link href={`/teams/${team.id}`} className="block group">
+        <Link href={`/teams/${team.id}`} className="group block">
           <Card className="transition-shadow group-hover:shadow-md">
-            <CardContent className="py-4 flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm">{team.name}</p>
-                <div className="flex items-center gap-4 mt-1">
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CardContent className="flex items-center gap-4 py-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{team.name}</p>
+                <div className="mt-1 flex items-center gap-4">
+                  <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
                     <Users className="h-3.5 w-3.5" />
                     {team.memberCount} membre{team.memberCount !== 1 ? "s" : ""}
                   </span>
                   {team.leadName && (
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
                       <UserCheck className="h-3.5 w-3.5" />
                       {team.leadName}
                     </span>

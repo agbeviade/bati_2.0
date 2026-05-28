@@ -69,9 +69,10 @@ export async function createQuote(data: {
         unit: item.unit,
         unit_price: item.unit_price,
         sort_order: item.sort_order,
-      }))
+      })),
     );
-    if (itemsError) logger.error("createQuote items insert failed", itemsError, { quoteId: quote.id });
+    if (itemsError)
+      logger.error("createQuote items insert failed", itemsError, { quoteId: quote.id });
   }
 
   revalidatePath("/quotes");
@@ -103,25 +104,31 @@ export async function addQuoteItem(quoteId: string, item: QuoteItemInput) {
   revalidatePath(`/quotes/${quoteId}`);
 }
 
-export async function updateQuoteMeta(id: string, data: {
-  client_name: string;
-  project_type: string;
-  surface_m2: string;
-  valid_until: string;
-  tax_rate: string;
-  margin_pct: string;
-  notes: string;
-}) {
+export async function updateQuoteMeta(
+  id: string,
+  data: {
+    client_name: string;
+    project_type: string;
+    surface_m2: string;
+    valid_until: string;
+    tax_rate: string;
+    margin_pct: string;
+    notes: string;
+  },
+) {
   const { supabase } = await getAuthedProfile();
-  const { error } = await supabase.from("quotes").update({
-    client_name: data.client_name || null,
-    project_type: data.project_type || null,
-    surface_m2: data.surface_m2 ? Number(data.surface_m2) : null,
-    valid_until: data.valid_until || null,
-    tax_rate: Number(data.tax_rate) || 0,
-    margin_pct: Number(data.margin_pct) || 0,
-    notes: data.notes || null,
-  }).eq("id", id);
+  const { error } = await supabase
+    .from("quotes")
+    .update({
+      client_name: data.client_name || null,
+      project_type: data.project_type || null,
+      surface_m2: data.surface_m2 ? Number(data.surface_m2) : null,
+      valid_until: data.valid_until || null,
+      tax_rate: Number(data.tax_rate) || 0,
+      margin_pct: Number(data.margin_pct) || 0,
+      notes: data.notes || null,
+    })
+    .eq("id", id);
   if (error) return { error: error.message };
   revalidatePath(`/quotes/${id}`);
   revalidatePath("/quotes");

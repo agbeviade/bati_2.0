@@ -12,7 +12,9 @@ function fmt(n: number) {
 
 export default async function ClientInvoicesPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
@@ -25,50 +27,79 @@ export default async function ClientInvoicesPage() {
     .order("created_at", { ascending: false });
 
   const invoices = (data ?? []) as Invoice[];
-  const totalDue = invoices.filter(i => ["sent", "overdue"].includes(i.status)).reduce((s, i) => s + i.amount, 0);
-  const totalPaid = invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
+  const totalDue = invoices
+    .filter((i) => ["sent", "overdue"].includes(i.status))
+    .reduce((s, i) => s + i.amount, 0);
+  const totalPaid = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.amount, 0);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold">Mes factures</h2>
         {invoices.length > 0 && (
           <div className="flex gap-4 text-sm">
-            <span className="text-muted-foreground">À payer : <strong className="text-foreground">{fmt(totalDue)} XOF</strong></span>
-            <span className="text-muted-foreground">Payé : <strong className="text-green-600">{fmt(totalPaid)} XOF</strong></span>
+            <span className="text-muted-foreground">
+              À payer : <strong className="text-foreground">{fmt(totalDue)} XOF</strong>
+            </span>
+            <span className="text-muted-foreground">
+              Payé : <strong className="text-green-600">{fmt(totalPaid)} XOF</strong>
+            </span>
           </div>
         )}
       </div>
 
       {invoices.length === 0 ? (
-        <Card><CardContent className="flex flex-col items-center py-12 text-center">
-          <Receipt className="h-10 w-10 text-muted-foreground mb-3" />
-          <p className="font-medium">Aucune facture pour le moment</p>
-        </CardContent></Card>
+        <Card>
+          <CardContent className="flex flex-col items-center py-12 text-center">
+            <Receipt className="text-muted-foreground mb-3 h-10 w-10" />
+            <p className="font-medium">Aucune facture pour le moment</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-3">
-          {invoices.map(inv => {
-            const isOverdue = inv.status === "overdue" || (inv.status === "sent" && inv.due_date && new Date(inv.due_date) < new Date());
+          {invoices.map((inv) => {
+            const isOverdue =
+              inv.status === "overdue" ||
+              (inv.status === "sent" && inv.due_date && new Date(inv.due_date) < new Date());
             return (
-              <Card key={inv.id} className={`hover:shadow-md transition-shadow ${isOverdue ? "border-red-200" : ""}`}>
+              <Card
+                key={inv.id}
+                className={`transition-shadow hover:shadow-md ${isOverdue ? "border-red-200" : ""}`}
+              >
                 <CardContent className="pt-4 pb-4">
                   <div className="flex items-center gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-sm font-semibold">{inv.invoice_number}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-sm font-semibold">
+                          {inv.invoice_number}
+                        </span>
                         <InvoiceStatusBadge status={inv.status} />
-                        {isOverdue && <span className="text-xs font-semibold text-red-600">EN RETARD</span>}
-                      </div>
-                      <div className="flex gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                        {inv.due_date && (
-                          <span className={isOverdue ? "text-red-500" : ""}>Échéance : {new Date(inv.due_date).toLocaleDateString("fr-FR")}</span>
+                        {isOverdue && (
+                          <span className="text-xs font-semibold text-red-600">EN RETARD</span>
                         )}
-                        {inv.paid_at && <span className="text-green-600">Payée le {new Date(inv.paid_at).toLocaleDateString("fr-FR")}</span>}
+                      </div>
+                      <div className="text-muted-foreground mt-1 flex flex-wrap gap-3 text-xs">
+                        {inv.due_date && (
+                          <span className={isOverdue ? "text-red-500" : ""}>
+                            Échéance : {new Date(inv.due_date).toLocaleDateString("fr-FR")}
+                          </span>
+                        )}
+                        {inv.paid_at && (
+                          <span className="text-green-600">
+                            Payée le {new Date(inv.paid_at).toLocaleDateString("fr-FR")}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className={`text-lg font-bold ${isOverdue ? "text-red-600" : ""}`}>{fmt(inv.amount)} XOF</p>
-                      <Link href={`/invoices/${inv.id}/print`} target="_blank" className="text-xs text-blue-600 hover:underline">
+                    <div className="shrink-0 text-right">
+                      <p className={`text-lg font-bold ${isOverdue ? "text-red-600" : ""}`}>
+                        {fmt(inv.amount)} XOF
+                      </p>
+                      <Link
+                        href={`/invoices/${inv.id}/print`}
+                        target="_blank"
+                        className="text-xs text-blue-600 hover:underline"
+                      >
                         Télécharger
                       </Link>
                     </div>

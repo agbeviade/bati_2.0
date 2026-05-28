@@ -10,13 +10,13 @@ import type { TypeGeometrie, ComposantRecette } from "@/lib/calcul-ouvrage";
 export async function suggestRecette(
   designation: string,
   typeGeometrie: TypeGeometrie,
-  availableMaterials: { id: string; name: string; unit: string }[]
+  availableMaterials: { id: string; name: string; unit: string }[],
 ): Promise<{ recette: ComposantRecette[]; error?: string }> {
   try {
     const ai = getAI();
 
     const materialsJson = JSON.stringify(
-      availableMaterials.map((m) => ({ id: m.id, name: m.name, unit: m.unit }))
+      availableMaterials.map((m) => ({ id: m.id, name: m.name, unit: m.unit })),
     );
 
     const response = await ai.messages.create({
@@ -74,7 +74,7 @@ Coefficients basés sur les standards BTP Côte d'Ivoire.`,
 
 export async function extractMetresFromImage(
   imageBase64: string,
-  mimeType: "image/jpeg" | "image/png" | "image/webp"
+  mimeType: "image/jpeg" | "image/png" | "image/webp",
 ): Promise<{
   ouvrages: Array<{
     designation: string;
@@ -164,7 +164,7 @@ export async function analyserCoherence(
     coefficient: number;
     quantite_nette: number;
     quantite_commande: number;
-  }>
+  }>,
 ): Promise<{ alerte: string | null; niveau: "ok" | "warning" | "error" }> {
   if (quantiteNette <= 0 || recetteCalculee.length === 0) {
     return { alerte: null, niveau: "ok" };
@@ -228,7 +228,7 @@ export async function genererDevisDepuisMetres(
       type: string;
     }>;
   }>,
-  nomProjet: string
+  nomProjet: string,
 ): Promise<{
   items: Array<{
     category: "material" | "labor" | "transport" | "equipment" | "other";
@@ -253,7 +253,7 @@ export async function genererDevisDepuisMetres(
           quantite: `${c.quantite_commande.toFixed(3)} ${c.unite}`,
           type: c.type,
         })),
-      }))
+      })),
     );
 
     const response = await ai.messages.create({
@@ -314,7 +314,7 @@ export async function genererDevisDepuisTemplate(
   mimeType: string,
   fileType: "pdf" | "image",
   description: string,
-  debourseContext?: Array<{ label: string; quantity: number; unit: string }>
+  debourseContext?: Array<{ label: string; quantity: number; unit: string }>,
 ): Promise<{
   items: Array<{
     category: "material" | "labor" | "transport" | "equipment" | "other";
@@ -330,9 +330,10 @@ export async function genererDevisDepuisTemplate(
   try {
     const ai = getAI();
 
-    const debourseSection = debourseContext && debourseContext.length > 0
-      ? `\nQuantités exactes calculées par le calculateur de débours secs (à utiliser telles quelles pour les matériaux) :\n${debourseContext.map(l => `- ${l.label} : ${l.quantity} ${l.unit}`).join("\n")}\n`
-      : "";
+    const debourseSection =
+      debourseContext && debourseContext.length > 0
+        ? `\nQuantités exactes calculées par le calculateur de débours secs (à utiliser telles quelles pour les matériaux) :\n${debourseContext.map((l) => `- ${l.label} : ${l.quantity} ${l.unit}`).join("\n")}\n`
+        : "";
 
     const systemPrompt = `Tu es un expert en devis BTP Côte d'Ivoire (Bordereau des Prix BTP CI 2024).
 Tu analyses des modèles de devis pour en extraire la structure et les postes types.
@@ -365,15 +366,20 @@ Réponds UNIQUEMENT avec ce JSON :
 
     const imageMediaType = mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
 
-    const contentBlock = fileType === "pdf"
-      ? {
-          type: "document" as const,
-          source: { type: "base64" as const, media_type: "application/pdf" as const, data: fileBase64 },
-        }
-      : {
-          type: "image" as const,
-          source: { type: "base64" as const, media_type: imageMediaType, data: fileBase64 },
-        };
+    const contentBlock =
+      fileType === "pdf"
+        ? {
+            type: "document" as const,
+            source: {
+              type: "base64" as const,
+              media_type: "application/pdf" as const,
+              data: fileBase64,
+            },
+          }
+        : {
+            type: "image" as const,
+            source: { type: "base64" as const, media_type: imageMediaType, data: fileBase64 },
+          };
 
     const response = await ai.messages.create({
       model: AI_MODEL,
@@ -402,7 +408,7 @@ Réponds UNIQUEMENT avec ce JSON :
 
 export async function genererDevisDepuisDebourses(
   lignes: Array<{ label: string; quantity: number; unit: string }>,
-  description: string
+  description: string,
 ): Promise<{
   items: Array<{
     category: "material" | "labor" | "transport" | "equipment" | "other";
@@ -418,9 +424,7 @@ export async function genererDevisDepuisDebourses(
   try {
     const ai = getAI();
 
-    const lignesJson = lignes
-      .map(l => `- ${l.label} : ${l.quantity} ${l.unit}`)
-      .join("\n");
+    const lignesJson = lignes.map((l) => `- ${l.label} : ${l.quantity} ${l.unit}`).join("\n");
 
     const response = await ai.messages.create({
       model: AI_MODEL,

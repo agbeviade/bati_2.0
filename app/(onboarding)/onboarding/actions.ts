@@ -43,7 +43,9 @@ export async function createCompany(formData: FormData) {
 
   if (companyError || !company) {
     logger.error("onboarding company insert failed", companyError, { userId: user.id });
-    return { error: `Impossible de créer l'entreprise. (${companyError?.message ?? "erreur inconnue"})` };
+    return {
+      error: `Impossible de créer l'entreprise. (${companyError?.message ?? "erreur inconnue"})`,
+    };
   }
 
   const { error: userError } = await admin
@@ -52,7 +54,10 @@ export async function createCompany(formData: FormData) {
     .eq("id", user.id);
 
   if (userError) {
-    logger.error("onboarding user update failed", userError, { userId: user.id, companyId: company.id });
+    logger.error("onboarding user update failed", userError, {
+      userId: user.id,
+      companyId: company.id,
+    });
     return { error: `Impossible de mettre à jour votre profil. (${userError.message})` };
   }
 

@@ -76,16 +76,16 @@ export function Topbar({ email, fullName }: TopbarProps) {
 
   return (
     <>
-      <header className="h-16 border-b bg-card sticky top-0 z-30 flex items-center justify-between px-4 lg:px-6 min-w-0">
+      <header className="bg-card sticky top-0 z-30 flex h-16 min-w-0 items-center justify-between border-b px-4 lg:px-6">
         <div className="flex items-center gap-3">
           <button
-            className="lg:hidden p-2 rounded-md hover:bg-accent transition-colors"
+            className="hover:bg-accent rounded-md p-2 transition-colors lg:hidden"
             onClick={() => setMobileOpen(true)}
             aria-label="Menu"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="font-semibold text-sm lg:text-base">
+          <h1 className="text-sm font-semibold lg:text-base">
             Bonjour {fullName?.split(" ")[0] || ""} 👋
           </h1>
         </div>
@@ -96,7 +96,7 @@ export function Topbar({ email, fullName }: TopbarProps) {
               <Avatar className="h-8 w-8">
                 <AvatarFallback>{initials || "?"}</AvatarFallback>
               </Avatar>
-              <span className="hidden sm:inline text-sm">{fullName || email}</span>
+              <span className="hidden text-sm sm:inline">{fullName || email}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -104,12 +104,12 @@ export function Topbar({ email, fullName }: TopbarProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <a href="/settings">
-                <User className="h-4 w-4 mr-2" />
+                <User className="mr-2 h-4 w-4" />
                 Paramètres
               </a>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
+              <LogOut className="mr-2 h-4 w-4" />
               Déconnexion
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -120,23 +120,20 @@ export function Topbar({ email, fullName }: TopbarProps) {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setMobileOpen(false)}
-          />
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
           {/* Drawer */}
-          <aside className="absolute left-0 top-0 h-full w-72 bg-card border-r flex flex-col shadow-xl">
-            <div className="p-5 border-b flex items-center justify-between">
-              <span className="font-bold text-xl">BatiFlow</span>
+          <aside className="bg-card absolute top-0 left-0 flex h-full w-72 flex-col border-r shadow-xl">
+            <div className="flex items-center justify-between border-b p-5">
+              <span className="text-xl font-bold">BatiFlow</span>
               <button
                 onClick={() => setMobileOpen(false)}
-                className="p-1.5 rounded-md hover:bg-accent transition-colors"
+                className="hover:bg-accent rounded-md p-1.5 transition-colors"
                 aria-label="Fermer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            <nav className="flex-1 space-y-1 overflow-y-auto p-3">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const active =
@@ -148,10 +145,10 @@ export function Topbar({ email, fullName }: TopbarProps) {
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors",
+                      "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
                       active
                         ? "bg-primary text-primary-foreground"
-                        : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                        : "hover:bg-accent hover:text-accent-foreground text-muted-foreground",
                     )}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />

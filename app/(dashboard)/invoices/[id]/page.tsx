@@ -10,21 +10,35 @@ import { PaymentSection } from "@/components/invoices/payment-section";
 import type { Invoice, Payment, Project, Quote } from "@/lib/supabase/types";
 
 function formatAmount(n: number, currency: string) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 function formatDate(d: string | null) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  return new Date(d).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: invoiceData } = await supabase.from("invoices").select("*").eq("id", id).maybeSingle();
+  const { data: invoiceData } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
   if (!invoiceData) notFound();
   const invoice = invoiceData as Invoice;
 
@@ -44,13 +58,21 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   let project: Pick<Project, "id" | "name"> | null = null;
   if (invoice.project_id) {
-    const { data } = await supabase.from("projects").select("id, name").eq("id", invoice.project_id).maybeSingle();
+    const { data } = await supabase
+      .from("projects")
+      .select("id, name")
+      .eq("id", invoice.project_id)
+      .maybeSingle();
     project = data as Pick<Project, "id" | "name"> | null;
   }
 
   let quote: Pick<Quote, "id" | "quote_number"> | null = null;
   if (invoice.quote_id) {
-    const { data } = await supabase.from("quotes").select("id, quote_number").eq("id", invoice.quote_id).maybeSingle();
+    const { data } = await supabase
+      .from("quotes")
+      .select("id, quote_number")
+      .eq("id", invoice.quote_id)
+      .maybeSingle();
     quote = data as Pick<Quote, "id" | "quote_number"> | null;
   }
 
@@ -61,21 +83,23 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       {/* Header */}
       <div className="flex items-start gap-3">
         <Button variant="ghost" size="icon" asChild className="mt-0.5">
-          <Link href="/invoices"><ArrowLeft className="h-4 w-4" /></Link>
+          <Link href="/invoices">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
         </Button>
         <div className="flex-1">
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-2xl font-bold">{invoice.invoice_number}</h2>
             <InvoiceStatusBadge status={invoice.status} />
           </div>
-          <p className="text-muted-foreground text-sm flex items-center gap-1.5 mt-0.5">
+          <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-sm">
             <User className="h-3.5 w-3.5" />
             {invoice.client_name ?? "—"}
           </p>
         </div>
         <Button variant="outline" size="sm" asChild>
           <Link href={`/invoices/${id}/print`} target="_blank">
-            <Printer className="h-3.5 w-3.5 mr-1.5" />
+            <Printer className="mr-1.5 h-3.5 w-3.5" />
             Imprimer
           </Link>
         </Button>
@@ -85,7 +109,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       <InvoiceStatusActions invoiceId={id} currentStatus={invoice.status} />
 
       {/* Meta cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {[
           { label: "Montant", value: formatAmount(invoice.amount, currency) },
           { label: "Créée le", value: formatDate(invoice.created_at) },
@@ -94,8 +118,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         ].map(({ label, value }) => (
           <Card key={label}>
             <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="font-medium text-sm mt-0.5">{value}</p>
+              <p className="text-muted-foreground text-xs">{label}</p>
+              <p className="mt-0.5 text-sm font-medium">{value}</p>
             </CardContent>
           </Card>
         ))}
@@ -103,11 +127,11 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
       {/* Liens */}
       {(project || quote) && (
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex flex-wrap gap-3">
           {project && (
             <Button variant="outline" size="sm" asChild>
               <Link href={`/projects/${project.id}`}>
-                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                <FileText className="mr-1.5 h-3.5 w-3.5" />
                 Chantier : {project.name}
               </Link>
             </Button>
@@ -115,7 +139,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           {quote && (
             <Button variant="outline" size="sm" asChild>
               <Link href={`/quotes/${quote.id}`}>
-                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                <FileText className="mr-1.5 h-3.5 w-3.5" />
                 Devis : {quote.quote_number}
               </Link>
             </Button>
@@ -127,7 +151,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       {invoice.notes && (
         <Card>
           <CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground mb-1">Notes</p>
+            <p className="text-muted-foreground mb-1 text-xs">Notes</p>
             <p className="text-sm whitespace-pre-line">{invoice.notes}</p>
           </CardContent>
         </Card>

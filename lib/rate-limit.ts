@@ -70,11 +70,7 @@ function getLimiter(max: number, windowSec: number): Ratelimit | null {
  * @param max       Nombre max de requêtes par fenêtre
  * @param windowMs  Durée de la fenêtre en ms
  */
-export async function rateLimit(
-  key: string,
-  max = 60,
-  windowMs = 60_000
-): Promise<boolean> {
+export async function rateLimit(key: string, max = 60, windowMs = 60_000): Promise<boolean> {
   const windowSec = Math.max(1, Math.round(windowMs / 1000));
   const limiter = getLimiter(max, windowSec);
   if (limiter) {

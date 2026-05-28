@@ -15,8 +15,8 @@ export default function ClientsLoading() {
 
       <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="rounded-lg border bg-card p-4 flex items-center gap-4">
-            <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
+          <div key={i} className="bg-card flex items-center gap-4 rounded-lg border p-4">
+            <Skeleton className="h-10 w-10 flex-shrink-0 rounded-full" />
             <div className="flex-1 space-y-1.5">
               <Skeleton className="h-4 w-40" />
               <div className="flex gap-4">

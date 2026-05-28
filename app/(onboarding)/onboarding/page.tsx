@@ -53,58 +53,36 @@ export default function OnboardingPage() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Building2 className="h-6 w-6 text-primary" />
+        <div className="mb-2 flex items-center gap-3">
+          <div className="bg-primary/10 rounded-lg p-2">
+            <Building2 className="text-primary h-6 w-6" />
           </div>
           <CardTitle className="text-2xl">Créez votre entreprise</CardTitle>
         </div>
-        <CardDescription>
-          Ces informations apparaîtront sur vos devis et factures.
-        </CardDescription>
+        <CardDescription>Ces informations apparaîtront sur vos devis et factures.</CardDescription>
       </CardHeader>
 
       <form ref={formRef} onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nom de l&apos;entreprise *</Label>
-            <Input
-              id="name"
-              name="name"
-              placeholder="BTP Kouassi & Fils"
-              required
-              minLength={2}
-            />
+            <Input id="name" name="name" placeholder="BTP Kouassi & Fils" required minLength={2} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone">Téléphone</Label>
-              <Input
-                id="phone"
-                name="phone"
-                type="tel"
-                placeholder="+225 07 00 00 00 00"
-              />
+              <Input id="phone" name="phone" type="tel" placeholder="+225 07 00 00 00 00" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email professionnel</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="contact@entreprise.com"
-              />
+              <Input id="email" name="email" type="email" placeholder="contact@entreprise.com" />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="address">Adresse</Label>
-            <Input
-              id="address"
-              name="address"
-              placeholder="Abidjan, Cocody"
-            />
+            <Input id="address" name="address" placeholder="Abidjan, Cocody" />
           </div>
 
           <div className="space-y-2">
@@ -113,7 +91,7 @@ export default function OnboardingPage() {
               id="currency"
               name="currency"
               defaultValue="XOF"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               {CURRENCIES.map((c) => (
                 <option key={c.value} value={c.value}>
@@ -128,7 +106,7 @@ export default function OnboardingPage() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Création en cours..." : "Créer mon entreprise"}
           </Button>
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-muted-foreground text-center text-xs">
             Vous pourrez modifier ces informations dans les Paramètres.
           </p>
         </CardFooter>

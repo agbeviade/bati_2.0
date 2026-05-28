@@ -12,13 +12,17 @@ export async function createMaterial(formData: FormData) {
   const name = (formData.get("name") as string)?.trim();
   if (!name) return { error: "Le nom est requis." };
 
-  const { data: material, error } = await supabase.from("materials").insert({
-    company_id: companyId,
-    name,
-    category: (formData.get("category") as MaterialCategory) || "other",
-    unit: (formData.get("unit") as string)?.trim() || "u",
-    unit_cost: Number(formData.get("unit_cost")) || 0,
-  }).select("id").single();
+  const { data: material, error } = await supabase
+    .from("materials")
+    .insert({
+      company_id: companyId,
+      name,
+      category: (formData.get("category") as MaterialCategory) || "other",
+      unit: (formData.get("unit") as string)?.trim() || "u",
+      unit_cost: Number(formData.get("unit_cost")) || 0,
+    })
+    .select("id")
+    .single();
 
   if (error || !material) {
     logger.error("createMaterial failed", error, { companyId });
@@ -34,12 +38,15 @@ export async function updateMaterial(id: string, formData: FormData) {
   const { supabase } = await getAuthedProfile();
   const name = (formData.get("name") as string)?.trim();
 
-  const { error } = await supabase.from("materials").update({
-    name,
-    category: (formData.get("category") as MaterialCategory) || "other",
-    unit: (formData.get("unit") as string)?.trim() || "u",
-    unit_cost: Number(formData.get("unit_cost")) || 0,
-  }).eq("id", id);
+  const { error } = await supabase
+    .from("materials")
+    .update({
+      name,
+      category: (formData.get("category") as MaterialCategory) || "other",
+      unit: (formData.get("unit") as string)?.trim() || "u",
+      unit_cost: Number(formData.get("unit_cost")) || 0,
+    })
+    .eq("id", id);
 
   if (error) return { error: error.message };
 

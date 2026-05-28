@@ -75,7 +75,9 @@ function AssetUploader({
 
     const MAX = 3 * 1024 * 1024;
     if (file.size > MAX) {
-      toast.error(`Fichier trop lourd (${(file.size / 1024 / 1024).toFixed(1)} Mo). Maximum : 3 Mo.`);
+      toast.error(
+        `Fichier trop lourd (${(file.size / 1024 / 1024).toFixed(1)} Mo). Maximum : 3 Mo.`,
+      );
       e.target.value = "";
       return;
     }
@@ -113,21 +115,18 @@ function AssetUploader({
     <div className="space-y-3">
       <div>
         <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground text-xs">{description}</p>
       </div>
 
       {currentUrl ? (
-        <div className="relative group rounded-lg border overflow-hidden bg-muted/20">
-          <div className="relative w-full" style={{ aspectRatio: type === "header" ? "7/1" : "12/1" }}>
-            <Image
-              src={currentUrl}
-              alt={label}
-              fill
-              className="object-contain"
-              unoptimized
-            />
+        <div className="group bg-muted/20 relative overflow-hidden rounded-lg border">
+          <div
+            className="relative w-full"
+            style={{ aspectRatio: type === "header" ? "7/1" : "12/1" }}
+          >
+            <Image src={currentUrl} alt={label} fill className="object-contain" unoptimized />
           </div>
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+          <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-colors group-hover:bg-black/30 group-hover:opacity-100">
             <Button
               size="sm"
               variant="secondary"
@@ -135,7 +134,11 @@ function AssetUploader({
               disabled={isPending}
               className="shadow"
             >
-              {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+              {uploading ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Upload className="h-3 w-3" />
+              )}
               Remplacer
             </Button>
             <Button
@@ -155,7 +158,7 @@ function AssetUploader({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={isPending}
-          className="w-full border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 flex flex-col items-center gap-2 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="border-muted-foreground/25 text-muted-foreground hover:border-primary/40 hover:text-primary flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed p-8 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
           {uploading ? (
             <Loader2 className="h-8 w-8 animate-spin" />

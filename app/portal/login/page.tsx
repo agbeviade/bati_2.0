@@ -30,22 +30,24 @@ export default function PortalLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="flex flex-col items-center gap-3">
-          <div className="h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-md">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 shadow-md">
             <Construction className="h-6 w-6 text-white" />
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-bold">BatiFlow</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Portail client — accès à vos devis et factures</p>
+            <p className="text-muted-foreground mt-0.5 text-sm">
+              Portail client — accès à vos devis et factures
+            </p>
           </div>
         </div>
 
         {/* Formulaire */}
-        <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4">
-          <h2 className="font-semibold text-lg">Connexion</h2>
+        <div className="space-y-4 rounded-xl border bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Connexion</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
@@ -55,7 +57,7 @@ export default function PortalLoginPage() {
                 autoComplete="email"
                 placeholder="vous@exemple.com"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -66,7 +68,7 @@ export default function PortalLoginPage() {
                 type="password"
                 autoComplete="current-password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
@@ -76,9 +78,11 @@ export default function PortalLoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-center text-xs">
           Vous avez un compte entreprise ?{" "}
-          <a href="/login" className="underline hover:text-foreground">Connexion espace BTP</a>
+          <a href="/login" className="hover:text-foreground underline">
+            Connexion espace BTP
+          </a>
         </p>
       </div>
     </div>

@@ -22,10 +22,13 @@ Deno.serve(async (req) => {
     const { description, surface_m2, project_type, currency = "XOF" } = await req.json();
 
     if (!description || description.trim().length < 10) {
-      return new Response(JSON.stringify({ error: "Description trop courte (minimum 10 caractères)" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Description trop courte (minimum 10 caractères)" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const apiKey = Deno.env.get("GROQ_API_KEY")!;
@@ -60,7 +63,7 @@ Prix en ${currency}. Entre 8 et 20 lignes.`;
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
@@ -89,10 +92,13 @@ Prix en ${currency}. Entre 8 et 20 lignes.`;
       const match = text.match(/\{[\s\S]*\}/);
       parsed = JSON.parse(match?.[0] ?? text);
     } catch {
-      return new Response(JSON.stringify({ error: "Impossible de parser la réponse IA", raw: text }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Impossible de parser la réponse IA", raw: text }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const items = (parsed.items ?? []).map((item, i) => ({

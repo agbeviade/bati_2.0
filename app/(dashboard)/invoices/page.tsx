@@ -8,22 +8,40 @@ import { InvoicesList } from "@/components/invoices/invoices-list";
 import type { Invoice } from "@/lib/supabase/types";
 
 function formatAmount(n: number, currency: string) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 function formatDate(d: string | null) {
   if (!d) return null;
-  return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(d).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export default async function InvoicesPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
   if (!profile?.company_id) redirect("/onboarding");
 
-  const { data: company } = await supabase.from("companies").select("currency").eq("id", profile.company_id).single();
+  const { data: company } = await supabase
+    .from("companies")
+    .select("currency")
+    .eq("id", profile.company_id)
+    .single();
   const currency = (company as { currency?: string } | null)?.currency ?? "XOF";
 
   const { data: invoicesData } = await supabase
@@ -32,16 +50,26 @@ export default async function InvoicesPage() {
     .eq("company_id", profile.company_id)
     .order("created_at", { ascending: false });
 
-  const invoices = (invoicesData ?? []) as Pick<Invoice, "id" | "invoice_number" | "client_name" | "amount" | "status" | "due_date" | "paid_at" | "created_at">[];
+  const invoices = (invoicesData ?? []) as Pick<
+    Invoice,
+    | "id"
+    | "invoice_number"
+    | "client_name"
+    | "amount"
+    | "status"
+    | "due_date"
+    | "paid_at"
+    | "created_at"
+  >[];
 
   const stats = {
     total: invoices.length,
-    draft: invoices.filter(i => i.status === "draft").length,
-    sent: invoices.filter(i => i.status === "sent").length,
-    paid: invoices.filter(i => i.status === "paid").length,
-    overdue: invoices.filter(i => i.status === "overdue").length,
+    draft: invoices.filter((i) => i.status === "draft").length,
+    sent: invoices.filter((i) => i.status === "sent").length,
+    paid: invoices.filter((i) => i.status === "paid").length,
+    overdue: invoices.filter((i) => i.status === "overdue").length,
     totalAmount: invoices.reduce((s, i) => s + i.amount, 0),
-    paidAmount: invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0),
+    paidAmount: invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.amount, 0),
   };
 
   return (
@@ -57,24 +85,24 @@ export default async function InvoicesPage() {
         </div>
         <Button asChild className="self-start sm:self-auto">
           <Link href="/invoices/new">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Nouvelle facture
           </Link>
         </Button>
       </div>
 
       {invoices.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {[
             { label: "Brouillons", value: stats.draft, color: "text-muted-foreground" },
             { label: "Envoyées", value: stats.sent, color: "text-blue-600" },
             { label: "Payées", value: stats.paid, color: "text-green-600" },
             { label: "En retard", value: stats.overdue, color: "text-red-600" },
-          ].map(s => (
+          ].map((s) => (
             <Card key={s.label}>
               <CardContent className="pt-4 text-center">
                 <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
+                <p className="text-muted-foreground text-xs">{s.label}</p>
               </CardContent>
             </Card>
           ))}

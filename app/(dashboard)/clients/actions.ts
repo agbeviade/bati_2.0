@@ -33,11 +33,15 @@ export async function updateClient(id: string, formData: FormData) {
   const admin = createAdminClient();
 
   // admin needed to update another user's row; scoped to company
-  await admin.from("users").update({
-    full_name: (formData.get("full_name") as string)?.trim() || undefined,
-    phone: (formData.get("phone") as string) || null,
-    email: (formData.get("email") as string)?.trim() || undefined,
-  }).eq("id", id).eq("company_id", companyId);
+  await admin
+    .from("users")
+    .update({
+      full_name: (formData.get("full_name") as string)?.trim() || undefined,
+      phone: (formData.get("phone") as string) || null,
+      email: (formData.get("email") as string)?.trim() || undefined,
+    })
+    .eq("id", id)
+    .eq("company_id", companyId);
 
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
@@ -46,6 +50,10 @@ export async function updateClient(id: string, formData: FormData) {
 export async function toggleClientActive(id: string, is_active: boolean) {
   const { companyId } = await getAuthedProfile();
   // admin needed to update another user's row; scoped to company
-  await createAdminClient().from("users").update({ is_active }).eq("id", id).eq("company_id", companyId);
+  await createAdminClient()
+    .from("users")
+    .update({ is_active })
+    .eq("id", id)
+    .eq("company_id", companyId);
   revalidatePath("/clients");
 }

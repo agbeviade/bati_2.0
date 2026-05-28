@@ -72,9 +72,7 @@ export default function RegisterPage() {
     <Card>
       <CardHeader>
         <CardTitle>Créer un compte</CardTitle>
-        <CardDescription>
-          Commencez gratuitement — 1 chantier inclus.
-        </CardDescription>
+        <CardDescription>Commencez gratuitement — 1 chantier inclus.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -117,11 +115,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Téléphone (optionnel)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="tel"
-                      placeholder="+225 07 00 00 00 00"
-                      {...field}
-                    />
+                    <Input type="tel" placeholder="+225 07 00 00 00 00" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -134,11 +128,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Mot de passe</FormLabel>
                   <FormControl>
-                    <Input
-                      type="password"
-                      autoComplete="new-password"
-                      {...field}
-                    />
+                    <Input type="password" autoComplete="new-password" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -149,7 +139,7 @@ export default function RegisterPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Création..." : "Créer mon compte"}
             </Button>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Déjà inscrit ?{" "}
               <Link href="/login" className="font-medium hover:underline">
                 Se connecter

@@ -62,9 +62,7 @@ export default function LoginPage() {
     <Card>
       <CardHeader>
         <CardTitle>Connexion</CardTitle>
-        <CardDescription>
-          Connectez-vous à votre espace BatiFlow.
-        </CardDescription>
+        <CardDescription>Connectez-vous à votre espace BatiFlow.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -94,11 +92,7 @@ export default function LoginPage() {
                 <FormItem>
                   <FormLabel>Mot de passe</FormLabel>
                   <FormControl>
-                    <Input
-                      type="password"
-                      autoComplete="current-password"
-                      {...field}
-                    />
+                    <Input type="password" autoComplete="current-password" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -107,7 +101,7 @@ export default function LoginPage() {
             <div className="text-right">
               <Link
                 href="/forgot-password"
-                className="text-sm text-muted-foreground hover:underline"
+                className="text-muted-foreground text-sm hover:underline"
               >
                 Mot de passe oublié ?
               </Link>
@@ -117,7 +111,7 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Connexion..." : "Se connecter"}
             </Button>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Pas encore de compte ?{" "}
               <Link href="/register" className="font-medium hover:underline">
                 Créer un compte

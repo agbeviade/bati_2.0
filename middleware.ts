@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
             "Content-Type": "application/json",
             "Retry-After": "60",
           },
-        }
+        },
       );
     }
   }

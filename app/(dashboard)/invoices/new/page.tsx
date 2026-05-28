@@ -12,13 +12,20 @@ export default async function NewInvoicePage({
   const { quote_id } = await searchParams;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
   if (!profile?.company_id) redirect("/onboarding");
 
-  let prefill: { client_name?: string; amount?: number; project_id?: string; quote_id?: string } = {};
+  let prefill: { client_name?: string; amount?: number; project_id?: string; quote_id?: string } =
+    {};
   if (quote_id) {
     const { data: quoteData } = await supabase
       .from("quotes")
@@ -28,7 +35,12 @@ export default async function NewInvoicePage({
       .maybeSingle();
     if (quoteData) {
       const q = quoteData as Pick<Quote, "id" | "client_name" | "total" | "project_id">;
-      prefill = { client_name: q.client_name ?? undefined, amount: q.total, project_id: q.project_id ?? undefined, quote_id: q.id };
+      prefill = {
+        client_name: q.client_name ?? undefined,
+        amount: q.total,
+        project_id: q.project_id ?? undefined,
+        quote_id: q.id,
+      };
     }
   }
 
@@ -48,7 +60,9 @@ export default async function NewInvoicePage({
     <NewInvoiceForm
       prefill={prefill}
       projects={(projectsData ?? []) as Pick<Project, "id" | "name">[]}
-      approvedQuotes={(quotesData ?? []) as Pick<Quote, "id" | "quote_number" | "client_name" | "total">[]}
+      approvedQuotes={
+        (quotesData ?? []) as Pick<Quote, "id" | "quote_number" | "client_name" | "total">[]
+      }
     />
   );
 }

@@ -37,7 +37,9 @@ export function SearchFilter<T>({
   const [activeFilter, setActiveFilter] = useState("all");
   const [page, setPage] = useState(1);
 
-  useEffect(() => { setPage(1); }, [query, activeFilter]);
+  useEffect(() => {
+    setPage(1);
+  }, [query, activeFilter]);
 
   const filtered = useMemo(() => {
     let result = items;
@@ -50,31 +52,32 @@ export function SearchFilter<T>({
         searchKeys.some((key) => {
           const val = item[key];
           return val != null && String(val).toLowerCase().includes(q);
-        })
+        }),
       );
     }
     return result;
   }, [items, query, activeFilter, searchKeys, filterKey]);
 
   const hasQuery = query.trim() !== "";
-  const totalPages = (pageSize && !hasQuery) ? Math.max(1, Math.ceil(filtered.length / pageSize)) : 1;
-  const paginated = (pageSize && !hasQuery) ? filtered.slice((page - 1) * pageSize, page * pageSize) : filtered;
+  const totalPages = pageSize && !hasQuery ? Math.max(1, Math.ceil(filtered.length / pageSize)) : 1;
+  const paginated =
+    pageSize && !hasQuery ? filtered.slice((page - 1) * pageSize, page * pageSize) : filtered;
 
   return (
     <div className={className}>
-      <div className="flex flex-col gap-3 mb-4">
+      <div className="mb-4 flex flex-col gap-3">
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={placeholder}
-            className="pl-9 pr-9"
+            className="pr-9 pl-9"
           />
           {query && (
             <button
               onClick={() => setQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
             >
               <X className="h-4 w-4" />
             </button>
@@ -82,8 +85,8 @@ export function SearchFilter<T>({
         </div>
 
         {filterOptions.length > 0 && (
-          <div className="overflow-x-auto pb-1 md:overflow-x-visible md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="flex gap-1.5 w-max md:w-auto md:flex-wrap">
+          <div className="[scrollbar-width:none] overflow-x-auto pb-1 md:overflow-x-visible md:pb-0 [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-max gap-1.5 md:w-auto md:flex-wrap">
               <Badge
                 variant={activeFilter === "all" ? "default" : "outline"}
                 className="cursor-pointer px-3 py-1 text-xs"
@@ -108,16 +111,25 @@ export function SearchFilter<T>({
 
       {filtered.length === 0 ? (
         query || activeFilter !== "all" ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
-            <Search className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center space-y-3 py-16 text-center">
+            <Search className="text-muted-foreground h-8 w-8" />
+            <p className="text-muted-foreground text-sm">
               Aucun résultat pour <span className="font-medium">"{query || activeFilter}"</span>
             </p>
-            <Button variant="ghost" size="sm" onClick={() => { setQuery(""); setActiveFilter("all"); }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setQuery("");
+                setActiveFilter("all");
+              }}
+            >
               Effacer les filtres
             </Button>
           </div>
-        ) : emptyState
+        ) : (
+          emptyState
+        )
       ) : (
         <>
           <div className="space-y-2">
@@ -128,22 +140,27 @@ export function SearchFilter<T>({
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-4">
-              <p className="text-sm text-muted-foreground">
-                {(page - 1) * pageSize! + 1}–{Math.min(page * pageSize!, filtered.length)} sur {filtered.length}
+              <p className="text-muted-foreground text-sm">
+                {(page - 1) * pageSize! + 1}–{Math.min(page * pageSize!, filtered.length)} sur{" "}
+                {filtered.length}
               </p>
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline" size="icon"
+                  variant="outline"
+                  size="icon"
                   disabled={page === 1}
-                  onClick={() => setPage(p => p - 1)}
+                  onClick={() => setPage((p) => p - 1)}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-sm">Page {page} / {totalPages}</span>
+                <span className="text-sm">
+                  Page {page} / {totalPages}
+                </span>
                 <Button
-                  variant="outline" size="icon"
+                  variant="outline"
+                  size="icon"
                   disabled={page === totalPages}
-                  onClick={() => setPage(p => p + 1)}
+                  onClick={() => setPage((p) => p + 1)}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>

@@ -57,7 +57,9 @@ describe("calculerBrut", () => {
   });
 
   it("escalier : nb × (giron + contremarche) × largeur", () => {
-    expect(calculerBrut("escalier", { nb_marches: 15, giron: 0.3, contremarche: 0.18, largeur: 1.2 })).toBeCloseTo(15 * (0.3 + 0.18) * 1.2);
+    expect(
+      calculerBrut("escalier", { nb_marches: 15, giron: 0.3, contremarche: 0.18, largeur: 1.2 }),
+    ).toBeCloseTo(15 * (0.3 + 0.18) * 1.2);
   });
 
   it("escalier : defaults giron/contremarche si omis", () => {
@@ -120,7 +122,14 @@ describe("calculerOuvrage", () => {
       vides_deduits: [{ id: "v1", nom: "Porte", largeur: 1, hauteur: 2, surface: 2 }],
       unite_principale: "m²",
       recette: [
-        { materiau_id: "m1", materiau_nom: "Ciment", unite: "sac", coefficient: 0.5, taux_perte: 0.05, type: "materiau" },
+        {
+          materiau_id: "m1",
+          materiau_nom: "Ciment",
+          unite: "sac",
+          coefficient: 0.5,
+          taux_perte: 0.05,
+          type: "materiau",
+        },
       ],
     });
 

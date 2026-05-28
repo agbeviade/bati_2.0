@@ -21,10 +21,18 @@ const METHOD_LABELS: Record<string, string> = {
 };
 
 function formatAmount(n: number, currency: string) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function PaymentSection({
@@ -52,7 +60,10 @@ export function PaymentSection({
     const fd = new FormData(form);
     startTransition(async () => {
       const result = await addPayment(invoiceId, fd);
-      if (result?.error) { toast.error(result.error); return; }
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
       form.reset();
       setShowForm(false);
       toast.success("Paiement enregistré.");
@@ -70,13 +81,13 @@ export function PaymentSection({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Paiements</CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               {formatAmount(totalPaid, currency)} / {formatAmount(invoiceAmount, currency)} encaissé
             </p>
           </div>
           {!readonly && remaining > 0 && (
-            <Button size="sm" onClick={() => setShowForm(v => !v)}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
+            <Button size="sm" onClick={() => setShowForm((v) => !v)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
               Ajouter
             </Button>
           )}
@@ -84,7 +95,7 @@ export function PaymentSection({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Progress bar */}
-        <div className="h-2 rounded-full bg-muted overflow-hidden">
+        <div className="bg-muted h-2 overflow-hidden rounded-full">
           <div
             className="h-full rounded-full bg-green-500 transition-all"
             style={{ width: `${Math.min(100, (totalPaid / invoiceAmount) * 100)}%` }}
@@ -93,23 +104,31 @@ export function PaymentSection({
 
         {/* Form */}
         {showForm && (
-          <form onSubmit={handleAdd} className="border rounded-lg p-4 space-y-3 bg-muted/30">
+          <form onSubmit={handleAdd} className="bg-muted/30 space-y-3 rounded-lg border p-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="amount">Montant *</Label>
                 <Input
-                  id="amount" name="amount" type="number" min="1" step="1"
-                  placeholder={String(Math.max(0, remaining))} required
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder={String(Math.max(0, remaining))}
+                  required
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="method">Mode *</Label>
                 <select
-                  name="method" id="method"
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  name="method"
+                  id="method"
+                  className="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
                 >
                   {Object.entries(METHOD_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -117,7 +136,12 @@ export function PaymentSection({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="paid_at">Date</Label>
-                <Input id="paid_at" name="paid_at" type="date" defaultValue={new Date().toISOString().split("T")[0]} />
+                <Input
+                  id="paid_at"
+                  name="paid_at"
+                  type="date"
+                  defaultValue={new Date().toISOString().split("T")[0]}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="reference">Référence</Label>
@@ -125,27 +149,38 @@ export function PaymentSection({
               </div>
             </div>
             <div className="flex gap-2">
-              <Button type="submit" size="sm" disabled={isPending}>Enregistrer</Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => setShowForm(false)}>Annuler</Button>
+              <Button type="submit" size="sm" disabled={isPending}>
+                Enregistrer
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setShowForm(false)}>
+                Annuler
+              </Button>
             </div>
           </form>
         )}
 
         {/* List */}
         {payments.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">Aucun paiement enregistré.</p>
+          <p className="text-muted-foreground py-6 text-center text-sm">
+            Aucun paiement enregistré.
+          </p>
         ) : (
           <ul className="space-y-1">
             {payments.map((p, i) => (
               <li key={p.id}>
                 <div className="flex items-center gap-3 py-2">
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{formatAmount(p.amount, currency)}</span>
-                      <span className="text-xs text-muted-foreground">{METHOD_LABELS[p.method] ?? p.method}</span>
+                      <span className="text-sm font-medium">
+                        {formatAmount(p.amount, currency)}
+                      </span>
+                      <span className="text-muted-foreground text-xs">
+                        {METHOD_LABELS[p.method] ?? p.method}
+                      </span>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(p.paid_at)}{p.reference && ` · ${p.reference}`}
+                    <p className="text-muted-foreground text-xs">
+                      {formatDate(p.paid_at)}
+                      {p.reference && ` · ${p.reference}`}
                     </p>
                   </div>
                   {!readonly && (
@@ -165,7 +200,7 @@ export function PaymentSection({
         )}
 
         {remaining > 0 && totalPaid > 0 && (
-          <div className="text-sm font-medium text-orange-600 pt-1">
+          <div className="pt-1 text-sm font-medium text-orange-600">
             Reste à payer : {formatAmount(remaining, currency)}
           </div>
         )}

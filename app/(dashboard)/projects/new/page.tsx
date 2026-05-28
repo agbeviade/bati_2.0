@@ -42,7 +42,7 @@ export default function NewProjectPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/projects">
@@ -60,9 +60,7 @@ export default function NewProjectPage() {
       <Card>
         <CardHeader>
           <CardTitle>Informations du chantier</CardTitle>
-          <CardDescription>
-            Seul le nom est obligatoire.
-          </CardDescription>
+          <CardDescription>Seul le nom est obligatoire.</CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit}>
@@ -85,17 +83,13 @@ export default function NewProjectPage() {
                 name="description"
                 placeholder="Détails du chantier, nature des travaux..."
                 rows={3}
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+                className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[80px] w-full resize-none rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="address">Adresse du chantier</Label>
-              <Input
-                id="address"
-                name="address"
-                placeholder="Abidjan, Cocody Riviera 3"
-              />
+              <Input id="address" name="address" placeholder="Abidjan, Cocody Riviera 3" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -112,7 +106,7 @@ export default function NewProjectPage() {
               </div>
               <div className="space-y-2">
                 <Label>&nbsp;</Label>
-                <p className="text-xs text-muted-foreground pt-2">
+                <p className="text-muted-foreground pt-2 text-xs">
                   Montant dans la devise de votre entreprise.
                 </p>
               </div>

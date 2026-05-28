@@ -1,23 +1,19 @@
 import Link from "next/link";
 
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col">
       <header className="border-b">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="font-bold text-xl">
+        <div className="container mx-auto flex items-center justify-between px-6 py-4">
+          <Link href="/" className="text-xl font-bold">
             BatiFlow
           </Link>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Pilotez vos chantiers comme une entreprise moderne.
           </p>
         </div>
       </header>
-      <main className="flex-1 flex items-center justify-center px-6 py-12">
+      <main className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">{children}</div>
       </main>
     </div>

@@ -15,14 +15,28 @@ import {
   type ComposantRecette,
 } from "@/lib/calcul-ouvrage";
 import { createOuvrage, updateOuvrage, saveOuvrageType } from "@/app/(dashboard)/metres/actions";
-import { suggestRecette, extractMetresFromImage, analyserCoherence } from "@/app/(dashboard)/metres/ai-actions";
+import {
+  suggestRecette,
+  extractMetresFromImage,
+  analyserCoherence,
+} from "@/app/(dashboard)/metres/ai-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Save, BookOpen, Sparkles, Camera, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Save,
+  BookOpen,
+  Sparkles,
+  Camera,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+} from "lucide-react";
 import type { ProjectOuvrage, OuvrageType } from "@/lib/supabase/types";
 
 // ---------------------------------------------------------------------------
@@ -49,7 +63,13 @@ interface Props {
 // Composant
 // ---------------------------------------------------------------------------
 
-export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectId, initialData }: Props) {
+export function OuvrageForm({
+  projects,
+  materials,
+  ouvrageTypes,
+  initialProjectId,
+  initialData,
+}: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -57,22 +77,30 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
 
   // --- États AI ---
   const [aiLoading, setAiLoading] = useState<"recette" | "photo" | "coherence" | null>(null);
-  const [coherence, setCoherence] = useState<{ alerte: string | null; niveau: "ok" | "warning" | "error" } | null>(null);
+  const [coherence, setCoherence] = useState<{
+    alerte: string | null;
+    niveau: "ok" | "warning" | "error";
+  } | null>(null);
 
   // --- État du formulaire ---
   const [designation, setDesignation] = useState(initialData?.designation ?? "");
   const [projectId, setProjectId] = useState(initialProjectId ?? initialData?.project_id ?? "");
   const [type, setType] = useState<TypeGeometrie>(
-    (initialData?.type_geometrie as TypeGeometrie) ?? "surface_l_h"
+    (initialData?.type_geometrie as TypeGeometrie) ?? "surface_l_h",
   );
   const [dimensions, setDimensions] = useState<DimensionsOuvrage>(
-    (initialData?.dimensions as DimensionsOuvrage) ?? {}
+    (initialData?.dimensions as DimensionsOuvrage) ?? {},
   );
   const [vides, setVides] = useState<LocalVide[]>(
-    initialData?.vides_deduits?.map((v) => ({ _key: v.id, nom: v.nom, largeur: v.largeur, hauteur: v.hauteur })) ?? []
+    initialData?.vides_deduits?.map((v) => ({
+      _key: v.id,
+      nom: v.nom,
+      largeur: v.largeur,
+      hauteur: v.hauteur,
+    })) ?? [],
   );
   const [recette, setRecette] = useState<LocalComposant[]>(
-    initialData?.recette?.map((c, i) => ({ ...c, _key: `${c.materiau_id}-${i}` })) ?? []
+    initialData?.recette?.map((c, i) => ({ ...c, _key: `${c.materiau_id}-${i}` })) ?? [],
   );
 
   // --- Calcul en temps réel (synchrone, pas de useEffect) ---
@@ -104,10 +132,8 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
   function updateVide(key: string, field: keyof LocalVide, value: string) {
     setVides((prev) =>
       prev.map((v) =>
-        v._key === key
-          ? { ...v, [field]: field === "nom" ? value : Number(value) || 0 }
-          : v
-      )
+        v._key === key ? { ...v, [field]: field === "nom" ? value : Number(value) || 0 } : v,
+      ),
     );
   }
   function removeVide(key: string) {
@@ -142,7 +168,7 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
         }
         if (field === "type") return { ...c, type: value as "materiau" | "main_oeuvre" };
         return { ...c, [field]: Number(value) || 0 };
-      })
+      }),
     );
   }
   function removeComposant(key: string) {
@@ -159,7 +185,9 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
       setRecette(result.recette.map((c, i) => ({ ...c, _key: `ai-${i}-${Date.now()}` })));
       setCoherence(null);
     } else {
-      setServerError("L'IA n'a pas trouvé de recette pour ces matériaux. Ajoutez d'abord vos matériaux en stock.");
+      setServerError(
+        "L'IA n'a pas trouvé de recette pour ces matériaux. Ajoutez d'abord vos matériaux en stock.",
+      );
     }
   }
 
@@ -170,7 +198,9 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
 
     const MAX_SIZE = 3 * 1024 * 1024; // 3 MB
     if (file.size > MAX_SIZE) {
-      setServerError(`Image trop lourde (${(file.size / 1024 / 1024).toFixed(1)} Mo). Maximum : 3 Mo.`);
+      setServerError(
+        `Image trop lourde (${(file.size / 1024 / 1024).toFixed(1)} Mo). Maximum : 3 Mo.`,
+      );
       e.target.value = "";
       return;
     }
@@ -208,7 +238,7 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
       type,
       computed.quantite_nette,
       computed.unite_principale,
-      computed.recette_calculee
+      computed.recette_calculee,
     );
     setAiLoading(null);
     setCoherence(result);
@@ -268,7 +298,7 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {serverError && (
-        <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md text-sm">
+        <div className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm">
           {serverError}
         </div>
       )}
@@ -278,7 +308,7 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
         <CardHeader>
           <CardTitle className="text-base">Informations générales</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Désignation *</Label>
             <div className="flex gap-2">
@@ -290,14 +320,25 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
                 className="flex-1"
               />
               {/* AI Feature 2 — Analyser une photo */}
-              <label className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-md border text-sm cursor-pointer transition-colors shrink-0",
-                "border-violet-300 text-violet-700 hover:bg-violet-50",
-                aiLoading === "photo" && "opacity-60 pointer-events-none"
-              )}>
-                {aiLoading === "photo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              <label
+                className={cn(
+                  "flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-3 py-2 text-sm transition-colors",
+                  "border-violet-300 text-violet-700 hover:bg-violet-50",
+                  aiLoading === "photo" && "pointer-events-none opacity-60",
+                )}
+              >
+                {aiLoading === "photo" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
                 Photo
-                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                />
               </label>
             </div>
           </div>
@@ -306,7 +347,7 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
             <select
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
-              className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="border-input bg-background h-10 w-full rounded-md border px-3 py-2 text-sm"
             >
               <option value="">— Sans chantier —</option>
               {projects.map((p) => (
@@ -323,7 +364,7 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
               <Label>Appliquer un modèle de recette</Label>
               <div className="flex gap-2">
                 <select
-                  className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="border-input bg-background h-10 flex-1 rounded-md border px-3 py-2 text-sm"
                   defaultValue=""
                   onChange={(e) => e.target.value && applyOuvrageType(e.target.value)}
                 >
@@ -346,7 +387,7 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
           <CardTitle className="text-base">Type de géométrie</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {(Object.keys(LABELS_GEOMETRIE) as TypeGeometrie[]).map((t) => (
               <button
                 key={t}
@@ -357,10 +398,10 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
                   setVides([]);
                 }}
                 className={cn(
-                  "flex flex-col items-center gap-1 p-3 rounded-lg border text-xs transition-colors",
+                  "flex flex-col items-center gap-1 rounded-lg border p-3 text-xs transition-colors",
                   type === t
                     ? "border-primary bg-primary/10 text-primary font-semibold"
-                    : "border-border hover:border-primary/50 hover:bg-accent text-muted-foreground"
+                    : "border-border hover:border-primary/50 hover:bg-accent text-muted-foreground",
                 )}
               >
                 <span className="text-lg">{ICONES_GEOMETRIE[t]}</span>
@@ -372,7 +413,7 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
       </Card>
 
       {/* ---- Dimensions + Résultat ---- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Dimensions</CardTitle>
@@ -397,29 +438,32 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
         {/* Résumé calculé */}
         <Card className="bg-muted/30">
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               Résultat calculé
-              <Badge variant="outline" className="font-mono text-xs">{unite}</Badge>
+              <Badge variant="outline" className="font-mono text-xs">
+                {unite}
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-sm text-muted-foreground">Quantité brute</span>
-              <span className="font-mono font-semibold text-lg">
+            <div className="flex items-center justify-between border-b py-2">
+              <span className="text-muted-foreground text-sm">Quantité brute</span>
+              <span className="font-mono text-lg font-semibold">
                 {computed.quantite_brute.toFixed(3)} {unite}
               </span>
             </div>
             {!estTypeVolume(type) && vides.length > 0 && (
-              <div className="flex justify-between items-center py-2 border-b text-destructive/80">
+              <div className="text-destructive/80 flex items-center justify-between border-b py-2">
                 <span className="text-sm">− Vides déduits</span>
                 <span className="font-mono">
-                  {computed.vides_deduits.reduce((s, v) => s + v.largeur * v.hauteur, 0).toFixed(3)} m²
+                  {computed.vides_deduits.reduce((s, v) => s + v.largeur * v.hauteur, 0).toFixed(3)}{" "}
+                  m²
                 </span>
               </div>
             )}
-            <div className="flex justify-between items-center py-2">
+            <div className="flex items-center justify-between py-2">
               <span className="text-sm font-medium">Quantité nette</span>
-              <span className="font-mono font-bold text-xl text-primary">
+              <span className="text-primary font-mono text-xl font-bold">
                 {computed.quantite_nette.toFixed(3)} {unite}
               </span>
             </div>
@@ -434,64 +478,65 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Vides déduits</CardTitle>
               <Button type="button" variant="outline" size="sm" onClick={addVide}>
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="mr-1 h-4 w-4" />
                 Ajouter
               </Button>
             </div>
           </CardHeader>
           <CardContent>
             {vides.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Aucun vide — cliquez sur &quot;Ajouter&quot; pour déduire une porte, fenêtre, portail...
+              <p className="text-muted-foreground py-4 text-center text-sm">
+                Aucun vide — cliquez sur &quot;Ajouter&quot; pour déduire une porte, fenêtre,
+                portail...
               </p>
             ) : (
               <div className="overflow-x-auto">
-              <div className="space-y-2 min-w-[420px]">
-                <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
-                  <span className="col-span-5">Désignation</span>
-                  <span className="col-span-3">Largeur (m)</span>
-                  <span className="col-span-3">Hauteur (m)</span>
-                  <span className="col-span-1" />
-                </div>
-                {vides.map((v) => (
-                  <div key={v._key} className="grid grid-cols-12 gap-2 items-center">
-                    <Input
-                      className="col-span-5 h-8 text-sm"
-                      placeholder="ex: Porte principale"
-                      value={v.nom}
-                      onChange={(e) => updateVide(v._key, "nom", e.target.value)}
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="col-span-3 h-8 text-sm"
-                      placeholder="0.90"
-                      value={v.largeur || ""}
-                      onChange={(e) => updateVide(v._key, "largeur", e.target.value)}
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="col-span-3 h-8 text-sm"
-                      placeholder="2.10"
-                      value={v.hauteur || ""}
-                      onChange={(e) => updateVide(v._key, "hauteur", e.target.value)}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="col-span-1 h-8 w-8 text-destructive"
-                      onClick={() => removeVide(v._key)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                <div className="min-w-[420px] space-y-2">
+                  <div className="text-muted-foreground grid grid-cols-12 gap-2 px-1 text-xs">
+                    <span className="col-span-5">Désignation</span>
+                    <span className="col-span-3">Largeur (m)</span>
+                    <span className="col-span-3">Hauteur (m)</span>
+                    <span className="col-span-1" />
                   </div>
-                ))}
+                  {vides.map((v) => (
+                    <div key={v._key} className="grid grid-cols-12 items-center gap-2">
+                      <Input
+                        className="col-span-5 h-8 text-sm"
+                        placeholder="ex: Porte principale"
+                        value={v.nom}
+                        onChange={(e) => updateVide(v._key, "nom", e.target.value)}
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="col-span-3 h-8 text-sm"
+                        placeholder="0.90"
+                        value={v.largeur || ""}
+                        onChange={(e) => updateVide(v._key, "largeur", e.target.value)}
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="col-span-3 h-8 text-sm"
+                        placeholder="2.10"
+                        value={v.hauteur || ""}
+                        onChange={(e) => updateVide(v._key, "hauteur", e.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive col-span-1 h-8 w-8"
+                        onClick={() => removeVide(v._key)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
             )}
           </CardContent>
         </Card>
@@ -512,13 +557,21 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
                 onClick={handleSuggestRecette}
                 disabled={!designation.trim() || aiLoading === "recette" || materials.length === 0}
               >
-                {aiLoading === "recette"
-                  ? <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                  : <Sparkles className="h-4 w-4 mr-1" />}
+                {aiLoading === "recette" ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-1 h-4 w-4" />
+                )}
                 IA
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={addComposant} disabled={materials.length === 0}>
-                <Plus className="h-4 w-4 mr-1" />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addComposant}
+                disabled={materials.length === 0}
+              >
+                <Plus className="mr-1 h-4 w-4" />
                 Ajouter
               </Button>
             </div>
@@ -526,75 +579,75 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
         </CardHeader>
         <CardContent>
           {recette.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className="text-muted-foreground py-4 text-center text-sm">
               Aucun matériau — cliquez sur &quot;Ajouter&quot; pour définir la recette
             </p>
           ) : (
             <div className="overflow-x-auto">
-            <div className="space-y-2 min-w-[520px]">
-              <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
-                <span className="col-span-4">Matériau</span>
-                <span className="col-span-2">Unité</span>
-                <span className="col-span-2">Coeff.</span>
-                <span className="col-span-2">Perte %</span>
-                <span className="col-span-1">Type</span>
-                <span className="col-span-1" />
-              </div>
-              {recette.map((c) => (
-                <div key={c._key} className="grid grid-cols-12 gap-2 items-center">
-                  <select
-                    className="col-span-4 h-8 rounded-md border border-input bg-background px-2 text-sm"
-                    value={c.materiau_id}
-                    onChange={(e) => updateComposant(c._key, "materiau_id", e.target.value)}
-                  >
-                    {materials.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="col-span-2 text-sm text-muted-foreground px-1">{c.unite}</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.001"
-                    className="col-span-2 h-8 text-sm"
-                    placeholder="0.00"
-                    value={c.coefficient || ""}
-                    onChange={(e) => updateComposant(c._key, "coefficient", e.target.value)}
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="1"
-                    className="col-span-2 h-8 text-sm"
-                    placeholder="5"
-                    value={c.taux_perte ? c.taux_perte * 100 : ""}
-                    onChange={(e) =>
-                      updateComposant(c._key, "taux_perte", String(Number(e.target.value) / 100))
-                    }
-                  />
-                  <select
-                    className="col-span-1 h-8 rounded-md border border-input bg-background px-1 text-xs"
-                    value={c.type}
-                    onChange={(e) => updateComposant(c._key, "type", e.target.value)}
-                  >
-                    <option value="materiau">Mat.</option>
-                    <option value="main_oeuvre">MO</option>
-                  </select>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="col-span-1 h-8 w-8 text-destructive"
-                    onClick={() => removeComposant(c._key)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+              <div className="min-w-[520px] space-y-2">
+                <div className="text-muted-foreground grid grid-cols-12 gap-2 px-1 text-xs">
+                  <span className="col-span-4">Matériau</span>
+                  <span className="col-span-2">Unité</span>
+                  <span className="col-span-2">Coeff.</span>
+                  <span className="col-span-2">Perte %</span>
+                  <span className="col-span-1">Type</span>
+                  <span className="col-span-1" />
                 </div>
-              ))}
-            </div>
+                {recette.map((c) => (
+                  <div key={c._key} className="grid grid-cols-12 items-center gap-2">
+                    <select
+                      className="border-input bg-background col-span-4 h-8 rounded-md border px-2 text-sm"
+                      value={c.materiau_id}
+                      onChange={(e) => updateComposant(c._key, "materiau_id", e.target.value)}
+                    >
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-muted-foreground col-span-2 px-1 text-sm">{c.unite}</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      className="col-span-2 h-8 text-sm"
+                      placeholder="0.00"
+                      value={c.coefficient || ""}
+                      onChange={(e) => updateComposant(c._key, "coefficient", e.target.value)}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      className="col-span-2 h-8 text-sm"
+                      placeholder="5"
+                      value={c.taux_perte ? c.taux_perte * 100 : ""}
+                      onChange={(e) =>
+                        updateComposant(c._key, "taux_perte", String(Number(e.target.value) / 100))
+                      }
+                    />
+                    <select
+                      className="border-input bg-background col-span-1 h-8 rounded-md border px-1 text-xs"
+                      value={c.type}
+                      onChange={(e) => updateComposant(c._key, "type", e.target.value)}
+                    >
+                      <option value="materiau">Mat.</option>
+                      <option value="main_oeuvre">MO</option>
+                    </select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive col-span-1 h-8 w-8"
+                      onClick={() => removeComposant(c._key)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
@@ -612,21 +665,27 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
             onClick={handleAnalyserCoherence}
             disabled={aiLoading === "coherence"}
           >
-            {aiLoading === "coherence"
-              ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              : <Sparkles className="h-4 w-4 mr-2" />}
+            {aiLoading === "coherence" ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-4 w-4" />
+            )}
             Analyser la cohérence
           </Button>
           {coherence && (
-            <div className={cn(
-              "flex items-center gap-2 text-sm px-3 py-1.5 rounded-md",
-              coherence.niveau === "ok" && "bg-green-50 text-green-700",
-              coherence.niveau === "warning" && "bg-amber-50 text-amber-700",
-              coherence.niveau === "error" && "bg-red-50 text-red-700",
-            )}>
-              {coherence.niveau === "ok"
-                ? <CheckCircle2 className="h-4 w-4 shrink-0" />
-                : <AlertTriangle className="h-4 w-4 shrink-0" />}
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm",
+                coherence.niveau === "ok" && "bg-green-50 text-green-700",
+                coherence.niveau === "warning" && "bg-amber-50 text-amber-700",
+                coherence.niveau === "error" && "bg-red-50 text-red-700",
+              )}
+            >
+              {coherence.niveau === "ok" ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+              )}
               {coherence.alerte ?? "Métrés cohérents ✓"}
             </div>
           )}
@@ -636,25 +695,26 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
       {computed.recette_calculee.length > 0 && computed.quantite_nette > 0 && (
         <Card className="border-primary/30 bg-primary/5">
           <CardHeader>
-            <CardTitle className="text-base text-primary">
-              Récapitulatif des besoins
-            </CardTitle>
+            <CardTitle className="text-primary text-base">Récapitulatif des besoins</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="divide-y">
               {computed.recette_calculee.map((c) => (
-                <div key={c.materiau_id} className="py-2.5 grid grid-cols-3 gap-2 text-sm">
+                <div key={c.materiau_id} className="grid grid-cols-3 gap-2 py-2.5 text-sm">
                   <div className="font-medium">{c.materiau_nom}</div>
-                  <div className="text-center text-muted-foreground">
-                    Besoin net : <span className="font-mono text-foreground">{c.quantite_nette.toFixed(3)} {c.unite}</span>
+                  <div className="text-muted-foreground text-center">
+                    Besoin net :{" "}
+                    <span className="text-foreground font-mono">
+                      {c.quantite_nette.toFixed(3)} {c.unite}
+                    </span>
                   </div>
                   <div className="text-right">
                     À commander :{" "}
-                    <span className="font-mono font-semibold text-primary">
+                    <span className="text-primary font-mono font-semibold">
                       {c.quantite_commande.toFixed(3)} {c.unite}
                     </span>
                     {c.taux_perte > 0 && (
-                      <span className="text-xs text-muted-foreground ml-1">
+                      <span className="text-muted-foreground ml-1 text-xs">
                         (+{(c.taux_perte * 100).toFixed(0)}%)
                       </span>
                     )}
@@ -667,7 +727,7 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
       )}
 
       {/* ---- Actions ---- */}
-      <div className="flex items-center gap-3 justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Button
           type="button"
           variant="outline"
@@ -675,15 +735,20 @@ export function OuvrageForm({ projects, materials, ouvrageTypes, initialProjectI
           onClick={handleSaveType}
           disabled={isPending || !designation || recette.length === 0}
         >
-          <BookOpen className="h-4 w-4 mr-2" />
+          <BookOpen className="mr-2 h-4 w-4" />
           {savedType ? "Modèle sauvegardé ✓" : "Sauvegarder comme modèle"}
         </Button>
         <div className="flex gap-3">
-          <Button type="button" variant="outline" onClick={() => router.push("/metres")} disabled={isPending}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push("/metres")}
+            disabled={isPending}
+          >
             Annuler
           </Button>
           <Button type="submit" disabled={isPending || !designation || !projectId}>
-            <Save className="h-4 w-4 mr-2" />
+            <Save className="mr-2 h-4 w-4" />
             {isPending ? "Sauvegarde..." : initialData ? "Mettre à jour" : "Enregistrer l'ouvrage"}
           </Button>
         </div>

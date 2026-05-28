@@ -7,10 +7,16 @@ import { ClientsList } from "@/components/clients/clients-list";
 
 export default async function ClientsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
   if (!profile?.company_id) redirect("/onboarding");
 
   const { data: clients } = await supabase
@@ -20,7 +26,14 @@ export default async function ClientsPage() {
     .eq("role", "client")
     .order("full_name");
 
-  const list = (clients ?? []) as { id: string; full_name: string | null; email: string | null; phone: string | null; is_active: boolean; created_at: string }[];
+  const list = (clients ?? []) as {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    phone: string | null;
+    is_active: boolean;
+    created_at: string;
+  }[];
 
   return (
     <div className="space-y-6">
@@ -34,7 +47,10 @@ export default async function ClientsPage() {
           </p>
         </div>
         <Button asChild className="self-start sm:self-auto">
-          <Link href="/clients/new"><Plus className="h-4 w-4 mr-2" />Nouveau client</Link>
+          <Link href="/clients/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Nouveau client
+          </Link>
         </Button>
       </div>
 

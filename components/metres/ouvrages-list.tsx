@@ -27,16 +27,18 @@ export function OuvragesList({ ouvrages, projects }: Props) {
 
   function handleDelete(id: string) {
     if (!confirm("Supprimer cet ouvrage ?")) return;
-    startTransition(async () => { await deleteOuvrage(id); });
+    startTransition(async () => {
+      await deleteOuvrage(id);
+    });
   }
 
   if (ouvrages.length === 0) {
     return (
-      <div className="text-center py-16 text-muted-foreground">
+      <div className="text-muted-foreground py-16 text-center">
         <p className="mb-4">Aucun ouvrage pour l&apos;instant.</p>
         <Button asChild>
           <Link href="/metres/new">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Créer le premier ouvrage
           </Link>
         </Button>
@@ -48,10 +50,10 @@ export function OuvragesList({ ouvrages, projects }: Props) {
     <div className="space-y-4">
       {/* Filtre projet */}
       {projects.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setFilterProjectId("")}
-            className={`px-3 py-1 rounded-full text-sm transition-colors ${
+            className={`rounded-full px-3 py-1 text-sm transition-colors ${
               filterProjectId === ""
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:bg-accent"
@@ -63,7 +65,7 @@ export function OuvragesList({ ouvrages, projects }: Props) {
             <button
               key={p.id}
               onClick={() => setFilterProjectId(p.id)}
-              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+              className={`rounded-full px-3 py-1 text-sm transition-colors ${
                 filterProjectId === p.id
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-accent"
@@ -78,31 +80,32 @@ export function OuvragesList({ ouvrages, projects }: Props) {
       {/* Liste */}
       <div className="grid gap-3">
         {filtered.map((ouvrage) => (
-          <Card key={ouvrage.id} className="hover:shadow-md transition-shadow">
+          <Card key={ouvrage.id} className="transition-shadow hover:shadow-md">
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold truncate">{ouvrage.designation}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="truncate font-semibold">{ouvrage.designation}</span>
                     <Badge variant="secondary" className="shrink-0 text-xs">
-                      {LABELS_GEOMETRIE[ouvrage.type_geometrie as TypeGeometrie] ?? ouvrage.type_geometrie}
+                      {LABELS_GEOMETRIE[ouvrage.type_geometrie as TypeGeometrie] ??
+                        ouvrage.type_geometrie}
                     </Badge>
                   </div>
                   {ouvrage.project_id && (
-                    <p className="text-xs text-muted-foreground mb-2">
+                    <p className="text-muted-foreground mb-2 text-xs">
                       {projectMap[ouvrage.project_id] ?? "—"}
                     </p>
                   )}
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                     <span className="text-muted-foreground whitespace-nowrap">
                       Brut :{" "}
-                      <span className="font-medium text-foreground">
+                      <span className="text-foreground font-medium">
                         {ouvrage.quantite_brute.toFixed(2)} {ouvrage.unite_principale}
                       </span>
                     </span>
                     <span className="text-muted-foreground whitespace-nowrap">
                       Net :{" "}
-                      <span className="font-medium text-foreground">
+                      <span className="text-foreground font-medium">
                         {ouvrage.quantite_nette.toFixed(2)} {ouvrage.unite_principale}
                       </span>
                     </span>
@@ -114,7 +117,7 @@ export function OuvragesList({ ouvrages, projects }: Props) {
                     )}
                   </div>
                 </div>
-                <div className="flex gap-1 shrink-0">
+                <div className="flex shrink-0 gap-1">
                   <Button variant="ghost" size="icon" asChild>
                     <Link href={`/metres/${ouvrage.id}`}>
                       <Pencil className="h-4 w-4" />

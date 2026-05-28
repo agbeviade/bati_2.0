@@ -14,11 +14,16 @@ export async function createTeam(formData: FormData) {
   if (!name) return { error: "Le nom de l'équipe est requis." };
   const lead_id = (formData.get("lead_id") as string) || null;
 
-  const { data: team, error } = await supabase.from("teams")
+  const { data: team, error } = await supabase
+    .from("teams")
     .insert({ company_id: companyId, name, lead_id })
-    .select("id").single();
+    .select("id")
+    .single();
 
-  if (error || !team) { logger.error("createTeam failed", error, { companyId }); return { error: error?.message }; }
+  if (error || !team) {
+    logger.error("createTeam failed", error, { companyId });
+    return { error: error?.message };
+  }
 
   revalidatePath("/teams");
   redirect(`/teams/${team.id}`);
@@ -45,7 +50,9 @@ export async function deleteTeam(id: string) {
 
 export async function addMemberToTeam(teamId: string, userId: string) {
   const { supabase } = await getAuthedProfile();
-  const { error } = await supabase.from("team_members").insert({ team_id: teamId, user_id: userId });
+  const { error } = await supabase
+    .from("team_members")
+    .insert({ team_id: teamId, user_id: userId });
   if (error) {
     if (error.code === "23505") return { error: "Ce membre est déjà dans l'équipe." };
     return { error: error.message };
@@ -61,7 +68,13 @@ export async function removeMemberFromTeam(teamId: string, userId: string) {
 
 // ── Attendance ───────────────────────────────────────────────
 
-export async function checkIn(userId: string, projectId: string | null, geoLat: number | null, geoLng: number | null, teamId: string) {
+export async function checkIn(
+  userId: string,
+  projectId: string | null,
+  geoLat: number | null,
+  geoLng: number | null,
+  teamId: string,
+) {
   const { supabase } = await getAuthedProfile();
 
   const { data: open } = await supabase
@@ -85,13 +98,21 @@ export async function checkIn(userId: string, projectId: string | null, geoLat: 
   revalidatePath(`/teams/${teamId}`);
 }
 
-export async function checkOut(attendanceId: string, geoLat: number | null, geoLng: number | null, teamId: string) {
+export async function checkOut(
+  attendanceId: string,
+  geoLat: number | null,
+  geoLng: number | null,
+  teamId: string,
+) {
   const { supabase } = await getAuthedProfile();
-  const { error } = await supabase.from("attendance").update({
-    check_out: new Date().toISOString(),
-    geo_lat_out: geoLat,
-    geo_lng_out: geoLng,
-  }).eq("id", attendanceId);
+  const { error } = await supabase
+    .from("attendance")
+    .update({
+      check_out: new Date().toISOString(),
+      geo_lat_out: geoLat,
+      geo_lng_out: geoLng,
+    })
+    .eq("id", attendanceId);
   if (error) return { error: error.message };
   revalidatePath(`/teams/${teamId}`);
 }

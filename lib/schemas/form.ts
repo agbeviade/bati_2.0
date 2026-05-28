@@ -12,9 +12,7 @@
 
 import { z } from "zod";
 
-export type ParseResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+export type ParseResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
 /**
  * Convertit FormData en objet plat (les fichiers `File` sont conservés),

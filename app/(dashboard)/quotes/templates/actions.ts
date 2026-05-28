@@ -7,13 +7,7 @@ import type { QuoteTemplate } from "@/lib/supabase/types";
 
 const BUCKET = "quote-templates";
 const MAX_SIZE = 20 * 1024 * 1024; // 20 MB
-const ALLOWED_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-];
+const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 export async function uploadTemplate(formData: FormData): Promise<{ error?: string }> {
   const { companyId, supabase } = await getAuthedProfile();
@@ -77,7 +71,10 @@ export async function deleteTemplate(id: string): Promise<{ error?: string }> {
   const admin = createAdminClient(); // storage remove requires admin
 
   const { data } = await supabase
-    .from("quote_templates").select("storage_path").eq("id", id).single();
+    .from("quote_templates")
+    .select("storage_path")
+    .eq("id", id)
+    .single();
 
   if (data?.storage_path) {
     await admin.storage.from(BUCKET).remove([data.storage_path]);
@@ -97,7 +94,7 @@ export async function getTemplatePublicUrl(storagePath: string): Promise<string>
 }
 
 export async function getTemplateAsBase64(
-  id: string
+  id: string,
 ): Promise<{ base64: string; mimeType: string; fileType: string; error?: string }> {
   const { supabase } = await getAuthedProfile();
   const admin = createAdminClient(); // storage download requires admin
@@ -108,13 +105,18 @@ export async function getTemplateAsBase64(
     .eq("id", id)
     .single();
 
-  if (!tmpl?.storage_path) return { base64: "", mimeType: "", fileType: "", error: "Template introuvable." };
+  if (!tmpl?.storage_path)
+    return { base64: "", mimeType: "", fileType: "", error: "Template introuvable." };
 
-  const { data: fileData, error } = await admin.storage
-    .from(BUCKET)
-    .download(tmpl.storage_path);
+  const { data: fileData, error } = await admin.storage.from(BUCKET).download(tmpl.storage_path);
 
-  if (error || !fileData) return { base64: "", mimeType: "", fileType: "", error: error?.message ?? "Téléchargement échoué." };
+  if (error || !fileData)
+    return {
+      base64: "",
+      mimeType: "",
+      fileType: "",
+      error: error?.message ?? "Téléchargement échoué.",
+    };
 
   const buffer = Buffer.from(await fileData.arrayBuffer());
   return {

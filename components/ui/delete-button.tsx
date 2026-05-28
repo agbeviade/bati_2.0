@@ -48,13 +48,13 @@ export function DeleteButton({
             variant="ghost"
             size="icon"
             disabled={disabled || loading}
-            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         ) : (
           <Button variant="destructive" disabled={disabled || loading}>
-            <Trash2 className="h-4 w-4 mr-2" />
+            <Trash2 className="mr-2 h-4 w-4" />
             {loading ? "Suppression..." : label}
           </Button>
         )}

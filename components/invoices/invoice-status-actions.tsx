@@ -6,7 +6,11 @@ import { updateInvoiceStatus } from "@/app/(dashboard)/invoices/actions";
 import { Button } from "@/components/ui/button";
 import type { InvoiceStatus } from "@/lib/supabase/types";
 
-type Transition = { label: string; next: InvoiceStatus; variant?: "default" | "destructive" | "outline" };
+type Transition = {
+  label: string;
+  next: InvoiceStatus;
+  variant?: "default" | "destructive" | "outline";
+};
 
 const TRANSITIONS: Record<InvoiceStatus, Transition[]> = {
   draft: [
@@ -26,7 +30,13 @@ const TRANSITIONS: Record<InvoiceStatus, Transition[]> = {
   canceled: [],
 };
 
-export function InvoiceStatusActions({ invoiceId, currentStatus }: { invoiceId: string; currentStatus: InvoiceStatus }) {
+export function InvoiceStatusActions({
+  invoiceId,
+  currentStatus,
+}: {
+  invoiceId: string;
+  currentStatus: InvoiceStatus;
+}) {
   const [isPending, startTransition] = useTransition();
   const transitions = TRANSITIONS[currentStatus] ?? [];
 
@@ -35,14 +45,17 @@ export function InvoiceStatusActions({ invoiceId, currentStatus }: { invoiceId: 
   function handle(next: InvoiceStatus) {
     startTransition(async () => {
       const result = await updateInvoiceStatus(invoiceId, next);
-      if (result?.error) { toast.error(result.error); return; }
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Statut mis à jour.");
     });
   }
 
   return (
-    <div className="flex gap-2 flex-wrap">
-      {transitions.map(t => (
+    <div className="flex flex-wrap gap-2">
+      {transitions.map((t) => (
         <Button
           key={t.next}
           size="sm"

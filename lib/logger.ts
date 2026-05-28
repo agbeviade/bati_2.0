@@ -60,19 +60,28 @@ function toSentry(err: unknown, ctx?: LogContext) {
         Sentry.captureMessage(String(err), { extra: ctx, level: "error" });
       }
     })
-    .catch(() => { /* Sentry not installed yet — no-op */ });
+    .catch(() => {
+      /* Sentry not installed yet — no-op */
+    });
 }
 
 export const logger = {
-  debug(msg: string, ctx?: LogContext) { emit("debug", msg, ctx); },
-  info(msg: string, ctx?: LogContext)  { emit("info", msg, ctx); },
-  warn(msg: string, ctx?: LogContext)  { emit("warn", msg, ctx); },
+  debug(msg: string, ctx?: LogContext) {
+    emit("debug", msg, ctx);
+  },
+  info(msg: string, ctx?: LogContext) {
+    emit("info", msg, ctx);
+  },
+  warn(msg: string, ctx?: LogContext) {
+    emit("warn", msg, ctx);
+  },
   error(msg: string, err?: unknown, ctx?: LogContext) {
-    const errorCtx = err instanceof Error
-      ? { error: err.message, stack: err.stack, ...ctx }
-      : err !== undefined
-        ? { error: String(err), ...ctx }
-        : ctx;
+    const errorCtx =
+      err instanceof Error
+        ? { error: err.message, stack: err.stack, ...ctx }
+        : err !== undefined
+          ? { error: String(err), ...ctx }
+          : ctx;
     emit("error", msg, errorCtx);
     if (err !== undefined) toSentry(err, ctx);
   },

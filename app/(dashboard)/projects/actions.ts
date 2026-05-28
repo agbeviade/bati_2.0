@@ -35,9 +35,13 @@ export async function createProject(formData: FormData) {
       end_date: input.end_date,
       created_by: user.id,
     })
-    .select("id").single();
+    .select("id")
+    .single();
 
-  if (error || !project) { logger.error("createProject failed", error, { companyId }); return { error: "Impossible de créer le chantier." }; }
+  if (error || !project) {
+    logger.error("createProject failed", error, { companyId });
+    return { error: "Impossible de créer le chantier." };
+  }
 
   revalidatePath("/projects");
   revalidatePath("/dashboard");
@@ -51,18 +55,24 @@ export async function updateProject(id: string, formData: FormData) {
   if (!parsed.ok) return { error: parsed.error };
   const input = parsed.data;
 
-  const { error } = await supabase.from("projects").update({
-    name: input.name ?? undefined,
-    description: input.description,
-    address: input.address,
-    budget: input.budget,
-    start_date: input.start_date,
-    end_date: input.end_date,
-    status: input.status,
-    progress_pct: input.progress_pct ?? undefined,
-  }).eq("id", id);
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      name: input.name ?? undefined,
+      description: input.description,
+      address: input.address,
+      budget: input.budget,
+      start_date: input.start_date,
+      end_date: input.end_date,
+      status: input.status,
+      progress_pct: input.progress_pct ?? undefined,
+    })
+    .eq("id", id);
 
-  if (error) { logger.error("updateProject failed", error, { projectId: id }); return { error: "Mise à jour échouée." }; }
+  if (error) {
+    logger.error("updateProject failed", error, { projectId: id });
+    return { error: "Mise à jour échouée." };
+  }
 
   revalidatePath(`/projects/${id}`);
   revalidatePath("/projects");
@@ -94,7 +104,10 @@ export async function createTask(projectId: string, formData: FormData) {
     due_date: input.due_date,
   });
 
-  if (error) { logger.error("createTask failed", error, { projectId }); return { error: "Impossible de créer la tâche." }; }
+  if (error) {
+    logger.error("createTask failed", error, { projectId });
+    return { error: "Impossible de créer la tâche." };
+  }
   revalidatePath(`/projects/${projectId}`);
 }
 
@@ -122,7 +135,10 @@ export async function createExpense(projectId: string, formData: FormData) {
     created_by: user.id,
   });
 
-  if (error) { logger.error("createExpense failed", error, { projectId }); return { error: error.message }; }
+  if (error) {
+    logger.error("createExpense failed", error, { projectId });
+    return { error: error.message };
+  }
   revalidatePath(`/projects/${projectId}`);
 }
 
@@ -173,7 +189,10 @@ export async function savePhotoRecord(projectId: string, storagePath: string, ca
     source: "web",
   });
 
-  if (error) { logger.error("savePhotoRecord failed", error, { projectId }); return { error: error.message }; }
+  if (error) {
+    logger.error("savePhotoRecord failed", error, { projectId });
+    return { error: error.message };
+  }
   revalidatePath(`/projects/${projectId}`);
 }
 

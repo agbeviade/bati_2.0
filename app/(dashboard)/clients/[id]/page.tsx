@@ -19,10 +19,16 @@ function fmt(n: number) {
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
   if (!profile?.company_id) redirect("/onboarding");
 
   const { data: client } = await supabase
@@ -36,8 +42,18 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   // Devis et factures liés à ce client
   const [{ data: quotesData }, { data: invoicesData }] = await Promise.all([
-    supabase.from("quotes").select("id, quote_number, client_name, total, status, created_at").eq("company_id", profile.company_id).eq("client_id", id).order("created_at", { ascending: false }),
-    supabase.from("invoices").select("id, invoice_number, client_name, amount, status, due_date").eq("company_id", profile.company_id).eq("client_id", id).order("created_at", { ascending: false }),
+    supabase
+      .from("quotes")
+      .select("id, quote_number, client_name, total, status, created_at")
+      .eq("company_id", profile.company_id)
+      .eq("client_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("invoices")
+      .select("id, invoice_number, client_name, amount, status, due_date")
+      .eq("company_id", profile.company_id)
+      .eq("client_id", id)
+      .order("created_at", { ascending: false }),
   ]);
   const quotes = (quotesData ?? []) as Quote[];
   const invoices = (invoicesData ?? []) as Invoice[];
@@ -46,17 +62,25 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const toggleAction = toggleClientActive.bind(null, id, !client.is_active);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6 p-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/clients"><ArrowLeft className="h-4 w-4" /></Link>
+          <Link href="/clients">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">{client.full_name}</h1>
-            {!client.is_active && <Badge variant="outline" className="text-muted-foreground">Inactif</Badge>}
+            {!client.is_active && (
+              <Badge variant="outline" className="text-muted-foreground">
+                Inactif
+              </Badge>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground">Client depuis le {new Date(client.created_at).toLocaleDateString("fr-FR")}</p>
+          <p className="text-muted-foreground text-sm">
+            Client depuis le {new Date(client.created_at).toLocaleDateString("fr-FR")}
+          </p>
         </div>
         <form action={toggleAction}>
           <Button type="submit" variant="outline" size="sm">
@@ -65,10 +89,12 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         </form>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid gap-6 md:grid-cols-2">
         {/* Édition profil */}
         <Card>
-          <CardHeader><CardTitle className="text-base">Informations</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">Informations</CardTitle>
+          </CardHeader>
           <CardContent>
             <form action={updateAction} className="space-y-3">
               <div className="space-y-1.5">
@@ -83,7 +109,9 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                 <Label htmlFor="phone">Téléphone</Label>
                 <Input id="phone" name="phone" defaultValue={client.phone ?? ""} />
               </div>
-              <Button type="submit" size="sm">Enregistrer</Button>
+              <Button type="submit" size="sm">
+                Enregistrer
+              </Button>
             </form>
           </CardContent>
         </Card>
@@ -93,12 +121,12 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           <Card>
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
                   <FileText className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{quotes.length}</p>
-                  <p className="text-xs text-muted-foreground">Devis</p>
+                  <p className="text-muted-foreground text-xs">Devis</p>
                 </div>
               </div>
             </CardContent>
@@ -106,14 +134,15 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           <Card>
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-green-50 flex items-center justify-center">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50">
                   <Receipt className="h-4 w-4 text-green-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {fmt(invoices.reduce((s, i) => s + (i.status === "paid" ? i.amount : 0), 0))} XOF
+                    {fmt(invoices.reduce((s, i) => s + (i.status === "paid" ? i.amount : 0), 0))}{" "}
+                    XOF
                   </p>
-                  <p className="text-xs text-muted-foreground">Encaissé</p>
+                  <p className="text-muted-foreground text-xs">Encaissé</p>
                 </div>
               </div>
             </CardContent>
@@ -124,14 +153,25 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       {/* Devis */}
       {quotes.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" />Devis ({quotes.length})</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-4 w-4" />
+              Devis ({quotes.length})
+            </CardTitle>
+          </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
-              {quotes.map(q => (
-                <Link key={q.id} href={`/quotes/${q.id}`} className="flex items-center gap-4 px-6 py-3 hover:bg-muted/50 transition-colors">
+              {quotes.map((q) => (
+                <Link
+                  key={q.id}
+                  href={`/quotes/${q.id}`}
+                  className="hover:bg-muted/50 flex items-center gap-4 px-6 py-3 transition-colors"
+                >
                   <div className="flex-1">
-                    <p className="font-medium text-sm">{q.quote_number}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(q.created_at).toLocaleDateString("fr-FR")}</p>
+                    <p className="text-sm font-medium">{q.quote_number}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {new Date(q.created_at).toLocaleDateString("fr-FR")}
+                    </p>
                   </div>
                   <span className="text-sm font-semibold">{fmt(q.total)} XOF</span>
                   <QuoteStatusBadge status={q.status} />
@@ -145,14 +185,27 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       {/* Factures */}
       {invoices.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Receipt className="h-4 w-4" />Factures ({invoices.length})</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Receipt className="h-4 w-4" />
+              Factures ({invoices.length})
+            </CardTitle>
+          </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
-              {invoices.map(i => (
-                <Link key={i.id} href={`/invoices/${i.id}`} className="flex items-center gap-4 px-6 py-3 hover:bg-muted/50 transition-colors">
+              {invoices.map((i) => (
+                <Link
+                  key={i.id}
+                  href={`/invoices/${i.id}`}
+                  className="hover:bg-muted/50 flex items-center gap-4 px-6 py-3 transition-colors"
+                >
                   <div className="flex-1">
-                    <p className="font-medium text-sm">{i.invoice_number}</p>
-                    {i.due_date && <p className="text-xs text-muted-foreground">Échéance : {new Date(i.due_date).toLocaleDateString("fr-FR")}</p>}
+                    <p className="text-sm font-medium">{i.invoice_number}</p>
+                    {i.due_date && (
+                      <p className="text-muted-foreground text-xs">
+                        Échéance : {new Date(i.due_date).toLocaleDateString("fr-FR")}
+                      </p>
+                    )}
                   </div>
                   <span className="text-sm font-semibold">{fmt(i.amount)} XOF</span>
                   <InvoiceStatusBadge status={i.status} />

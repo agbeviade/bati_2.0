@@ -11,7 +11,7 @@ export async function addProjectEntry(
   materialId: string,
   quantity: number,
   unitCost: number,
-  notes?: string
+  notes?: string,
 ): Promise<{ id?: string; error?: string }> {
   const { user, supabase } = await getAuthedProfile();
 
@@ -35,7 +35,10 @@ export async function addProjectEntry(
   const totalCost = quantity * unitCost;
   if (totalCost > 0) {
     const { data: proj } = await supabase
-      .from("projects").select("spent").eq("id", projectId).single();
+      .from("projects")
+      .select("spent")
+      .eq("id", projectId)
+      .single();
     await supabase
       .from("projects")
       .update({ spent: (proj?.spent ?? 0) + totalCost })
@@ -52,7 +55,7 @@ export async function addProjectExit(
   projectId: string,
   materialId: string,
   quantity: number,
-  justification: string
+  justification: string,
 ): Promise<{ id?: string; error?: string }> {
   const { user, supabase } = await getAuthedProfile();
 
@@ -82,7 +85,7 @@ export async function deleteProjectMovement(
   materialId: string,
   type: string,
   quantity: number,
-  unitCost: number | null
+  unitCost: number | null,
 ): Promise<void> {
   const { supabase } = await getAuthedProfile();
 
@@ -92,7 +95,10 @@ export async function deleteProjectMovement(
   if (type === "purchase" && unitCost && quantity > 0) {
     const totalCost = quantity * unitCost;
     const { data: proj2 } = await supabase
-      .from("projects").select("spent").eq("id", projectId).single();
+      .from("projects")
+      .select("spent")
+      .eq("id", projectId)
+      .single();
     await supabase
       .from("projects")
       .update({ spent: Math.max(0, (proj2?.spent ?? 0) - totalCost) })

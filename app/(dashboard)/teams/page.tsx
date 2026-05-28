@@ -8,10 +8,16 @@ import type { Team, User } from "@/lib/supabase/types";
 
 export default async function TeamsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
   if (!profile?.company_id) redirect("/onboarding");
 
   const { data: teamsData } = await supabase
@@ -22,7 +28,7 @@ export default async function TeamsPage() {
 
   const teams = (teamsData ?? []) as Pick<Team, "id" | "name" | "lead_id" | "created_at">[];
 
-  const teamIds = teams.map(t => t.id);
+  const teamIds = teams.map((t) => t.id);
   const memberCounts: Record<string, number> = {};
   const leadNames: Record<string, string | null> = {};
 
@@ -36,7 +42,7 @@ export default async function TeamsPage() {
       memberCounts[m.team_id] = (memberCounts[m.team_id] ?? 0) + 1;
     }
 
-    const leadIds = teams.map(t => t.lead_id).filter(Boolean) as string[];
+    const leadIds = teams.map((t) => t.lead_id).filter(Boolean) as string[];
     if (leadIds.length > 0) {
       const { data: leads } = await supabase
         .from("users")
@@ -48,7 +54,7 @@ export default async function TeamsPage() {
     }
   }
 
-  const teamRows = teams.map(t => ({
+  const teamRows = teams.map((t) => ({
     id: t.id,
     name: t.name,
     memberCount: memberCounts[t.id] ?? 0,
@@ -68,7 +74,7 @@ export default async function TeamsPage() {
         </div>
         <Button asChild className="self-start sm:self-auto">
           <Link href="/teams/new">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Nouvelle équipe
           </Link>
         </Button>

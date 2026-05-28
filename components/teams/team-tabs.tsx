@@ -15,15 +15,15 @@ export function TeamTabs({ teamId }: { teamId: string }) {
   const active = (searchParams.get("tab") ?? "members") as Tab;
 
   return (
-    <div className="flex border-b gap-1">
-      {TABS.map(tab => (
+    <div className="flex gap-1 border-b">
+      {TABS.map((tab) => (
         <Link
           key={tab.id}
           href={`/teams/${teamId}?tab=${tab.id}`}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+          className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
             active === tab.id
               ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground border-transparent"
           }`}
         >
           {tab.label}

@@ -13,7 +13,15 @@ import { ExpensesTab } from "@/components/projects/tabs/expenses-tab";
 import { PhotosTab } from "@/components/projects/tabs/photos-tab";
 import { TeamTab } from "@/components/projects/tabs/team-tab";
 import { MaterialsTab } from "@/components/projects/tabs/materials-tab";
-import type { Project, Task, ProjectExpense, ProjectAssignment, User, Material, StockMovement } from "@/lib/supabase/types";
+import type {
+  Project,
+  Task,
+  ProjectExpense,
+  ProjectAssignment,
+  User,
+  Material,
+  StockMovement,
+} from "@/lib/supabase/types";
 import { Suspense } from "react";
 
 type Tab = "overview" | "materials" | "expenses" | "photos" | "team" | "documents";
@@ -26,31 +34,66 @@ export default async function ProjectDetailPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
-  const { tab = "overview" } = await searchParams as { tab?: Tab };
+  const { tab = "overview" } = (await searchParams) as { tab?: Tab };
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: projectData } = await supabase.from("projects").select("*").eq("id", id).maybeSingle();
+  const { data: projectData } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
   if (!projectData) notFound();
   const project = projectData as Project;
 
   const { data: companyData } = await supabase
-    .from("companies").select("currency").eq("id", project.company_id).maybeSingle();
+    .from("companies")
+    .select("currency")
+    .eq("id", project.company_id)
+    .maybeSingle();
   const currency = (companyData as { currency?: string } | null)?.currency ?? "XOF";
 
   // Chargement conditionnel selon l'onglet actif
   let tasks: Task[] = [];
   let expenses: ProjectExpense[] = [];
-  let photos: { id: string; storage_path: string; caption: string | null; taken_at: string; signedUrl?: string }[] = [];
-  let assignments: { id: string; user_id: string; role_on_project: string | null; start_date: string | null; user: Pick<User, "full_name" | "role" | "avatar_url"> }[] = [];
+  let photos: {
+    id: string;
+    storage_path: string;
+    caption: string | null;
+    taken_at: string;
+    signedUrl?: string;
+  }[] = [];
+  let assignments: {
+    id: string;
+    user_id: string;
+    role_on_project: string | null;
+    start_date: string | null;
+    user: Pick<User, "full_name" | "role" | "avatar_url">;
+  }[] = [];
   let availableUsers: Pick<User, "id" | "full_name" | "role">[] = [];
-  let projectMovements: { id: string; material_id: string; type: string; quantity: number; unit_cost: number | null; notes: string | null; created_at: string; material_name: string; unit: string }[] = [];
+  let projectMovements: {
+    id: string;
+    material_id: string;
+    type: string;
+    quantity: number;
+    unit_cost: number | null;
+    notes: string | null;
+    created_at: string;
+    material_name: string;
+    unit: string;
+  }[] = [];
   let allMaterials: Pick<Material, "id" | "name" | "unit" | "stock_qty" | "unit_cost">[] = [];
 
   if (tab === "overview") {
-    const { data } = await supabase.from("tasks").select("*").eq("project_id", id).order("created_at", { ascending: false });
+    const { data } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("project_id", id)
+      .order("created_at", { ascending: false });
     tasks = (data ?? []) as Task[];
   }
 
@@ -58,7 +101,9 @@ export default async function ProjectDetailPage({
     const [{ data: movData }, { data: matData }] = await Promise.all([
       supabase
         .from("stock_movements")
-        .select("id, material_id, type, quantity, unit_cost, notes, created_at, materials(name, unit)")
+        .select(
+          "id, material_id, type, quantity, unit_cost, notes, created_at, materials(name, unit)",
+        )
         .eq("project_id", id)
         .in("type", ["purchase", "use", "return"])
         .order("created_at", { ascending: false }),
@@ -69,11 +114,18 @@ export default async function ProjectDetailPage({
         .order("name"),
     ]);
 
-    projectMovements = ((movData ?? []) as unknown as Array<{
-      id: string; material_id: string; type: string; quantity: number;
-      unit_cost: number | null; notes: string | null; created_at: string;
-      materials: { name: string; unit: string } | null;
-    }>).map(m => ({
+    projectMovements = (
+      (movData ?? []) as unknown as Array<{
+        id: string;
+        material_id: string;
+        type: string;
+        quantity: number;
+        unit_cost: number | null;
+        notes: string | null;
+        created_at: string;
+        materials: { name: string; unit: string } | null;
+      }>
+    ).map((m) => ({
       id: m.id,
       material_id: m.material_id,
       type: m.type,
@@ -85,17 +137,33 @@ export default async function ProjectDetailPage({
       unit: m.materials?.unit ?? "u",
     }));
 
-    allMaterials = (matData ?? []) as Pick<Material, "id" | "name" | "unit" | "stock_qty" | "unit_cost">[];
+    allMaterials = (matData ?? []) as Pick<
+      Material,
+      "id" | "name" | "unit" | "stock_qty" | "unit_cost"
+    >[];
   }
 
   if (tab === "expenses") {
-    const { data } = await supabase.from("project_expenses").select("*").eq("project_id", id).order("spent_at", { ascending: false });
+    const { data } = await supabase
+      .from("project_expenses")
+      .select("*")
+      .eq("project_id", id)
+      .order("spent_at", { ascending: false });
     expenses = (data ?? []) as ProjectExpense[];
   }
 
   if (tab === "photos") {
-    const { data } = await supabase.from("project_photos").select("*").eq("project_id", id).order("taken_at", { ascending: false });
-    const rawPhotos = (data ?? []) as { id: string; storage_path: string; caption: string | null; taken_at: string }[];
+    const { data } = await supabase
+      .from("project_photos")
+      .select("*")
+      .eq("project_id", id)
+      .order("taken_at", { ascending: false });
+    const rawPhotos = (data ?? []) as {
+      id: string;
+      storage_path: string;
+      caption: string | null;
+      taken_at: string;
+    }[];
 
     const admin = createAdminClient();
     photos = await Promise.all(
@@ -104,7 +172,7 @@ export default async function ProjectDetailPage({
           .from("project-photos")
           .createSignedUrl(p.storage_path, 3600);
         return { ...p, signedUrl: urlData?.signedUrl };
-      })
+      }),
     );
   }
 
@@ -114,7 +182,7 @@ export default async function ProjectDetailPage({
       .select("id, user_id, role_on_project, start_date")
       .eq("project_id", id);
 
-    const assignedIds = (assignData ?? []).map(a => a.user_id);
+    const assignedIds = (assignData ?? []).map((a) => a.user_id);
 
     if (assignedIds.length > 0) {
       const { data: usersData } = await supabase
@@ -123,10 +191,13 @@ export default async function ProjectDetailPage({
         .in("id", assignedIds);
 
       const usersMap = Object.fromEntries(
-        ((usersData ?? []) as Pick<User, "id" | "full_name" | "role" | "avatar_url">[]).map(u => [u.id, u])
+        ((usersData ?? []) as Pick<User, "id" | "full_name" | "role" | "avatar_url">[]).map((u) => [
+          u.id,
+          u,
+        ]),
       );
 
-      assignments = (assignData ?? []).map(a => ({
+      assignments = (assignData ?? []).map((a) => ({
         ...a,
         user: usersMap[a.user_id] ?? { full_name: null, role: "worker" as const, avatar_url: null },
       }));
@@ -138,25 +209,29 @@ export default async function ProjectDetailPage({
       .eq("company_id", project.company_id)
       .eq("is_active", true);
 
-    availableUsers = ((companyUsers ?? []) as Pick<User, "id" | "full_name" | "role">[])
-      .filter(u => !assignments.some(a => a.user_id === u.id));
+    availableUsers = ((companyUsers ?? []) as Pick<User, "id" | "full_name" | "role">[]).filter(
+      (u) => !assignments.some((a) => a.user_id === u.id),
+    );
   }
 
   return (
-    <div className="space-y-4 max-w-4xl w-full min-w-0">
+    <div className="w-full max-w-4xl min-w-0 space-y-4">
       {/* Header */}
       <div className="flex items-start gap-3">
         <Button variant="ghost" size="icon" asChild className="mt-0.5">
-          <Link href="/projects"><ArrowLeft className="h-4 w-4" /></Link>
+          <Link href="/projects">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
         </Button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-2xl font-bold truncate">{project.name}</h2>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="truncate text-2xl font-bold">{project.name}</h2>
             <StatusBadge status={project.status} />
           </div>
           {project.address && (
-            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-              <MapPin className="h-3.5 w-3.5" />{project.address}
+            <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-sm">
+              <MapPin className="h-3.5 w-3.5" />
+              {project.address}
             </p>
           )}
         </div>
@@ -167,14 +242,18 @@ export default async function ProjectDetailPage({
 
       {/* Barre de progression */}
       <div>
-        <div className="flex items-center justify-between text-sm mb-1.5">
+        <div className="mb-1.5 flex items-center justify-between text-sm">
           <span className="text-muted-foreground flex items-center gap-1.5">
-            <TrendingUp className="h-4 w-4" />Avancement
+            <TrendingUp className="h-4 w-4" />
+            Avancement
           </span>
           <span className="font-semibold">{project.progress_pct}%</span>
         </div>
-        <div className="h-2 rounded-full bg-muted overflow-hidden">
-          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${project.progress_pct}%` }} />
+        <div className="bg-muted h-2 overflow-hidden rounded-full">
+          <div
+            className="bg-primary h-full rounded-full transition-all"
+            style={{ width: `${project.progress_pct}%` }}
+          />
         </div>
       </div>
 
@@ -184,9 +263,7 @@ export default async function ProjectDetailPage({
       </Suspense>
 
       {/* Contenu */}
-      {tab === "overview" && (
-        <OverviewTab project={project} tasks={tasks} currency={currency} />
-      )}
+      {tab === "overview" && <OverviewTab project={project} tasks={tasks} currency={currency} />}
       {tab === "materials" && (
         <MaterialsTab
           projectId={id}
@@ -197,7 +274,12 @@ export default async function ProjectDetailPage({
         />
       )}
       {tab === "expenses" && (
-        <ExpensesTab projectId={id} projectName={project.name} expenses={expenses} currency={currency} />
+        <ExpensesTab
+          projectId={id}
+          projectName={project.name}
+          expenses={expenses}
+          currency={currency}
+        />
       )}
       {tab === "photos" && (
         <PhotosTab projectId={id} companyId={project.company_id} initialPhotos={photos} />
@@ -206,9 +288,11 @@ export default async function ProjectDetailPage({
         <TeamTab projectId={id} assignments={assignments} availableUsers={availableUsers} />
       )}
       {tab === "documents" && (
-        <div className="flex flex-col items-center justify-center py-16 text-center space-y-2">
+        <div className="flex flex-col items-center justify-center space-y-2 py-16 text-center">
           <p className="font-medium">Documents</p>
-          <p className="text-sm text-muted-foreground">Upload de documents — disponible prochainement.</p>
+          <p className="text-muted-foreground text-sm">
+            Upload de documents — disponible prochainement.
+          </p>
         </div>
       )}
     </div>

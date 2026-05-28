@@ -7,10 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import type { Invoice, Material, Attendance, User, Quote } from "@/lib/supabase/types";
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 function formatAmount(n: number, currency: string) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 function hoursAgo(iso: string) {
   return Math.round((Date.now() - new Date(iso).getTime()) / 3_600_000);
@@ -28,15 +36,25 @@ type Alert = {
 
 export default async function NotificationsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
   if (!profile?.company_id) redirect("/onboarding");
 
   const companyId = profile.company_id;
 
-  const { data: companyData } = await supabase.from("companies").select("currency").eq("id", companyId).single();
+  const { data: companyData } = await supabase
+    .from("companies")
+    .select("currency")
+    .eq("id", companyId)
+    .single();
   const currency = (companyData as { currency?: string } | null)?.currency ?? "XOF";
 
   const today = new Date().toISOString().split("T")[0];
@@ -48,41 +66,60 @@ export default async function NotificationsPage() {
     { data: lowStockData },
     { data: openAttendanceData },
   ] = await Promise.all([
-    supabase.from("invoices")
+    supabase
+      .from("invoices")
       .select("id, invoice_number, client_name, amount, due_date, status")
       .eq("company_id", companyId)
       .in("status", ["sent", "overdue"])
       .lt("due_date", today)
       .order("due_date"),
-    supabase.from("quotes")
+    supabase
+      .from("quotes")
       .select("id, quote_number, client_name, valid_until")
       .eq("company_id", companyId)
       .eq("status", "sent")
       .lt("valid_until", today)
       .order("valid_until"),
-    supabase.from("materials")
+    supabase
+      .from("materials")
       .select("id, name, stock_qty, min_stock_qty, unit")
       .eq("company_id", companyId)
       .gt("min_stock_qty", 0),
-    supabase.from("attendance")
+    supabase
+      .from("attendance")
       .select("id, user_id, check_in")
       .lt("check_in", twelveHoursAgo)
       .is("check_out", null)
-      .in("user_id", (
-        await supabase.from("users").select("id").eq("company_id", companyId)
-      ).data?.map(u => u.id) ?? []),
+      .in(
+        "user_id",
+        (await supabase.from("users").select("id").eq("company_id", companyId)).data?.map(
+          (u) => u.id,
+        ) ?? [],
+      ),
   ]);
 
-  const overdueInvoices = (overdueInvoicesData ?? []) as Pick<Invoice, "id" | "invoice_number" | "client_name" | "amount" | "due_date" | "status">[];
-  const expiredQuotes = (expiredQuotesData ?? []) as Pick<Quote, "id" | "quote_number" | "client_name" | "valid_until">[];
-  const allMaterials = (lowStockData ?? []) as Pick<Material, "id" | "name" | "stock_qty" | "min_stock_qty" | "unit">[];
-  const lowStockMaterials = allMaterials.filter(m => m.stock_qty <= m.min_stock_qty);
-  const openAttendances = (openAttendanceData ?? []) as Pick<Attendance, "id" | "user_id" | "check_in">[];
+  const overdueInvoices = (overdueInvoicesData ?? []) as Pick<
+    Invoice,
+    "id" | "invoice_number" | "client_name" | "amount" | "due_date" | "status"
+  >[];
+  const expiredQuotes = (expiredQuotesData ?? []) as Pick<
+    Quote,
+    "id" | "quote_number" | "client_name" | "valid_until"
+  >[];
+  const allMaterials = (lowStockData ?? []) as Pick<
+    Material,
+    "id" | "name" | "stock_qty" | "min_stock_qty" | "unit"
+  >[];
+  const lowStockMaterials = allMaterials.filter((m) => m.stock_qty <= m.min_stock_qty);
+  const openAttendances = (openAttendanceData ?? []) as Pick<
+    Attendance,
+    "id" | "user_id" | "check_in"
+  >[];
 
   // Résoudre les noms des employés avec pointage ouvert
   const attendanceUserNames: Record<string, string | null> = {};
   if (openAttendances.length > 0) {
-    const uids = [...new Set(openAttendances.map(a => a.user_id))];
+    const uids = [...new Set(openAttendances.map((a) => a.user_id))];
     const { data: usersData } = await supabase.from("users").select("id, full_name").in("id", uids);
     for (const u of (usersData ?? []) as Pick<User, "id" | "full_name">[]) {
       attendanceUserNames[u.id] = u.full_name;
@@ -90,7 +127,7 @@ export default async function NotificationsPage() {
   }
 
   const alerts: Alert[] = [
-    ...overdueInvoices.map(inv => ({
+    ...overdueInvoices.map((inv) => ({
       id: `inv-${inv.id}`,
       level: "error" as const,
       icon: Receipt,
@@ -99,7 +136,7 @@ export default async function NotificationsPage() {
       href: `/invoices/${inv.id}`,
       date: inv.due_date!,
     })),
-    ...expiredQuotes.map(q => ({
+    ...expiredQuotes.map((q) => ({
       id: `quote-${q.id}`,
       level: "warning" as const,
       icon: FileText,
@@ -108,7 +145,7 @@ export default async function NotificationsPage() {
       href: `/quotes/${q.id}`,
       date: q.valid_until!,
     })),
-    ...lowStockMaterials.map(m => ({
+    ...lowStockMaterials.map((m) => ({
       id: `mat-${m.id}`,
       level: "warning" as const,
       icon: Package,
@@ -117,7 +154,7 @@ export default async function NotificationsPage() {
       href: `/materials/${m.id}`,
       date: new Date().toISOString(),
     })),
-    ...openAttendances.map(a => ({
+    ...openAttendances.map((a) => ({
       id: `att-${a.id}`,
       level: "info" as const,
       icon: Clock,
@@ -129,15 +166,27 @@ export default async function NotificationsPage() {
   ];
 
   const LEVEL_STYLE = {
-    error:   { bg: "bg-red-50 border-red-200",    icon: "text-red-500",    badge: "bg-red-100 text-red-700 border-red-200" },
-    warning: { bg: "bg-orange-50 border-orange-200", icon: "text-orange-500", badge: "bg-orange-100 text-orange-700 border-orange-200" },
-    info:    { bg: "bg-blue-50 border-blue-200",   icon: "text-blue-500",   badge: "bg-blue-100 text-blue-700 border-blue-200" },
+    error: {
+      bg: "bg-red-50 border-red-200",
+      icon: "text-red-500",
+      badge: "bg-red-100 text-red-700 border-red-200",
+    },
+    warning: {
+      bg: "bg-orange-50 border-orange-200",
+      icon: "text-orange-500",
+      badge: "bg-orange-100 text-orange-700 border-orange-200",
+    },
+    info: {
+      bg: "bg-blue-50 border-blue-200",
+      icon: "text-blue-500",
+      badge: "bg-blue-100 text-blue-700 border-blue-200",
+    },
   };
 
   const LEVEL_LABEL = { error: "Urgent", warning: "Attention", info: "Info" };
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Notifications</h2>
         <p className="text-muted-foreground">
@@ -149,11 +198,11 @@ export default async function NotificationsPage() {
 
       {alerts.length === 0 ? (
         <Card>
-          <CardContent className="py-16 flex flex-col items-center gap-3 text-center">
+          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <CheckCircle2 className="h-12 w-12 text-green-500" />
             <div>
               <p className="font-medium">Tout est en ordre</p>
-              <p className="text-sm text-muted-foreground">Aucune alerte active pour le moment.</p>
+              <p className="text-muted-foreground text-sm">Aucune alerte active pour le moment.</p>
             </div>
           </CardContent>
         </Card>
@@ -162,14 +211,26 @@ export default async function NotificationsPage() {
           {/* Résumé par type */}
           <div className="grid grid-cols-3 gap-2">
             {[
-              { label: "Urgentes", count: alerts.filter(a => a.level === "error").length, color: "text-red-600" },
-              { label: "Attention", count: alerts.filter(a => a.level === "warning").length, color: "text-orange-600" },
-              { label: "Info", count: alerts.filter(a => a.level === "info").length, color: "text-blue-600" },
-            ].map(s => (
+              {
+                label: "Urgentes",
+                count: alerts.filter((a) => a.level === "error").length,
+                color: "text-red-600",
+              },
+              {
+                label: "Attention",
+                count: alerts.filter((a) => a.level === "warning").length,
+                color: "text-orange-600",
+              },
+              {
+                label: "Info",
+                count: alerts.filter((a) => a.level === "info").length,
+                color: "text-blue-600",
+              },
+            ].map((s) => (
               <Card key={s.label}>
                 <CardContent className="px-3 pt-3 pb-3 text-center">
                   <div className={`text-2xl font-bold ${s.color}`}>{s.count}</div>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                  <p className="text-muted-foreground text-xs">{s.label}</p>
                 </CardContent>
               </Card>
             ))}
@@ -177,23 +238,25 @@ export default async function NotificationsPage() {
 
           {/* Liste */}
           <Card>
-            <CardHeader><CardTitle>Toutes les alertes</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Toutes les alertes</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2">
-              {alerts.map(alert => {
+              {alerts.map((alert) => {
                 const style = LEVEL_STYLE[alert.level];
                 const Icon = alert.icon;
                 return (
                   <Link
                     key={alert.id}
                     href={alert.href}
-                    className={`flex items-start gap-3 p-3 rounded-lg border ${style.bg} hover:opacity-80 transition-opacity`}
+                    className={`flex items-start gap-3 rounded-lg border p-3 ${style.bg} transition-opacity hover:opacity-80`}
                   >
-                    <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${style.icon}`} />
-                    <div className="flex-1 min-w-0">
+                    <Icon className={`mt-0.5 h-4 w-4 flex-shrink-0 ${style.icon}`} />
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{alert.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{alert.description}</p>
+                      <p className="text-muted-foreground mt-0.5 text-xs">{alert.description}</p>
                     </div>
-                    <Badge variant="outline" className={`text-xs flex-shrink-0 ${style.badge}`}>
+                    <Badge variant="outline" className={`flex-shrink-0 text-xs ${style.badge}`}>
                       {LEVEL_LABEL[alert.level]}
                     </Badge>
                   </Link>
