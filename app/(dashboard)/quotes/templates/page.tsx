@@ -172,6 +172,9 @@ export default function QuoteTemplatesPage() {
   }
 
   useEffect(() => {
+    // Fetch initial — pattern legitimate "sync external system on mount"
+    // (cf. React docs "you might not need an effect" → cas conservé)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTemplates();
   }, []);
 

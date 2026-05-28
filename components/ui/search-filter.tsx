@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,9 +37,15 @@ export function SearchFilter<T>({
   const [activeFilter, setActiveFilter] = useState("all");
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
+  // Reset la page courante quand le filtre/query change.
+  // Pattern recommandé React 19 (store info from previous render) — évite
+  // useEffect + setState qui déclenche un re-render en cascade.
+  const filterKey = `${query}|${activeFilter}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (lastFilterKey !== filterKey) {
+    setLastFilterKey(filterKey);
     setPage(1);
-  }, [query, activeFilter]);
+  }
 
   const filtered = useMemo(() => {
     let result = items;
