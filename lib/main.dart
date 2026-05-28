@@ -6,10 +6,12 @@ import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/supabase/supabase_config.dart';
 import 'core/theme/app_theme.dart';
+import 'features/onboarding/data/onboarding_repo.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   timeago.setLocaleMessages('fr', timeago.FrMessages());
+  await OnboardingRepo.init();
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   await NotificationService().init();
   runApp(const ProviderScope(child: BatiFlowApp()));

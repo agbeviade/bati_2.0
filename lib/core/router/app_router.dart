@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/signup_page.dart';
+import '../../features/onboarding/data/onboarding_repo.dart';
+import '../../features/onboarding/presentation/onboarding_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/projects/presentation/projects_page.dart';
 import '../../features/projects/presentation/project_detail_page.dart';
@@ -64,9 +66,19 @@ GoRouter buildRouter() {
         if (!isAuth) { _cachedRole = null; _cachedUid = null; }
         final loc = state.matchedLocation;
         final isAuthRoute = loc.startsWith('/login') || loc.startsWith('/signup');
+        final isOnboarding = loc.startsWith('/onboarding');
         final isPortal = loc.startsWith('/portal');
 
-        if (!isAuth && !isAuthRoute) return '/login';
+        // Premier lancement : afficher l'onboarding avant le login.
+        if (!isAuth && !OnboardingRepo.instance.hasSeenOnboarding && !isOnboarding) {
+          return '/onboarding';
+        }
+        // Onboarding déjà vu : pas d'accès à /onboarding (sauf debug)
+        if (isOnboarding && OnboardingRepo.instance.hasSeenOnboarding && isAuth) {
+          return '/dashboard';
+        }
+
+        if (!isAuth && !isAuthRoute && !isOnboarding) return '/login';
         if (isAuth && isAuthRoute) {
           final uid = session.user.id;
           try {
@@ -97,6 +109,7 @@ GoRouter buildRouter() {
         Supabase.instance.client.auth.onAuthStateChange,
       ),
       routes: [
+        GoRoute(path: '/onboarding', builder: (_, $) => const OnboardingPage()),
         GoRoute(path: '/login', builder: (_, $) => const LoginPage()),
         GoRoute(path: '/signup', builder: (_, $) => const SignupPage()),
         ShellRoute(
