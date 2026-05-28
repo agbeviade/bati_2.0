@@ -19,6 +19,7 @@ import {
   Settings,
   BarChart3,
   Ruler,
+  BookTemplate,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -38,6 +39,7 @@ const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/projects", label: "Chantiers", icon: HardHat },
   { href: "/quotes", label: "Devis", icon: FileText },
+  { href: "/quotes/templates", label: "Modèles de devis", icon: BookTemplate },
   { href: "/materials", label: "Matériaux", icon: Package },
   { href: "/stock", label: "Stock", icon: Warehouse },
   { href: "/metres", label: "Métrés", icon: Ruler },
