@@ -40,10 +40,10 @@ export function SearchFilter<T>({
   // Reset la page courante quand le filtre/query change.
   // Pattern recommandé React 19 (store info from previous render) — évite
   // useEffect + setState qui déclenche un re-render en cascade.
-  const filterKey = `${query}|${activeFilter}`;
-  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
-  if (lastFilterKey !== filterKey) {
-    setLastFilterKey(filterKey);
+  const paginationResetKey = `${query}|${activeFilter}`;
+  const [lastPaginationKey, setLastPaginationKey] = useState(paginationResetKey);
+  if (lastPaginationKey !== paginationResetKey) {
+    setLastPaginationKey(paginationResetKey);
     setPage(1);
   }
 
