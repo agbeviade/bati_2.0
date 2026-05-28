@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/cache/json_cache.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/empty_state.dart';
-import '../../../core/theme/app_theme.dart';
 
 class ClientsPage extends StatefulWidget {
   const ClientsPage({super.key});
@@ -13,6 +14,8 @@ class ClientsPage extends StatefulWidget {
 }
 
 class _ClientsPageState extends State<ClientsPage> {
+  static const _cacheKey = 'clients_v1';
+
   bool _loading = true;
   List<AppUser> _clients = [];
   bool _showInactive = false;
@@ -20,11 +23,23 @@ class _ClientsPageState extends State<ClientsPage> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _hydrateFromCache();
+    _refresh();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  void _hydrateFromCache() {
+    final entry = JsonCache.instance.read(_cacheKey);
+    if (entry == null) return;
+    try {
+      final list = (entry.data as List).cast<Map<String, dynamic>>();
+      setState(() {
+        _clients = list.map(AppUser.fromJson).toList();
+        _loading = false;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _refresh() async {
     try {
       final uid = Supabase.instance.client.auth.currentUser!.id;
       final profile = await Supabase.instance.client
@@ -39,12 +54,15 @@ class _ClientsPageState extends State<ClientsPage> {
           .eq('company_id', companyId)
           .eq('role', 'client')
           .order('full_name');
+      final jsonList = (data as List).cast<Map<String, dynamic>>();
+      await JsonCache.instance.write(_cacheKey, jsonList);
+      if (!mounted) return;
       setState(() {
-        _clients = (data as List).map((j) => AppUser.fromJson(j)).toList();
+        _clients = jsonList.map(AppUser.fromJson).toList();
         _loading = false;
       });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -58,7 +76,7 @@ class _ClientsPageState extends State<ClientsPage> {
 
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: _refresh,
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -152,7 +170,7 @@ class _ClientsPageState extends State<ClientsPage> {
                         client: visible[i],
                         onTap: () async {
                           await context.push('/clients/${visible[i].id}');
-                          _load();
+                          _refresh();
                         },
                       ),
                       childCount: visible.length,
@@ -169,7 +187,7 @@ class _ClientsPageState extends State<ClientsPage> {
         label: const Text('Nouveau client'),
         onPressed: () async {
           final result = await context.push('/clients/new');
-          if (result == true) _load();
+          if (result == true) _refresh();
         },
       ),
     );

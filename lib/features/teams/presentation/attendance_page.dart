@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/queue/sync_queue.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/models.dart';
 
 class AttendancePage extends StatefulWidget {
@@ -62,32 +64,68 @@ class _AttendancePageState extends State<AttendancePage> {
     return Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
   }
 
+  /// Pointage d'entrée. Si le réseau échoue, l'op est enqueuée et sera
+  /// rejouée par le `SyncWorker` au retour en ligne.
   Future<void> _checkIn() async {
     setState(() => _actionLoading = true);
     try {
       final pos = await _getLocation();
       final client = Supabase.instance.client;
       final userId = client.auth.currentUser!.id;
-      await client.from('attendance').insert({
+      final payload = <String, dynamic>{
         'user_id': userId,
         'project_id': _selectedProjectId,
         'check_in': DateTime.now().toUtc().toIso8601String(),
         if (pos != null) 'geo_lat_in': pos.latitude,
         if (pos != null) 'geo_lng_in': pos.longitude,
-      });
-      await _load();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pointage d\'entrée enregistré')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+      };
+
+      try {
+        await client.from('attendance').insert(payload);
+        await _load();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pointage d\'entrée enregistré')),
+          );
+        }
+      } catch (_) {
+        // Probable hors-ligne : enqueue, l'op partira au retour réseau.
+        await SyncQueue.instance.enqueue(PendingOp(
+          id: 'checkin-${DateTime.now().microsecondsSinceEpoch}',
+          kind: 'attendance_checkin',
+          payload: payload,
+          createdAt: DateTime.now(),
+        ));
+        // Mise à jour optimiste de l'UI (utile à l'utilisateur sur chantier)
+        if (mounted) {
+          setState(() {
+            _openAttendance = Attendance(
+              id: 'pending-${DateTime.now().microsecondsSinceEpoch}',
+              userId: userId,
+              projectId: _selectedProjectId,
+              checkIn: DateTime.parse(payload['check_in'] as String),
+              checkOut: null,
+              hoursWorked: null,
+              geoLatIn: pos?.latitude,
+              geoLngIn: pos?.longitude,
+              geoLatOut: null,
+              geoLngOut: null,
+            );
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pointage sauvegardé localement — sync au retour réseau'),
+              backgroundColor: AppColors.amber,
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _actionLoading = false);
     }
   }
 
+  /// Pointage de sortie. Même logique offline-safe que `_checkIn`.
   Future<void> _checkOut() async {
     if (_openAttendance == null) return;
     setState(() => _actionLoading = true);
@@ -95,19 +133,60 @@ class _AttendancePageState extends State<AttendancePage> {
       final pos = await _getLocation();
       final now = DateTime.now().toUtc();
       final hours = now.difference(_openAttendance!.checkIn).inMinutes / 60.0;
-      await Supabase.instance.client.from('attendance').update({
+      final update = <String, dynamic>{
         'check_out': now.toIso8601String(),
         'hours_worked': double.parse(hours.toStringAsFixed(2)),
         if (pos != null) 'geo_lat_out': pos.latitude,
         if (pos != null) 'geo_lng_out': pos.longitude,
-      }).eq('id', _openAttendance!.id);
-      await _load();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pointage de sortie enregistré')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+      };
+
+      try {
+        await Supabase.instance.client
+            .from('attendance')
+            .update(update)
+            .eq('id', _openAttendance!.id);
+        await _load();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pointage de sortie enregistré')),
+          );
+        }
+      } catch (_) {
+        // Hors-ligne : enqueue update. Note : si _openAttendance était lui-même
+        // une op pending (id qui commence par 'pending-'), on update l'op
+        // checkin déjà queued pour y ajouter le checkout — sinon on enqueue
+        // un update normal.
+        if (_openAttendance!.id.startsWith('pending-')) {
+          // Combiner checkin + checkout dans la même op (le serveur recevra
+          // une attendance déjà complète).
+          final pendingCheckIns = SyncQueue.instance.byKind('attendance_checkin');
+          if (pendingCheckIns.isNotEmpty) {
+            final last = pendingCheckIns.last;
+            await SyncQueue.instance.update(PendingOp(
+              id: last.id,
+              kind: last.kind,
+              payload: {...last.payload, ...update},
+              createdAt: last.createdAt,
+            ));
+          }
+        } else {
+          await SyncQueue.instance.enqueue(PendingOp(
+            id: 'checkout-${DateTime.now().microsecondsSinceEpoch}',
+            kind: 'attendance_checkout',
+            payload: {'_attendance_id': _openAttendance!.id, ...update},
+            createdAt: DateTime.now(),
+          ));
+        }
+
+        if (mounted) {
+          setState(() => _openAttendance = null);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sortie sauvegardée localement — sync au retour réseau'),
+              backgroundColor: AppColors.amber,
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _actionLoading = false);

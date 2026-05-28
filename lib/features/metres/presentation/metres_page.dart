@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/cache/json_cache.dart';
 import '../../../core/theme/app_theme.dart';
 import 'ouvrage_form_page.dart';
 
@@ -48,6 +49,8 @@ class MetresPage extends StatefulWidget {
 }
 
 class _MetresPageState extends State<MetresPage> {
+  static const _cacheKey = 'metres_v1';
+
   bool _loading = true;
   List<Map<String, dynamic>> _ouvrages = [];
   bool _generating = false;
@@ -55,23 +58,38 @@ class _MetresPageState extends State<MetresPage> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _hydrateFromCache();
+    _refresh();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  void _hydrateFromCache() {
+    final entry = JsonCache.instance.read(_cacheKey);
+    if (entry == null) return;
+    try {
+      final list = (entry.data as List).cast<Map<String, dynamic>>();
+      setState(() {
+        _ouvrages = list;
+        _loading = false;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _refresh() async {
     try {
       final data = await Supabase.instance.client
           .from('project_ouvrages')
           .select('id, designation, type_geometrie, quantite_nette, unite_principale, project_id, projects(name)')
           .order('created_at', ascending: false)
           .limit(100);
+      final jsonList = List<Map<String, dynamic>>.from(data as List);
+      await JsonCache.instance.write(_cacheKey, jsonList);
+      if (!mounted) return;
       setState(() {
-        _ouvrages = List<Map<String, dynamic>>.from(data as List);
+        _ouvrages = jsonList;
         _loading = false;
       });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -93,7 +111,7 @@ class _MetresPageState extends State<MetresPage> {
     if (confirmed != true) return;
     try {
       await Supabase.instance.client.from('project_ouvrages').delete().eq('id', id);
-      _load();
+      _refresh();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -231,7 +249,7 @@ class _MetresPageState extends State<MetresPage> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: _refresh,
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -329,7 +347,7 @@ class _MetresPageState extends State<MetresPage> {
                             builder: (_) => OuvrageFormPage(ouvrage: data),
                           ),
                         );
-                        if (result == true) _load();
+                        if (result == true) _refresh();
                       },
                       onDelete: () => _delete(_ouvrages[i]['id'] as String),
                     ),
@@ -345,7 +363,7 @@ class _MetresPageState extends State<MetresPage> {
         label: const Text('Nouvel ouvrage'),
         onPressed: () async {
           final result = await context.push('/metres/new');
-          if (result == true) _load();
+          if (result == true) _refresh();
         },
       ),
     );

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/cache/json_cache.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/empty_state.dart';
-import '../../../core/theme/app_theme.dart';
 
 class TeamsPage extends StatefulWidget {
   const TeamsPage({super.key});
@@ -13,24 +14,45 @@ class TeamsPage extends StatefulWidget {
 }
 
 class _TeamsPageState extends State<TeamsPage> {
+  static const _cacheKey = 'teams_v1';
+
   bool _loading = true;
   List<_TeamRow> _teams = [];
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _hydrateFromCache();
+    _refresh();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  void _hydrateFromCache() {
+    final entry = JsonCache.instance.read(_cacheKey);
+    if (entry == null) return;
+    try {
+      final list = (entry.data as List).cast<Map<String, dynamic>>();
+      setState(() {
+        _teams = list.map((j) {
+          final team = Team.fromJson(j);
+          final count = (j['team_members'] as List?)?.firstOrNull?['count'] as int? ?? 0;
+          return _TeamRow(team: team, memberCount: count);
+        }).toList();
+        _loading = false;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _refresh() async {
     try {
       final data = await Supabase.instance.client
           .from('teams')
           .select('id, name, lead_id, team_members(count)')
           .order('name');
+      final jsonList = (data as List).cast<Map<String, dynamic>>();
+      await JsonCache.instance.write(_cacheKey, jsonList);
+      if (!mounted) return;
       setState(() {
-        _teams = (data as List).map((j) {
+        _teams = jsonList.map((j) {
           final team = Team.fromJson(j);
           final count = (j['team_members'] as List?)?.firstOrNull?['count'] as int? ?? 0;
           return _TeamRow(team: team, memberCount: count);
@@ -38,7 +60,7 @@ class _TeamsPageState extends State<TeamsPage> {
         _loading = false;
       });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -51,7 +73,7 @@ class _TeamsPageState extends State<TeamsPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _load,
+              onRefresh: _refresh,
               child: _teams.isEmpty
                   ? const EmptyState(
                       icon: Icons.groups_outlined,
@@ -68,7 +90,7 @@ class _TeamsPageState extends State<TeamsPage> {
                           child: InkWell(
                             onTap: () async {
                               await context.push('/teams/${t.team.id}');
-                              _load();
+                              _refresh();
                             },
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
@@ -137,7 +159,7 @@ class _TeamsPageState extends State<TeamsPage> {
         onPressed: () async {
           final router = GoRouter.of(context);
           final result = await context.push('/teams/new');
-          if (result != null) _load();
+          if (result != null) _refresh();
           if (!mounted || result is! String) return;
           router.push('/teams/$result');
         },

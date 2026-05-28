@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'core/cache/json_cache.dart';
+import 'core/queue/sync_queue.dart';
+import 'core/queue/sync_worker.dart';
 import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/supabase/supabase_config.dart';
@@ -14,8 +16,10 @@ void main() async {
   timeago.setLocaleMessages('fr', timeago.FrMessages());
   await OnboardingRepo.init();
   await JsonCache.init();
+  await SyncQueue.init();
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   await NotificationService().init();
+  syncWorker.start();
   runApp(const ProviderScope(child: BatiFlowApp()));
 }
 
