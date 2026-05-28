@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,14 +25,13 @@ export default async function QuotesPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
 
-  const { data: company } = await admin.from("companies").select("currency").eq("id", profile.company_id).single();
+  const { data: company } = await supabase.from("companies").select("currency").eq("id", profile.company_id).single();
   const currency = (company as { currency?: string } | null)?.currency ?? "XOF";
 
-  const { data: quotesData } = await admin
+  const { data: quotesData } = await supabase
     .from("quotes")
     .select("id, quote_number, client_name, project_type, total, status, valid_until, created_at")
     .eq("company_id", profile.company_id)

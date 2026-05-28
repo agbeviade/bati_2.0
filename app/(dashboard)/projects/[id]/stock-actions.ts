@@ -1,19 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-
-async function getProfile() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { data: profile } = await supabase
-    .from("users").select("company_id").eq("id", user.id).single();
-  if (!profile?.company_id) redirect("/onboarding");
-  return { user, supabase };
-}
+import { getAuthedProfile } from "@/lib/auth/profile";
 
 // Stock is per-project — movements are scoped to a project_id.
 // materials.stock_qty is NOT used; compute stock from movements filtered by project.
@@ -25,10 +13,9 @@ export async function addProjectEntry(
   unitCost: number,
   notes?: string
 ): Promise<{ id?: string; error?: string }> {
-  const { user } = await getProfile();
-  const admin = createAdminClient();
+  const { user, supabase } = await getAuthedProfile();
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from("stock_movements")
     .insert({
       material_id: materialId,
@@ -47,9 +34,9 @@ export async function addProjectEntry(
   // Update project.spent (budget impact)
   const totalCost = quantity * unitCost;
   if (totalCost > 0) {
-    const { data: proj } = await admin
+    const { data: proj } = await supabase
       .from("projects").select("spent").eq("id", projectId).single();
-    await admin
+    await supabase
       .from("projects")
       .update({ spent: (proj?.spent ?? 0) + totalCost })
       .eq("id", projectId);
@@ -67,10 +54,9 @@ export async function addProjectExit(
   quantity: number,
   justification: string
 ): Promise<{ id?: string; error?: string }> {
-  const { user } = await getProfile();
-  const admin = createAdminClient();
+  const { user, supabase } = await getAuthedProfile();
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from("stock_movements")
     .insert({
       material_id: materialId,
@@ -98,19 +84,18 @@ export async function deleteProjectMovement(
   quantity: number,
   unitCost: number | null
 ): Promise<void> {
-  await getProfile();
-  const admin = createAdminClient();
+  const { supabase } = await getAuthedProfile();
 
-  await admin.from("stock_movements").delete().eq("id", movementId);
+  await supabase.from("stock_movements").delete().eq("id", movementId);
 
   // Reverse budget impact if it was a purchase
   if (type === "purchase" && unitCost && quantity > 0) {
     const totalCost = quantity * unitCost;
-    const { data: proj } = await admin
+    const { data: proj2 } = await supabase
       .from("projects").select("spent").eq("id", projectId).single();
-    await admin
+    await supabase
       .from("projects")
-      .update({ spent: Math.max(0, (proj?.spent ?? 0) - totalCost) })
+      .update({ spent: Math.max(0, (proj2?.spent ?? 0) - totalCost) })
       .eq("id", projectId);
   }
 

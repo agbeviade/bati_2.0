@@ -32,6 +32,7 @@ export function TeamsList({ teams }: { teams: TeamRow[] }) {
   return (
     <SearchFilter
       items={teams}
+      pageSize={20}
       searchKeys={["name", "leadName"]}
       placeholder="Rechercher par nom, chef d'équipe..."
       emptyState={emptyState}

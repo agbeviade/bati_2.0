@@ -132,12 +132,14 @@ export default function NewQuotePage() {
         applyGeneratedItems(result.items);
       } else {
         // Description libre uniquement
-        const supabase = createClient();
-        const { data, error } = await supabase.functions.invoke("generate-quote", {
-          body: { description: aiDesc },
+        const res = await fetch("/api/ai/generate-quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ description: aiDesc }),
         });
-        if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Erreur IA."); return; }
-        applyGeneratedItems(data.items ?? []);
+        const data = await res.json() as { items?: unknown[]; error?: string };
+        if (!res.ok || data.error) { toast.error(data.error ?? "Erreur IA."); return; }
+        applyGeneratedItems((data.items ?? []) as Parameters<typeof applyGeneratedItems>[0]);
       }
     } finally {
       setAiLoading(false);

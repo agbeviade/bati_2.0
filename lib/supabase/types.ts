@@ -438,12 +438,42 @@ export type Database = {
         Update: { name?: string; category?: string; description?: string | null; storage_path?: string | null; file_type?: string | null; mime_type?: string | null };
         Relationships: [];
       };
+      ai_logs: {
+        Row: {
+          id: string; company_id: string | null; user_id: string | null; kind: string; model: string;
+          input_tokens: number; output_tokens: number;
+          cache_creation_input_tokens: number; cache_read_input_tokens: number;
+          success: boolean; error: string | null; duration_ms: number | null; created_at: string;
+        };
+        Insert: {
+          id?: string; company_id?: string | null; user_id?: string | null; kind: string; model: string;
+          input_tokens?: number; output_tokens?: number;
+          cache_creation_input_tokens?: number; cache_read_input_tokens?: number;
+          success?: boolean; error?: string | null; duration_ms?: number | null; created_at?: string;
+        };
+        Update: { success?: boolean; error?: string | null };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
       auth_company_id: { Args: Record<string, never>; Returns: string };
       auth_role: { Args: Record<string, never>; Returns: UserRole };
       is_admin: { Args: Record<string, never>; Returns: boolean };
+      next_document_number: { Args: { p_kind: "quote" | "invoice" }; Returns: string };
+      get_dashboard_kpis: {
+        Args: Record<string, never>;
+        Returns: {
+          active_projects: number;
+          total_projects: number;
+          pending_quotes: number;
+          ca_this_month: number;
+          unpaid_total: number;
+          unpaid_count: number;
+          overdue_invoices_count: number;
+          low_stock_count: number;
+        }[];
+      };
     };
     Enums: {
       user_role: UserRole;

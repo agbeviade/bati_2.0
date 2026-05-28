@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { deleteMaterial, updateMaterial } from "@/app/(dashboard)/materials/actions";
@@ -28,12 +27,11 @@ export default async function MaterialDetailPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: matData } = await admin.from("materials").select("*").eq("id", id).maybeSingle();
+  const { data: matData } = await supabase.from("materials").select("*").eq("id", id).maybeSingle();
   if (!matData) notFound();
   const mat = matData as Material;
 
-  const { data: categoriesData } = await admin
+  const { data: categoriesData } = await supabase
     .from("material_categories")
     .select("id, slug, label")
     .eq("company_id", mat.company_id)

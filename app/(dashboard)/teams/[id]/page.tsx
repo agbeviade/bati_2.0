@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { TeamTabs } from "@/components/teams/team-tabs";
 import { MembersTab } from "@/components/teams/tabs/members-tab";
@@ -26,14 +25,12 @@ export default async function TeamDetailPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-
-  const { data: teamData } = await admin.from("teams").select("*").eq("id", id).maybeSingle();
+  const { data: teamData } = await supabase.from("teams").select("*").eq("id", id).maybeSingle();
   if (!teamData) notFound();
   const team = teamData as Team;
 
   // Always load members (needed for both tabs)
-  const { data: membersData } = await admin
+  const { data: membersData } = await supabase
     .from("team_members")
     .select("user_id")
     .eq("team_id", id);
@@ -43,7 +40,7 @@ export default async function TeamDetailPage({
   type MemberUser = Pick<User, "id" | "full_name" | "role" | "avatar_url">;
   let memberUsers: MemberUser[] = [];
   if (memberIds.length > 0) {
-    const { data } = await admin
+    const { data } = await supabase
       .from("users")
       .select("id, full_name, role, avatar_url")
       .in("id", memberIds);
@@ -59,7 +56,7 @@ export default async function TeamDetailPage({
   }));
 
   if (tab === "members") {
-    const { data: companyUsers } = await admin
+    const { data: companyUsers } = await supabase
       .from("users")
       .select("id, full_name, role")
       .eq("company_id", team.company_id)
@@ -82,7 +79,7 @@ export default async function TeamDetailPage({
 
   // attendance tab
   if (memberIds.length > 0) {
-    const { data: openData } = await admin
+    const { data: openData } = await supabase
       .from("attendance")
       .select("id, user_id, check_in, project_id")
       .in("user_id", memberIds)
@@ -94,7 +91,7 @@ export default async function TeamDetailPage({
     }
   }
 
-  const { data: projectsData } = await admin
+  const { data: projectsData } = await supabase
     .from("projects")
     .select("id, name")
     .eq("company_id", team.company_id)
@@ -102,7 +99,7 @@ export default async function TeamDetailPage({
 
   const projects = (projectsData ?? []) as { id: string; name: string }[];
 
-  const { data: historyData } = await admin
+  const { data: historyData } = await supabase
     .from("attendance")
     .select("id, user_id, check_in, check_out, hours_worked, project_id")
     .in("user_id", memberIds.length > 0 ? memberIds : ["00000000-0000-0000-0000-000000000000"])

@@ -45,6 +45,7 @@ export function InvoicesList({ invoices, currency }: { invoices: InvoiceRow[]; c
   return (
     <SearchFilter
       items={invoices}
+      pageSize={20}
       searchKeys={["invoice_number", "client_name"]}
       filterKey="status"
       filterOptions={STATUS_OPTIONS}

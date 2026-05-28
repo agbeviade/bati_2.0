@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { PrintButton } from "@/components/ui/print-button";
 import type { Quote, QuoteItem, Company } from "@/lib/supabase/types";
 
@@ -24,15 +23,14 @@ export default async function QuotePrintPage({ params }: { params: Promise<{ id:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: quoteData } = await admin.from("quotes").select("*").eq("id", id).maybeSingle();
+  const { data: quoteData } = await supabase.from("quotes").select("*").eq("id", id).maybeSingle();
   if (!quoteData) notFound();
   const quote = quoteData as Quote;
 
-  const { data: itemsData } = await admin.from("quote_items").select("*").eq("quote_id", id).order("sort_order");
+  const { data: itemsData } = await supabase.from("quote_items").select("*").eq("quote_id", id).order("sort_order");
   const items = (itemsData ?? []) as QuoteItem[];
 
-  const { data: companyData } = await admin.from("companies")
+  const { data: companyData } = await supabase.from("companies")
     .select("name, currency, address, phone, email").eq("id", quote.company_id).maybeSingle();
   const company = companyData as Pick<Company, "name" | "currency" | "address" | "phone" | "email"> | null;
   const currency = company?.currency ?? "XOF";

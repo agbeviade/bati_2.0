@@ -1,19 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-
-async function getCompanyId(): Promise<string> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
-  if (!profile?.company_id) redirect("/onboarding");
-  return profile.company_id as string;
-}
+import { getAuthedProfile } from "@/lib/auth/profile";
 
 function toSlug(label: string): string {
   return label
@@ -25,12 +13,12 @@ function toSlug(label: string): string {
 }
 
 export async function createCategory(formData: FormData) {
-  const companyId = await getCompanyId();
+  const { companyId, supabase } = await getAuthedProfile();
   const label = (formData.get("label") as string)?.trim();
   if (!label) return { error: "Le libellé est requis." };
 
   const slug = toSlug(label);
-  const { error } = await createAdminClient().from("material_categories").insert({
+  const { error } = await supabase.from("material_categories").insert({
     company_id: companyId,
     slug,
     label,
@@ -45,11 +33,11 @@ export async function createCategory(formData: FormData) {
 }
 
 export async function updateCategory(id: string, formData: FormData) {
-  await getCompanyId();
+  const { supabase } = await getAuthedProfile();
   const label = (formData.get("label") as string)?.trim();
   if (!label) return { error: "Le libellé est requis." };
 
-  const { error } = await createAdminClient()
+  const { error } = await supabase
     .from("material_categories")
     .update({ label })
     .eq("id", id);
@@ -59,17 +47,16 @@ export async function updateCategory(id: string, formData: FormData) {
 }
 
 export async function deleteCategory(id: string) {
-  const companyId = await getCompanyId();
-  const admin = createAdminClient();
+  const { companyId, supabase } = await getAuthedProfile();
 
-  const { data: cat } = await admin
+  const { data: cat } = await supabase
     .from("material_categories")
     .select("slug")
     .eq("id", id)
     .single();
   if (!cat) return { error: "Catégorie introuvable." };
 
-  const { count } = await admin
+  const { count } = await supabase
     .from("materials")
     .select("id", { count: "exact", head: true })
     .eq("company_id", companyId)
@@ -78,6 +65,6 @@ export async function deleteCategory(id: string) {
   if (count && count > 0)
     return { error: `Impossible : ${count} matériau${count > 1 ? "x" : ""} utilisent cette catégorie.` };
 
-  await admin.from("material_categories").delete().eq("id", id);
+  await supabase.from("material_categories").delete().eq("id", id);
   revalidatePath("/materials");
 }

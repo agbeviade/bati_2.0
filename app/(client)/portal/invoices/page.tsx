@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { InvoiceStatusBadge } from "@/components/invoices/invoice-status-badge";
 import type { Invoice } from "@/lib/supabase/types";
@@ -16,11 +15,10 @@ export default async function ClientInvoicesPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("role").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
   if (profile?.role !== "client") redirect("/dashboard");
 
-  const { data } = await admin
+  const { data } = await supabase
     .from("invoices")
     .select("id, invoice_number, amount, status, due_date, paid_at, created_at")
     .eq("client_id", user.id)

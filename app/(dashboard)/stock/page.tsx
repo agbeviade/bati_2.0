@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/projects/status-badge";
 import { ArrowDown, ArrowUp, Package, Warehouse } from "lucide-react";
@@ -32,17 +31,16 @@ export default async function StockPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
 
   const [{ data: projectsData }, { data: movementsData }] = await Promise.all([
-    admin
+    supabase
       .from("projects")
       .select("id, name, status")
       .eq("company_id", profile.company_id)
       .order("name"),
-    admin
+    supabase
       .from("stock_movements")
       .select("project_id, material_id, type, quantity, materials(name, unit)")
       .not("project_id", "is", null)

@@ -2,22 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-
-async function getProfile() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { data: profile } = await supabase
-    .from("users").select("company_id").eq("id", user.id).single();
-  if (!profile?.company_id) redirect("/onboarding");
-  return { user, companyId: profile.company_id as string, supabase };
-}
+import { getAuthedProfile } from "@/lib/auth/profile";
+import { logger } from "@/lib/logger";
 
 // ── Teams ────────────────────────────────────────────────────
 
 export async function createTeam(formData: FormData) {
-  const { companyId, supabase } = await getProfile();
+  const { companyId, supabase } = await getAuthedProfile();
 
   const name = (formData.get("name") as string)?.trim();
   if (!name) return { error: "Le nom de l'équipe est requis." };
@@ -27,14 +18,14 @@ export async function createTeam(formData: FormData) {
     .insert({ company_id: companyId, name, lead_id })
     .select("id").single();
 
-  if (error || !team) { console.error("[createTeam]", error); return { error: error?.message }; }
+  if (error || !team) { logger.error("createTeam failed", error, { companyId }); return { error: error?.message }; }
 
   revalidatePath("/teams");
   redirect(`/teams/${team.id}`);
 }
 
 export async function updateTeam(id: string, formData: FormData) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   const name = (formData.get("name") as string)?.trim();
   const lead_id = (formData.get("lead_id") as string) || null;
   const { error } = await supabase.from("teams").update({ name, lead_id }).eq("id", id);
@@ -44,7 +35,7 @@ export async function updateTeam(id: string, formData: FormData) {
 }
 
 export async function deleteTeam(id: string) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   await supabase.from("teams").delete().eq("id", id);
   revalidatePath("/teams");
   redirect("/teams");
@@ -53,7 +44,7 @@ export async function deleteTeam(id: string) {
 // ── Team Members ─────────────────────────────────────────────
 
 export async function addMemberToTeam(teamId: string, userId: string) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   const { error } = await supabase.from("team_members").insert({ team_id: teamId, user_id: userId });
   if (error) {
     if (error.code === "23505") return { error: "Ce membre est déjà dans l'équipe." };
@@ -63,7 +54,7 @@ export async function addMemberToTeam(teamId: string, userId: string) {
 }
 
 export async function removeMemberFromTeam(teamId: string, userId: string) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   await supabase.from("team_members").delete().eq("team_id", teamId).eq("user_id", userId);
   revalidatePath(`/teams/${teamId}`);
 }
@@ -71,7 +62,7 @@ export async function removeMemberFromTeam(teamId: string, userId: string) {
 // ── Attendance ───────────────────────────────────────────────
 
 export async function checkIn(userId: string, projectId: string | null, geoLat: number | null, geoLng: number | null, teamId: string) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
 
   const { data: open } = await supabase
     .from("attendance")
@@ -95,7 +86,7 @@ export async function checkIn(userId: string, projectId: string | null, geoLat: 
 }
 
 export async function checkOut(attendanceId: string, geoLat: number | null, geoLng: number | null, teamId: string) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   const { error } = await supabase.from("attendance").update({
     check_out: new Date().toISOString(),
     geo_lat_out: geoLat,

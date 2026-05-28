@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, User, Calendar, FileText, Printer } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InvoiceStatusBadge } from "@/components/invoices/invoice-status-badge";
@@ -25,20 +24,18 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-
-  const { data: invoiceData } = await admin.from("invoices").select("*").eq("id", id).maybeSingle();
+  const { data: invoiceData } = await supabase.from("invoices").select("*").eq("id", id).maybeSingle();
   if (!invoiceData) notFound();
   const invoice = invoiceData as Invoice;
 
-  const { data: company } = await admin
+  const { data: company } = await supabase
     .from("companies")
     .select("currency, name")
     .eq("id", invoice.company_id)
     .maybeSingle();
   const currency = (company as { currency?: string } | null)?.currency ?? "XOF";
 
-  const { data: paymentsData } = await admin
+  const { data: paymentsData } = await supabase
     .from("payments")
     .select("*")
     .eq("invoice_id", id)
@@ -47,13 +44,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   let project: Pick<Project, "id" | "name"> | null = null;
   if (invoice.project_id) {
-    const { data } = await admin.from("projects").select("id, name").eq("id", invoice.project_id).maybeSingle();
+    const { data } = await supabase.from("projects").select("id, name").eq("id", invoice.project_id).maybeSingle();
     project = data as Pick<Project, "id" | "name"> | null;
   }
 
   let quote: Pick<Quote, "id" | "quote_number"> | null = null;
   if (invoice.quote_id) {
-    const { data } = await admin.from("quotes").select("id, quote_number").eq("id", invoice.quote_id).maybeSingle();
+    const { data } = await supabase.from("quotes").select("id, quote_number").eq("id", invoice.quote_id).maybeSingle();
     quote = data as Pick<Quote, "id" | "quote_number"> | null;
   }
 

@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { HardHat, FileText, TrendingUp, ArrowRight, Receipt, AlertTriangle, BadgeCheck, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthedProfile } from "@/lib/auth/profile";
+import { getCompanyMeta } from "@/lib/auth/company";
 import {
   Card,
   CardContent,
@@ -28,111 +29,99 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from("users")
-    .select("company_id, full_name")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { userId, companyId } = await getAuthedProfile();
+  const { currency } = await getCompanyMeta();
 
-  const typedProfile = profile as { company_id?: string | null; full_name?: string | null } | null;
-  if (!typedProfile?.company_id) redirect("/onboarding");
+  // Nom de l'utilisateur pour le bonjour (cheap, scope déjà chargé via cache)
+  const { data: profileExtra } = await supabase
+    .from("users").select("full_name").eq("id", userId).maybeSingle();
+  const fullName = (profileExtra as { full_name?: string | null } | null)?.full_name;
 
-  const companyId = typedProfile.company_id;
+  const today = new Date().toISOString().split("T")[0];
 
-  const { data: companyData } = await admin
-    .from("companies")
-    .select("currency")
-    .eq("id", companyId)
-    .maybeSingle();
-  const currency = (companyData as { currency?: string } | null)?.currency ?? "XOF";
-
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const today = now.toISOString().split("T")[0];
-
-  // Données parallèles
+  // 1 RPC pour tous les KPIs agrégés + 4 listes bornées en parallèle.
   const [
-    { data: allProjectsData },
+    { data: kpisRows },
     { data: recentProjectsData },
-    { data: pendingQuotesData },
     { data: overdueInvoicesData },
     { data: recentInvoicesData },
-    { data: paidThisMonthData },
-    { data: unpaidInvoicesData },
     { data: lowStockData },
   ] = await Promise.all([
-    admin.from("projects").select("id, status, progress_pct").eq("company_id", companyId),
-    admin.from("projects").select("id, name, status, progress_pct, address").eq("company_id", companyId).order("created_at", { ascending: false }).limit(5),
-    admin.from("quotes").select("id").eq("company_id", companyId).eq("status", "sent"),
-    admin.from("invoices").select("id, invoice_number, client_name, amount, due_date, status")
+    supabase.rpc("get_dashboard_kpis"),
+    supabase.from("projects")
+      .select("id, name, status, progress_pct, address")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase.from("invoices")
+      .select("id, invoice_number, client_name, amount, due_date, status")
       .eq("company_id", companyId)
       .in("status", ["sent", "overdue"])
       .lt("due_date", today)
       .order("due_date"),
-    admin.from("invoices").select("id, invoice_number, client_name, amount, status, created_at")
+    supabase.from("invoices")
+      .select("id, invoice_number, client_name, amount, status, created_at")
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
       .limit(4),
-    admin.from("invoices").select("amount")
-      .eq("company_id", companyId)
-      .eq("status", "paid")
-      .gte("paid_at", monthStart),
-    admin.from("invoices").select("amount")
-      .eq("company_id", companyId)
-      .in("status", ["sent", "overdue"]),
-    admin.from("materials").select("id, name, stock_qty, min_stock_qty, unit")
+    supabase.from("materials")
+      .select("id, name, stock_qty, min_stock_qty, unit")
       .eq("company_id", companyId)
       .gt("min_stock_qty", 0),
   ]);
 
-  const allProjects = (allProjectsData ?? []) as { id: string; status: string; progress_pct: number }[];
+  const kpis = (kpisRows ?? [])[0] ?? {
+    active_projects: 0,
+    total_projects: 0,
+    pending_quotes: 0,
+    ca_this_month: 0,
+    unpaid_total: 0,
+    unpaid_count: 0,
+    overdue_invoices_count: 0,
+    low_stock_count: 0,
+  };
+
   const recentProjects = (recentProjectsData ?? []) as Pick<Project, "id" | "name" | "status" | "progress_pct" | "address">[];
   const recentInvoices = (recentInvoicesData ?? []) as Pick<Invoice, "id" | "invoice_number" | "client_name" | "amount" | "status" | "created_at">[];
   const overdueInvoices = (overdueInvoicesData ?? []) as Pick<Invoice, "id" | "invoice_number" | "client_name" | "amount" | "due_date" | "status">[];
   const allMaterials = (lowStockData ?? []) as Pick<Material, "id" | "name" | "stock_qty" | "min_stock_qty" | "unit">[];
   const lowStockMaterials = allMaterials.filter(m => m.stock_qty <= m.min_stock_qty);
 
-  const totalActive = allProjects.filter(p => p.status === "in_progress").length;
-  const pendingQuotesCount = pendingQuotesData?.length ?? 0;
-  const caThisMonth = (paidThisMonthData ?? []).reduce((s, i) => s + (i as { amount: number }).amount, 0);
-  const unpaidTotal = (unpaidInvoicesData ?? []).reduce((s, i) => s + (i as { amount: number }).amount, 0);
-  const unpaidCount = unpaidInvoicesData?.length ?? 0;
-
+  const now = new Date();
   const alertsCount = overdueInvoices.length + lowStockMaterials.length;
 
-  const kpis = [
+  const kpiCards = [
     {
       label: "Chantiers actifs",
-      value: String(totalActive),
+      value: String(kpis.active_projects),
       icon: HardHat,
-      hint: totalActive === 0 ? "Aucun chantier en cours" : `sur ${allProjects.length} total`,
+      hint: kpis.active_projects === 0 ? "Aucun chantier en cours" : `sur ${kpis.total_projects} total`,
       href: "/projects",
       color: "",
     },
     {
       label: "CA encaissé ce mois",
-      value: formatAmount(caThisMonth, currency),
+      value: formatAmount(Number(kpis.ca_this_month), currency),
       icon: BadgeCheck,
-      hint: caThisMonth === 0 ? "Aucune facture payée ce mois" : "Factures payées en " + now.toLocaleDateString("fr-FR", { month: "long" }),
+      hint: Number(kpis.ca_this_month) === 0 ? "Aucune facture payée ce mois" : "Factures payées en " + now.toLocaleDateString("fr-FR", { month: "long" }),
       href: "/invoices",
-      color: caThisMonth > 0 ? "text-success" : "",
+      color: Number(kpis.ca_this_month) > 0 ? "text-success" : "",
     },
     {
       label: "Factures impayées",
-      value: unpaidCount > 0 ? formatAmount(unpaidTotal, currency) : "0",
+      value: kpis.unpaid_count > 0 ? formatAmount(Number(kpis.unpaid_total), currency) : "0",
       icon: Clock,
-      hint: unpaidCount === 0 ? "Aucune facture en attente" : `${unpaidCount} facture${unpaidCount > 1 ? "s" : ""} en attente`,
+      hint: kpis.unpaid_count === 0 ? "Aucune facture en attente" : `${kpis.unpaid_count} facture${kpis.unpaid_count > 1 ? "s" : ""} en attente`,
       href: "/invoices",
-      color: unpaidCount > 0 ? "text-brand-orange" : "",
+      color: kpis.unpaid_count > 0 ? "text-brand-orange" : "",
     },
     {
       label: "Devis en attente",
-      value: String(pendingQuotesCount),
+      value: String(kpis.pending_quotes),
       icon: FileText,
-      hint: pendingQuotesCount === 0 ? "Aucun devis envoyé non traité" : `devis envoyé${pendingQuotesCount > 1 ? "s" : ""} sans réponse`,
+      hint: kpis.pending_quotes === 0 ? "Aucun devis envoyé non traité" : `devis envoyé${kpis.pending_quotes > 1 ? "s" : ""} sans réponse`,
       href: "/quotes",
-      color: pendingQuotesCount > 0 ? "text-primary" : "",
+      color: kpis.pending_quotes > 0 ? "text-primary" : "",
     },
   ];
 
@@ -140,13 +129,13 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">
-          Bonjour{typedProfile.full_name ? `, ${typedProfile.full_name.split(" ")[0]}` : ""} 👋
+          Bonjour{fullName ? `, ${fullName.split(" ")[0]}` : ""} 👋
         </h2>
         <p className="text-muted-foreground">Vue d&apos;ensemble de votre activité.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi) => {
+        {kpiCards.map((kpi) => {
           const Icon = kpi.icon;
           return (
             <Link key={kpi.label} href={kpi.href}>
@@ -244,14 +233,14 @@ export default async function DashboardPage() {
       </div>
 
       {/* Devis en attente */}
-      {pendingQuotesCount > 0 && (
+      {kpis.pending_quotes > 0 && (
         <Card className="border-blue-200">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-blue-500" />
                 <CardTitle className="text-base">
-                  {pendingQuotesCount} devis en attente de réponse
+                  {kpis.pending_quotes} devis en attente de réponse
                 </CardTitle>
               </div>
               <Button variant="ghost" size="sm" asChild>
@@ -294,6 +283,14 @@ export default async function DashboardPage() {
             ))}
           </CardContent>
         </Card>
+      )}
+
+      {/* Progression rapide — placeholder graphique */}
+      {kpis.total_projects > 0 && kpis.active_projects > 0 && (
+        <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <TrendingUp className="h-3.5 w-3.5" />
+          {kpis.active_projects} chantier{kpis.active_projects > 1 ? "s" : ""} en cours.
+        </div>
       )}
     </div>
   );

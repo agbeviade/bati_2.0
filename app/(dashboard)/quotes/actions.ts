@@ -2,23 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedProfile } from "@/lib/auth/profile";
+import { logger } from "@/lib/logger";
 import type { QuoteStatus, QuoteItemCategory } from "@/lib/supabase/types";
-
-async function getProfile() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { data: profile } = await supabase
-    .from("users").select("company_id").eq("id", user.id).single();
-  if (!profile?.company_id) redirect("/onboarding");
-  return { user, companyId: profile.company_id as string, supabase };
-}
-
-function nextQuoteNumber(count: number): string {
-  const year = new Date().getFullYear();
-  return `DEVIS-${year}-${String(count + 1).padStart(3, "0")}`;
-}
 
 export type QuoteItemInput = {
   category: QuoteItemCategory;
@@ -40,14 +26,15 @@ export async function createQuote(data: {
   project_id: string;
   items: QuoteItemInput[];
 }) {
-  const { user, companyId, supabase } = await getProfile();
+  const { user, companyId, supabase } = await getAuthedProfile();
 
-  const { count } = await supabase
-    .from("quotes")
-    .select("id", { count: "exact", head: true })
-    .eq("company_id", companyId);
-
-  const quote_number = nextQuoteNumber(count ?? 0);
+  const { data: quote_number, error: numErr } = await supabase.rpc("next_document_number", {
+    p_kind: "quote",
+  });
+  if (numErr || !quote_number) {
+    logger.error("createQuote number generation failed", numErr, { companyId });
+    return { error: "Impossible de générer le numéro de devis." };
+  }
 
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
@@ -68,7 +55,7 @@ export async function createQuote(data: {
     .single();
 
   if (quoteError || !quote) {
-    console.error("[createQuote]", quoteError);
+    logger.error("createQuote insert failed", quoteError, { companyId });
     return { error: `Impossible de créer le devis. (${quoteError?.message})` };
   }
 
@@ -84,7 +71,7 @@ export async function createQuote(data: {
         sort_order: item.sort_order,
       }))
     );
-    if (itemsError) console.error("[createQuote items]", itemsError);
+    if (itemsError) logger.error("createQuote items insert failed", itemsError, { quoteId: quote.id });
   }
 
   revalidatePath("/quotes");
@@ -93,7 +80,7 @@ export async function createQuote(data: {
 }
 
 export async function updateQuoteStatus(id: string, status: QuoteStatus) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   const { error } = await supabase.from("quotes").update({ status }).eq("id", id);
   if (error) return { error: error.message };
   revalidatePath(`/quotes/${id}`);
@@ -102,7 +89,7 @@ export async function updateQuoteStatus(id: string, status: QuoteStatus) {
 }
 
 export async function deleteQuote(id: string) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   await supabase.from("quotes").delete().eq("id", id);
   revalidatePath("/quotes");
   revalidatePath("/dashboard");
@@ -110,7 +97,7 @@ export async function deleteQuote(id: string) {
 }
 
 export async function addQuoteItem(quoteId: string, item: QuoteItemInput) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   const { error } = await supabase.from("quote_items").insert({ quote_id: quoteId, ...item });
   if (error) return { error: error.message };
   revalidatePath(`/quotes/${quoteId}`);
@@ -125,7 +112,7 @@ export async function updateQuoteMeta(id: string, data: {
   margin_pct: string;
   notes: string;
 }) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   const { error } = await supabase.from("quotes").update({
     client_name: data.client_name || null,
     project_type: data.project_type || null,
@@ -141,7 +128,7 @@ export async function updateQuoteMeta(id: string, data: {
 }
 
 export async function deleteQuoteItem(itemId: string, quoteId: string) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   await supabase.from("quote_items").delete().eq("id", itemId);
   revalidatePath(`/quotes/${quoteId}`);
 }

@@ -1,20 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { getAuthedProfile } from "@/lib/auth/profile";
 import type { QuoteTemplate } from "@/lib/supabase/types";
-
-async function getProfile() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { data: profile } = await supabase
-    .from("users").select("company_id").eq("id", user.id).single();
-  if (!profile?.company_id) redirect("/onboarding");
-  return { userId: user.id, companyId: profile.company_id as string, supabase };
-}
 
 const BUCKET = "quote-templates";
 const MAX_SIZE = 20 * 1024 * 1024; // 20 MB
@@ -27,7 +16,7 @@ const ALLOWED_TYPES = [
 ];
 
 export async function uploadTemplate(formData: FormData): Promise<{ error?: string }> {
-  const { companyId } = await getProfile();
+  const { companyId, supabase } = await getAuthedProfile();
 
   const name = (formData.get("name") as string)?.trim();
   const category = (formData.get("category") as string) || "autre";
@@ -45,7 +34,7 @@ export async function uploadTemplate(formData: FormData): Promise<{ error?: stri
   const fileType = file.type === "application/pdf" ? "pdf" : "image";
   const storagePath = `${companyId}/${Date.now()}-${name.replace(/[^a-z0-9]/gi, "_")}.${ext}`;
 
-  const admin = createAdminClient();
+  const admin = createAdminClient(); // storage upload requires admin
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error: uploadError } = await admin.storage
@@ -54,7 +43,7 @@ export async function uploadTemplate(formData: FormData): Promise<{ error?: stri
 
   if (uploadError) return { error: uploadError.message };
 
-  const { error: dbError } = await admin.from("quote_templates").insert({
+  const { error: dbError } = await supabase.from("quote_templates").insert({
     company_id: companyId,
     name,
     category,
@@ -74,7 +63,7 @@ export async function uploadTemplate(formData: FormData): Promise<{ error?: stri
 }
 
 export async function listTemplates(): Promise<QuoteTemplate[]> {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   const { data } = await supabase
     .from("quote_templates")
     .select("*")
@@ -84,8 +73,8 @@ export async function listTemplates(): Promise<QuoteTemplate[]> {
 }
 
 export async function deleteTemplate(id: string): Promise<{ error?: string }> {
-  const { supabase } = await getProfile();
-  const admin = createAdminClient();
+  const { supabase } = await getAuthedProfile();
+  const admin = createAdminClient(); // storage remove requires admin
 
   const { data } = await supabase
     .from("quote_templates").select("storage_path").eq("id", id).single();
@@ -110,8 +99,8 @@ export async function getTemplatePublicUrl(storagePath: string): Promise<string>
 export async function getTemplateAsBase64(
   id: string
 ): Promise<{ base64: string; mimeType: string; fileType: string; error?: string }> {
-  const { supabase } = await getProfile();
-  const admin = createAdminClient();
+  const { supabase } = await getAuthedProfile();
+  const admin = createAdminClient(); // storage download requires admin
 
   const { data: tmpl } = await supabase
     .from("quote_templates")

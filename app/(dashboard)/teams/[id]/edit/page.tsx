@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,12 +17,11 @@ export default async function EditTeamPage({ params }: { params: Promise<{ id: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: teamData } = await admin.from("teams").select("*").eq("id", id).maybeSingle();
+  const { data: teamData } = await supabase.from("teams").select("*").eq("id", id).maybeSingle();
   if (!teamData) notFound();
   const team = teamData as Team;
 
-  const { data: usersData } = await admin
+  const { data: usersData } = await supabase
     .from("users")
     .select("id, full_name, role")
     .eq("company_id", team.company_id)

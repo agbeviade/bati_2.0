@@ -11,13 +11,13 @@ import { Separator } from "@/components/ui/separator";
 import type { User, Company } from "@/lib/supabase/types";
 
 const CURRENCIES = [
-  { value: "XOF", label: "Franc CFA BCEAO (XOF)" },
-  { value: "XAF", label: "Franc CFA BEAC (XAF)" },
-  { value: "MAD", label: "Dirham marocain (MAD)" },
-  { value: "EUR", label: "Euro (EUR)" },
-  { value: "USD", label: "Dollar US (USD)" },
-  { value: "GHS", label: "Cedi ghanéen (GHS)" },
-  { value: "NGN", label: "Naira nigérian (NGN)" },
+  { value: "XOF", label: "XOF — Franc CFA (UEMOA)" },
+  { value: "XAF", label: "XAF — Franc CFA (CEMAC)" },
+  { value: "MAD", label: "MAD — Dirham marocain" },
+  { value: "EUR", label: "EUR — Euro" },
+  { value: "USD", label: "USD — Dollar américain" },
+  { value: "GHS", label: "GHS — Cedi ghanéen" },
+  { value: "NGN", label: "NGN — Naira nigérian" },
 ];
 
 const SPECIALTIES = [
@@ -55,7 +55,7 @@ export function ProfileForm({ profile }: { profile: Pick<User, "full_name" | "ph
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="phone">Téléphone</Label>
-              <Input id="phone" name="phone" defaultValue={profile.phone ?? ""} placeholder="+225 07 00 00 00" />
+              <Input id="phone" name="phone" defaultValue={profile.phone ?? ""} placeholder="+225 07 00 00 00 00" />
             </div>
           </div>
 
@@ -153,20 +153,20 @@ export function CompanyForm({ company }: { company: Pick<Company, "id" | "name" 
             <Input id="company_name" name="name" defaultValue={company.name} required />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="company_address">Adresse</Label>
-            <Input id="company_address" name="address" defaultValue={company.address ?? ""} placeholder="Abidjan, Cocody Riviera 3..." />
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="company_phone">Téléphone</Label>
-              <Input id="company_phone" name="phone" defaultValue={company.phone ?? ""} placeholder="+225 27 00 00 00" />
+              <Input id="company_phone" name="phone" defaultValue={company.phone ?? ""} placeholder="+225 07 00 00 00 00" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="company_email">Email</Label>
+              <Label htmlFor="company_email">Email professionnel</Label>
               <Input id="company_email" name="email" type="email" defaultValue={company.email ?? ""} placeholder="contact@monentreprise.ci" />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="company_address">Adresse</Label>
+            <Input id="company_address" name="address" defaultValue={company.address ?? ""} placeholder="Abidjan, Cocody Riviera 3..." />
           </div>
 
           <div className="space-y-1.5">

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { QuoteStatusBadge } from "@/components/quotes/quote-status-badge";
 import type { Quote } from "@/lib/supabase/types";
@@ -16,11 +15,10 @@ export default async function ClientQuotesPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id, role").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id, role").eq("id", user.id).single();
   if (profile?.role !== "client") redirect("/dashboard");
 
-  const { data } = await admin
+  const { data } = await supabase
     .from("quotes")
     .select("id, quote_number, project_type, total, status, valid_until, created_at")
     .eq("client_id", user.id)

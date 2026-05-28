@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { ProfileForm, CompanyForm } from "@/components/settings/settings-form";
 import { CompanyAssetsForm } from "@/components/settings/company-assets-form";
 import type { User, Company } from "@/lib/supabase/types";
@@ -10,9 +9,7 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-
-  const { data: profileData } = await admin
+  const { data: profileData } = await supabase
     .from("users")
     .select("full_name, phone, specialty, daily_rate, company_id")
     .eq("id", user.id)
@@ -21,7 +18,7 @@ export default async function SettingsPage() {
   const profile = profileData as Pick<User, "full_name" | "phone" | "specialty" | "daily_rate"> & { company_id: string };
   if (!profile?.company_id) redirect("/onboarding");
 
-  const { data: companyData } = await admin
+  const { data: companyData } = await supabase
     .from("companies")
     .select("id, name, address, phone, email, currency, plan, subscription_status, header_url, footer_url")
     .eq("id", profile.company_id)

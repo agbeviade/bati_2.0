@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { NewMaterialForm } from "@/components/materials/new-material-form";
 import type { CategoryRow } from "@/components/materials/category-manager";
 
@@ -9,11 +8,10 @@ export default async function NewMaterialPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
 
-  const { data } = await admin
+  const { data } = await supabase
     .from("material_categories")
     .select("id, slug, label")
     .eq("company_id", profile.company_id)

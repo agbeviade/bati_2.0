@@ -46,6 +46,7 @@ export function ProjectsList({ projects, currency }: { projects: ProjectRow[]; c
   return (
     <SearchFilter
       items={projects}
+      pageSize={20}
       searchKeys={["name", "address"]}
       filterKey="status"
       filterOptions={STATUS_OPTIONS}

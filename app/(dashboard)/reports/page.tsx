@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { Attendance, User, ProjectExpense } from "@/lib/supabase/types";
@@ -21,19 +20,18 @@ export default async function ReportsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
 
   const companyId = profile.company_id;
-  const { data: company } = await admin.from("companies").select("currency").eq("id", companyId).single();
+  const { data: company } = await supabase.from("companies").select("currency").eq("id", companyId).single();
   const currency = (company as { currency?: string } | null)?.currency ?? "XOF";
 
   const thisYear = new Date().getFullYear();
   const janFirst = new Date(thisYear, 0, 1).toISOString();
 
   // Facturation mensuelle (année en cours)
-  const { data: invoicesData } = await admin
+  const { data: invoicesData } = await supabase
     .from("invoices")
     .select("amount, status, created_at")
     .eq("company_id", companyId)
@@ -49,12 +47,12 @@ export default async function ReportsPage() {
   const maxRevenue = Math.max(...monthlyRevenue, 1);
 
   // Dépenses par chantier (top 8)
-  const { data: expensesData } = await admin
+  const { data: expensesData } = await supabase
     .from("project_expenses")
     .select("project_id, amount")
     .gte("created_at", janFirst);
 
-  const { data: projectsData } = await admin
+  const { data: projectsData } = await supabase
     .from("projects")
     .select("id, name")
     .eq("company_id", companyId);
@@ -75,7 +73,7 @@ export default async function ReportsPage() {
 
   // Heures travaillées par membre (mois en cours)
   const monthStart = new Date(thisYear, new Date().getMonth(), 1).toISOString();
-  const { data: attendanceData } = await admin
+  const { data: attendanceData } = await supabase
     .from("attendance")
     .select("user_id, hours_worked")
     .not("hours_worked", "is", null)
@@ -89,7 +87,7 @@ export default async function ReportsPage() {
   const userIds = Object.keys(hoursByUser);
   const userNames: Record<string, string | null> = {};
   if (userIds.length > 0) {
-    const { data: usersData } = await admin.from("users").select("id, full_name").in("id", userIds);
+    const { data: usersData } = await supabase.from("users").select("id, full_name").in("id", userIds);
     for (const u of (usersData ?? []) as Pick<User, "id" | "full_name">[]) {
       userNames[u.id] = u.full_name;
     }
@@ -100,12 +98,12 @@ export default async function ReportsPage() {
   const maxHours = Math.max(...topWorkers.map(([, v]) => v), 1);
 
   // KPIs globaux
-  const { data: allInvoices } = await admin.from("invoices").select("amount, status").eq("company_id", companyId);
+  const { data: allInvoices } = await supabase.from("invoices").select("amount, status").eq("company_id", companyId);
   const totalInvoiced = (allInvoices ?? []).reduce((s, i) => s + (i as { amount: number }).amount, 0);
   const totalCollected = (allInvoices ?? []).filter(i => (i as { status: string }).status === "paid").reduce((s, i) => s + (i as { amount: number }).amount, 0);
   const collectionRate = totalInvoiced > 0 ? Math.round((totalCollected / totalInvoiced) * 100) : 0;
 
-  const { data: allAttendance } = await admin.from("attendance").select("hours_worked").not("hours_worked", "is", null).gte("check_in", janFirst);
+  const { data: allAttendance } = await supabase.from("attendance").select("hours_worked").not("hours_worked", "is", null).gte("check_in", janFirst);
   const totalHours = (allAttendance ?? []).reduce((s, a) => s + ((a as { hours_worked: number }).hours_worked ?? 0), 0);
 
   return (

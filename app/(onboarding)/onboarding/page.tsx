@@ -19,8 +19,11 @@ import {
 const CURRENCIES = [
   { value: "XOF", label: "XOF — Franc CFA (UEMOA)" },
   { value: "XAF", label: "XAF — Franc CFA (CEMAC)" },
+  { value: "MAD", label: "MAD — Dirham marocain" },
   { value: "EUR", label: "EUR — Euro" },
   { value: "USD", label: "USD — Dollar américain" },
+  { value: "GHS", label: "GHS — Cedi ghanéen" },
+  { value: "NGN", label: "NGN — Naira nigérian" },
 ];
 
 export default function OnboardingPage() {

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Receipt, Package, Clock, FileText, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Invoice, Material, Attendance, User, Quote } from "@/lib/supabase/types";
@@ -32,13 +31,12 @@ export default async function NotificationsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
 
   const companyId = profile.company_id;
 
-  const { data: companyData } = await admin.from("companies").select("currency").eq("id", companyId).single();
+  const { data: companyData } = await supabase.from("companies").select("currency").eq("id", companyId).single();
   const currency = (companyData as { currency?: string } | null)?.currency ?? "XOF";
 
   const today = new Date().toISOString().split("T")[0];
@@ -50,28 +48,28 @@ export default async function NotificationsPage() {
     { data: lowStockData },
     { data: openAttendanceData },
   ] = await Promise.all([
-    admin.from("invoices")
+    supabase.from("invoices")
       .select("id, invoice_number, client_name, amount, due_date, status")
       .eq("company_id", companyId)
       .in("status", ["sent", "overdue"])
       .lt("due_date", today)
       .order("due_date"),
-    admin.from("quotes")
+    supabase.from("quotes")
       .select("id, quote_number, client_name, valid_until")
       .eq("company_id", companyId)
       .eq("status", "sent")
       .lt("valid_until", today)
       .order("valid_until"),
-    admin.from("materials")
+    supabase.from("materials")
       .select("id, name, stock_qty, min_stock_qty, unit")
       .eq("company_id", companyId)
       .gt("min_stock_qty", 0),
-    admin.from("attendance")
+    supabase.from("attendance")
       .select("id, user_id, check_in")
       .lt("check_in", twelveHoursAgo)
       .is("check_out", null)
       .in("user_id", (
-        await admin.from("users").select("id").eq("company_id", companyId)
+        await supabase.from("users").select("id").eq("company_id", companyId)
       ).data?.map(u => u.id) ?? []),
   ]);
 
@@ -85,7 +83,7 @@ export default async function NotificationsPage() {
   const attendanceUserNames: Record<string, string | null> = {};
   if (openAttendances.length > 0) {
     const uids = [...new Set(openAttendances.map(a => a.user_id))];
-    const { data: usersData } = await admin.from("users").select("id, full_name").in("id", uids);
+    const { data: usersData } = await supabase.from("users").select("id, full_name").in("id", uids);
     for (const u of (usersData ?? []) as Pick<User, "id" | "full_name">[]) {
       attendanceUserNames[u.id] = u.full_name;
     }

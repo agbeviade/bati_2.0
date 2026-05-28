@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { LogOut, Construction } from "lucide-react";
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -9,15 +8,14 @@ export default async function ClientLayout({ children }: { children: React.React
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/portal/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin
+  const { data: profile } = await supabase
     .from("users").select("full_name, role, company_id").eq("id", user.id).maybeSingle();
 
   // Only clients can access this portal
   if (!profile || profile.role !== "client") redirect("/dashboard");
 
   const { data: company } = profile.company_id
-    ? await admin.from("companies").select("name").eq("id", profile.company_id).maybeSingle()
+    ? await supabase.from("companies").select("name").eq("id", profile.company_id).maybeSingle()
     : { data: null };
 
   return (

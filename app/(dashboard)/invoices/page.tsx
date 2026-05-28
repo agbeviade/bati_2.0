@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InvoicesList } from "@/components/invoices/invoices-list";
@@ -21,14 +20,13 @@ export default async function InvoicesPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
 
-  const { data: company } = await admin.from("companies").select("currency").eq("id", profile.company_id).single();
+  const { data: company } = await supabase.from("companies").select("currency").eq("id", profile.company_id).single();
   const currency = (company as { currency?: string } | null)?.currency ?? "XOF";
 
-  const { data: invoicesData } = await admin
+  const { data: invoicesData } = await supabase
     .from("invoices")
     .select("id, invoice_number, client_name, amount, status, due_date, paid_at, created_at")
     .eq("company_id", profile.company_id)

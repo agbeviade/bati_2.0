@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowLeft, MapPin, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+// admin client conservé uniquement pour les signedUrl des photos (storage)
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/projects/status-badge";
 import { ProjectTabs } from "@/components/projects/project-tabs";
@@ -30,13 +32,11 @@ export default async function ProjectDetailPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-
-  const { data: projectData } = await admin.from("projects").select("*").eq("id", id).maybeSingle();
+  const { data: projectData } = await supabase.from("projects").select("*").eq("id", id).maybeSingle();
   if (!projectData) notFound();
   const project = projectData as Project;
 
-  const { data: companyData } = await admin
+  const { data: companyData } = await supabase
     .from("companies").select("currency").eq("id", project.company_id).maybeSingle();
   const currency = (companyData as { currency?: string } | null)?.currency ?? "XOF";
 
@@ -50,19 +50,19 @@ export default async function ProjectDetailPage({
   let allMaterials: Pick<Material, "id" | "name" | "unit" | "stock_qty" | "unit_cost">[] = [];
 
   if (tab === "overview") {
-    const { data } = await admin.from("tasks").select("*").eq("project_id", id).order("created_at", { ascending: false });
+    const { data } = await supabase.from("tasks").select("*").eq("project_id", id).order("created_at", { ascending: false });
     tasks = (data ?? []) as Task[];
   }
 
   if (tab === "materials") {
     const [{ data: movData }, { data: matData }] = await Promise.all([
-      admin
+      supabase
         .from("stock_movements")
         .select("id, material_id, type, quantity, unit_cost, notes, created_at, materials(name, unit)")
         .eq("project_id", id)
         .in("type", ["purchase", "use", "return"])
         .order("created_at", { ascending: false }),
-      admin
+      supabase
         .from("materials")
         .select("id, name, unit, stock_qty, unit_cost")
         .eq("company_id", project.company_id)
@@ -89,15 +89,15 @@ export default async function ProjectDetailPage({
   }
 
   if (tab === "expenses") {
-    const { data } = await admin.from("project_expenses").select("*").eq("project_id", id).order("spent_at", { ascending: false });
+    const { data } = await supabase.from("project_expenses").select("*").eq("project_id", id).order("spent_at", { ascending: false });
     expenses = (data ?? []) as ProjectExpense[];
   }
 
   if (tab === "photos") {
-    const { data } = await admin.from("project_photos").select("*").eq("project_id", id).order("taken_at", { ascending: false });
+    const { data } = await supabase.from("project_photos").select("*").eq("project_id", id).order("taken_at", { ascending: false });
     const rawPhotos = (data ?? []) as { id: string; storage_path: string; caption: string | null; taken_at: string }[];
 
-    // Génère les signed URLs
+    const admin = createAdminClient();
     photos = await Promise.all(
       rawPhotos.map(async (p) => {
         const { data: urlData } = await admin.storage
@@ -109,7 +109,7 @@ export default async function ProjectDetailPage({
   }
 
   if (tab === "team") {
-    const { data: assignData } = await admin
+    const { data: assignData } = await supabase
       .from("project_assignments")
       .select("id, user_id, role_on_project, start_date")
       .eq("project_id", id);
@@ -117,7 +117,7 @@ export default async function ProjectDetailPage({
     const assignedIds = (assignData ?? []).map(a => a.user_id);
 
     if (assignedIds.length > 0) {
-      const { data: usersData } = await admin
+      const { data: usersData } = await supabase
         .from("users")
         .select("id, full_name, role, avatar_url")
         .in("id", assignedIds);
@@ -132,7 +132,7 @@ export default async function ProjectDetailPage({
       }));
     }
 
-    const { data: companyUsers } = await admin
+    const { data: companyUsers } = await supabase
       .from("users")
       .select("id, full_name, role")
       .eq("company_id", project.company_id)

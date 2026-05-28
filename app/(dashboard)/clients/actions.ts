@@ -2,21 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-async function getProfile() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { data: profile } = await supabase
-    .from("users").select("company_id, role").eq("id", user.id).single();
-  if (!profile?.company_id) redirect("/onboarding");
-  return { user, companyId: profile.company_id as string, role: profile.role as string, supabase };
-}
+import { getAuthedProfile } from "@/lib/auth/profile";
 
 export async function createClient_(formData: FormData) {
-  const { supabase } = await getProfile();
+  const { supabase } = await getAuthedProfile();
   // Role check is enforced inside the RPC (throws if insufficient role)
 
   const email = (formData.get("email") as string)?.trim();
@@ -39,7 +29,7 @@ export async function createClient_(formData: FormData) {
 }
 
 export async function updateClient(id: string, formData: FormData) {
-  const { companyId } = await getProfile();
+  const { companyId } = await getAuthedProfile();
   const admin = createAdminClient();
 
   // admin needed to update another user's row; scoped to company
@@ -54,7 +44,7 @@ export async function updateClient(id: string, formData: FormData) {
 }
 
 export async function toggleClientActive(id: string, is_active: boolean) {
-  const { companyId } = await getProfile();
+  const { companyId } = await getAuthedProfile();
   // admin needed to update another user's row; scoped to company
   await createAdminClient().from("users").update({ is_active }).eq("id", id).eq("company_id", companyId);
   revalidatePath("/clients");

@@ -45,6 +45,7 @@ export function QuotesList({ quotes, currency }: { quotes: QuoteRow[]; currency:
   return (
     <SearchFilter
       items={quotes}
+      pageSize={20}
       searchKeys={["quote_number", "client_name", "project_type"]}
       filterKey="status"
       filterOptions={STATUS_OPTIONS}

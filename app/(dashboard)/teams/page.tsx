@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { TeamsList } from "@/components/teams/teams-list";
 import type { Team, User } from "@/lib/supabase/types";
@@ -12,11 +11,10 @@ export default async function TeamsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
 
-  const { data: teamsData } = await admin
+  const { data: teamsData } = await supabase
     .from("teams")
     .select("id, name, lead_id, created_at")
     .eq("company_id", profile.company_id)
@@ -29,7 +27,7 @@ export default async function TeamsPage() {
   const leadNames: Record<string, string | null> = {};
 
   if (teamIds.length > 0) {
-    const { data: members } = await admin
+    const { data: members } = await supabase
       .from("team_members")
       .select("team_id")
       .in("team_id", teamIds);
@@ -40,7 +38,7 @@ export default async function TeamsPage() {
 
     const leadIds = teams.map(t => t.lead_id).filter(Boolean) as string[];
     if (leadIds.length > 0) {
-      const { data: leads } = await admin
+      const { data: leads } = await supabase
         .from("users")
         .select("id, full_name")
         .in("id", leadIds);

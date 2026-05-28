@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { ClientsList } from "@/components/clients/clients-list";
 
@@ -11,11 +10,10 @@ export default async function ClientsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
 
-  const { data: clients } = await admin
+  const { data: clients } = await supabase
     .from("users")
     .select("id, full_name, email, phone, is_active, created_at")
     .eq("company_id", profile.company_id)

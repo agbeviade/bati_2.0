@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logger } from "@/lib/logger";
 
 export async function createCompany(formData: FormData) {
   // Vérification auth via le client utilisateur
@@ -41,7 +42,7 @@ export async function createCompany(formData: FormData) {
     .single();
 
   if (companyError || !company) {
-    console.error("[onboarding] company insert error:", companyError);
+    logger.error("onboarding company insert failed", companyError, { userId: user.id });
     return { error: `Impossible de créer l'entreprise. (${companyError?.message ?? "erreur inconnue"})` };
   }
 
@@ -51,7 +52,7 @@ export async function createCompany(formData: FormData) {
     .eq("id", user.id);
 
   if (userError) {
-    console.error("[onboarding] user update error:", userError);
+    logger.error("onboarding user update failed", userError, { userId: user.id, companyId: company.id });
     return { error: `Impossible de mettre à jour votre profil. (${userError.message})` };
   }
 

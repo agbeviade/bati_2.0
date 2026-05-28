@@ -1,22 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-async function getProfile() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { data: profile } = await supabase
-    .from("users").select("company_id").eq("id", user.id).single();
-  if (!profile?.company_id) redirect("/onboarding");
-  return { user, companyId: profile.company_id as string, supabase };
-}
+import { getAuthedProfile } from "@/lib/auth/profile";
 
 export async function updateProfile(formData: FormData) {
-  const { user, supabase } = await getProfile();
+  const { user, supabase } = await getAuthedProfile();
 
   const { error } = await supabase.from("users").update({
     full_name: (formData.get("full_name") as string)?.trim() || null,
@@ -44,7 +34,7 @@ export async function updatePassword(formData: FormData) {
 
 export async function updateCompany(formData: FormData) {
   // companyId derived server-side — never trusted from client
-  const { companyId, supabase } = await getProfile();
+  const { companyId, supabase } = await getAuthedProfile();
 
   const name = (formData.get("name") as string)?.trim();
   if (!name) return { error: "Le nom est requis." };
@@ -67,7 +57,7 @@ export async function uploadCompanyAsset(
   type: "header" | "footer"
 ): Promise<{ url: string | null; error?: string }> {
   // companyId derived server-side — never trusted from client
-  const { companyId } = await getProfile();
+  const { companyId } = await getAuthedProfile();
 
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return { url: null, error: "Aucun fichier." };
@@ -81,7 +71,8 @@ export async function uploadCompanyAsset(
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
   const path = `${companyId}/${type}.${ext}`;
 
-  const admin = createAdminClient();
+  const supabase = await createClient();
+  const admin = createAdminClient(); // storage upload requires admin (bucket policies)
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
@@ -94,7 +85,7 @@ export async function uploadCompanyAsset(
   const { data: { publicUrl } } = admin.storage.from("company-assets").getPublicUrl(path);
 
   const updateData = type === "header" ? { header_url: publicUrl } : { footer_url: publicUrl };
-  const { error: dbError } = await admin.from("companies")
+  const { error: dbError } = await supabase.from("companies")
     .update(updateData)
     .eq("id", companyId);
 
@@ -107,15 +98,15 @@ export async function uploadCompanyAsset(
 export async function removeCompanyAsset(
   type: "header" | "footer"
 ): Promise<{ error?: string }> {
-  const { companyId } = await getProfile();
-  const admin = createAdminClient();
+  const { companyId, supabase } = await getAuthedProfile();
+  const admin = createAdminClient(); // storage remove requires admin
 
   for (const ext of ["png", "jpg", "jpeg", "webp", "svg"]) {
     await admin.storage.from("company-assets").remove([`${companyId}/${type}.${ext}`]);
   }
 
   const clearData = type === "header" ? { header_url: null } : { footer_url: null };
-  const { error } = await admin.from("companies").update(clearData).eq("id", companyId);
+  const { error } = await supabase.from("companies").update(clearData).eq("id", companyId);
 
   if (error) return { error: error.message };
   revalidatePath("/settings");

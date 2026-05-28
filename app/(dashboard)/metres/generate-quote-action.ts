@@ -1,6 +1,5 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { genererDevisDepuisMetres } from "./ai-actions";
@@ -15,12 +14,11 @@ export async function generateQuoteFromMetres(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
 
   // Charger les ouvrages sélectionnés
-  const { data: ouvrages } = await admin
+  const { data: ouvrages } = await supabase
     .from("project_ouvrages")
     .select("*")
     .in("id", ouvrageIds)
@@ -33,7 +31,7 @@ export async function generateQuoteFromMetres(
   // Charger le nom du projet
   let projectName = "Projet BatiFlow";
   if (projectId) {
-    const { data: proj } = await admin.from("projects").select("name").eq("id", projectId).single();
+    const { data: proj } = await supabase.from("projects").select("name").eq("id", projectId).single();
     if (proj?.name) projectName = proj.name;
   }
 
@@ -64,16 +62,16 @@ export async function generateQuoteFromMetres(
   const tax_amount = subtotal * (tax_rate / 100);
   const total = subtotal + tax_amount;
 
-  // Numéro de devis
-  const { count } = await admin
-    .from("quotes")
-    .select("id", { count: "exact", head: true })
-    .eq("company_id", profile.company_id);
-  const year = new Date().getFullYear();
-  const quote_number = `DEVIS-${year}-${String((count ?? 0) + 1).padStart(3, "0")}`;
+  // Numéro de devis — RPC atomique
+  const { data: quote_number, error: numErr } = await supabase.rpc("next_document_number", {
+    p_kind: "quote",
+  });
+  if (numErr || !quote_number) {
+    return { error: "Impossible de générer le numéro de devis." };
+  }
 
   // Créer le devis
-  const { data: quote, error: quoteError } = await admin
+  const { data: quote, error: quoteError } = await supabase
     .from("quotes")
     .insert({
       company_id: profile.company_id,
@@ -97,7 +95,7 @@ export async function generateQuoteFromMetres(
   }
 
   // Insérer les lignes
-  await admin.from("quote_items").insert(
+  await supabase.from("quote_items").insert(
     aiResult.items.map((item, i) => ({
       quote_id: quote.id,
       category: item.category,

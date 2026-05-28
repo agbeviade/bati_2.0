@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { MaterialsList } from "@/components/materials/materials-list";
 import { CategoryManager } from "@/components/materials/category-manager";
@@ -14,17 +13,16 @@ export default async function MaterialsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
 
   const [{ data: materialsData }, { data: categoriesData }] = await Promise.all([
-    admin
+    supabase
       .from("materials")
       .select("id, name, category, unit, stock_qty, unit_cost")
       .eq("company_id", profile.company_id)
       .order("name"),
-    admin
+    supabase
       .from("material_categories")
       .select("id, slug, label")
       .eq("company_id", profile.company_id)

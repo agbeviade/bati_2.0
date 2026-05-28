@@ -40,6 +40,7 @@ export function ClientsList({ clients }: { clients: ClientRow[] }) {
   return (
     <SearchFilter
       items={clients}
+      pageSize={20}
       searchKeys={["full_name", "email", "phone"]}
       filterKey="is_active"
       filterOptions={STATUS_OPTIONS}

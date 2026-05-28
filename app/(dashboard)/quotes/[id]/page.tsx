@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, FileText, User, Calendar, Printer } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -29,20 +28,18 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-
-  const { data: quoteData } = await admin.from("quotes").select("*").eq("id", id).maybeSingle();
+  const { data: quoteData } = await supabase.from("quotes").select("*").eq("id", id).maybeSingle();
   if (!quoteData) notFound();
   const quote = quoteData as Quote;
 
-  const { data: itemsData } = await admin
+  const { data: itemsData } = await supabase
     .from("quote_items")
     .select("*")
     .eq("quote_id", id)
     .order("sort_order");
   const items = (itemsData ?? []) as QuoteItem[];
 
-  const { data: companyData } = await admin
+  const { data: companyData } = await supabase
     .from("companies")
     .select("name, currency, address, phone, email")
     .eq("id", quote.company_id)

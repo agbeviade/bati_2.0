@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, FileText, Receipt, Mail, Phone } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,11 +22,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("users").select("company_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("company_id").eq("id", user.id).single();
   if (!profile?.company_id) redirect("/onboarding");
 
-  const { data: client } = await admin
+  const { data: client } = await supabase
     .from("users")
     .select("id, full_name, email, phone, is_active, created_at")
     .eq("id", id)
@@ -38,8 +36,8 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   // Devis et factures liés à ce client
   const [{ data: quotesData }, { data: invoicesData }] = await Promise.all([
-    admin.from("quotes").select("id, quote_number, client_name, total, status, created_at").eq("company_id", profile.company_id).eq("client_id", id).order("created_at", { ascending: false }),
-    admin.from("invoices").select("id, invoice_number, client_name, amount, status, due_date").eq("company_id", profile.company_id).eq("client_id", id).order("created_at", { ascending: false }),
+    supabase.from("quotes").select("id, quote_number, client_name, total, status, created_at").eq("company_id", profile.company_id).eq("client_id", id).order("created_at", { ascending: false }),
+    supabase.from("invoices").select("id, invoice_number, client_name, amount, status, due_date").eq("company_id", profile.company_id).eq("client_id", id).order("created_at", { ascending: false }),
   ]);
   const quotes = (quotesData ?? []) as Quote[];
   const invoices = (invoicesData ?? []) as Invoice[];
