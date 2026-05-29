@@ -111,10 +111,14 @@ GoRouter buildRouter() {
         // Non connecté → /login
         if (!isAuth && !isAuthRoute && !isWelcome) return '/login';
 
-        // À partir d'ici, l'utilisateur est connecté.
-        // `session` est forcément non-null ici (sinon redirect vers /login plus haut),
-        // mais la flow analysis Dart ne le voit pas → forcer avec `!`.
-        final uid = session!.user.id;
+        // À partir d'ici, on peut être SOIT auth, SOIT sur /onboarding ou /login
+        // (les seuls cas non-auth restants après les checks précédents). Si pas
+        // de session, on n'a pas besoin de charger le profil — on est déjà sur
+        // une page autorisée pour les anonymes. Cette garde évite un crash
+        // `Null check operator used on a null value` sur session!.user.id.
+        if (session == null) return null;
+
+        final uid = session.user.id;
         final (role, companyId) = await _loadProfile(uid);
 
         // Client → portail (priorité sur le check company_id, les clients
