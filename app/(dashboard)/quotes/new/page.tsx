@@ -97,9 +97,20 @@ export default function NewQuotePage() {
         .select("id, name")
         .order("created_at", { ascending: false }),
       supabase.from("quote_templates").select("id, name, category").order("category").order("name"),
-    ]).then(([{ data: dm }, { data: qt }]) => {
+      // default_tax_rate vit sur companies — lecture via la jointure depuis users (RLS).
+      supabase.auth.getUser().then(async ({ data: { user } }) => {
+        if (!user) return null;
+        const { data } = await supabase
+          .from("users")
+          .select("companies(default_tax_rate)")
+          .eq("id", user.id)
+          .maybeSingle();
+        return (data?.companies as { default_tax_rate?: number } | null)?.default_tax_rate ?? null;
+      }),
+    ]).then(([{ data: dm }, { data: qt }, rate]) => {
       setDebourseModels(dm ?? []);
       setQuoteTemplates(qt ?? []);
+      if (typeof rate === "number") setTaxRate(String(rate));
     });
   }, []);
 

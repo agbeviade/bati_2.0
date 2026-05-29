@@ -38,7 +38,19 @@ async function fromDescription(description: string): Promise<Anthropic.Message> 
     messages: [
       {
         role: "user",
-        content: `Génère un devis BTP COMPLET pour ce projet :\n\nDescription : ${description}`,
+        content: `# DEVIS À GÉNÉRER
+
+## A. MODÈLE DE DEVIS
+(aucun modèle fourni — construis une structure standard BTP CI)
+
+## B. MODÈLE DE MÉTRÉ
+(aucun métré fourni — déduis les quantités de l'instruction)
+
+## C. INSTRUCTION DU PROJET
+${description}
+
+## TÂCHE
+Applique la hiérarchie du système. Sois exhaustif (gros œuvre, second œuvre, finitions, MO, transport).`,
       },
     ],
   });
@@ -69,18 +81,22 @@ async function fromDebourseModel(modelId: string, description: string): Promise<
     messages: [
       {
         role: "user",
-        content: `Génère un devis BTP COMPLET pour ce projet.
+        content: `# DEVIS À GÉNÉRER
 
-Description : ${description || "Construction BTP en Côte d'Ivoire"}
+## A. MODÈLE DE DEVIS
+(aucun modèle fourni — construis une structure standard BTP CI couvrant tous les lots utiles)
 
-Quantités de matériaux calculées par le calculateur de débours secs :
+## B. MODÈLE DE MÉTRÉ (quantités exactes — à utiliser telles quelles)
 ${lignesText}
 
-INSTRUCTIONS SPÉCIFIQUES :
-1. Reprends TOUTES les lignes matériaux avec leurs quantités EXACTES (ne les modifie pas).
-2. Attribue un prix unitaire réaliste (marché ivoirien 2024).
-3. Ajoute la main d'œuvre adaptée (maçon, ferrailleur, manœuvre, coffreur).
-4. Ajoute le transport si nécessaire.`,
+## C. INSTRUCTION DU PROJET
+${description || "Construction BTP en Côte d'Ivoire"}
+
+## TÂCHE
+Applique la hiérarchie du système.
+- Reprends EXACTEMENT chaque ligne du métré (B) avec sa quantité.
+- Ajoute la main d'œuvre adaptée (maçon, ferrailleur, manœuvre, coffreur) et le transport.
+- Complète avec les postes manquants pour un devis exhaustif.`,
       },
     ],
   });
@@ -130,19 +146,23 @@ async function fromTemplate(
 
   const debourseSection =
     debourseContext && debourseContext.length > 0
-      ? `\nQuantités exactes calculées (à utiliser telles quelles) :\n${debourseContext.map((l) => `- ${l.label} : ${l.quantity} ${l.unit}`).join("\n")}\n`
-      : "";
+      ? debourseContext.map((l) => `- ${l.label} : ${l.quantity} ${l.unit}`).join("\n")
+      : "(aucun métré fourni — utilise les quantités du modèle ou déduis-les de l'instruction)";
 
   const imageMediaType = mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+  // cache_control sur le document : un même template régénéré dans
+  // les 5 min ne re-paye pas l'input du PDF (~70% d'économie sur ce bloc).
   const contentBlock =
     fileType === "pdf"
       ? {
           type: "document" as const,
           source: { type: "base64" as const, media_type: "application/pdf" as const, data: base64 },
+          cache_control: { type: "ephemeral" as const },
         }
       : {
           type: "image" as const,
           source: { type: "base64" as const, media_type: imageMediaType, data: base64 },
+          cache_control: { type: "ephemeral" as const },
         };
 
   const ai = getAI();
@@ -156,16 +176,24 @@ async function fromTemplate(
           contentBlock,
           {
             type: "text",
-            text: `Analyse ce modèle de devis BTP et génère un devis COMPLET pour :
+            text: `# DEVIS À GÉNÉRER
 
-Description du projet : ${description || "Construction BTP en Côte d'Ivoire"}
+## A. MODÈLE DE DEVIS (structure de référence)
+Voir le document ci-joint. Tu DOIS reproduire sa structure (lots, sous-sections, items, codes, unités).
+
+## B. MODÈLE DE MÉTRÉ
 ${debourseSection}
-INSTRUCTIONS :
-${
-  debourseContext?.length
-    ? "1. Pour les matériaux listés ci-dessus, utilise les quantités EXACTES.\n2. Adapte les autres postes selon le modèle.\n3. Prix réalistes marché ivoirien 2024."
-    : "1. Inspire-toi de la structure du modèle.\n2. Adapte les quantités au projet.\n3. Prix réalistes marché ivoirien 2024."
-}`,
+
+## C. INSTRUCTION DU PROJET
+${description || "Construction BTP en Côte d'Ivoire"}
+
+## TÂCHE
+Applique la HIÉRARCHIE STRICTE :
+  1. Structure ← A (modèle de devis) — codes et titres conservés tels quels
+  2. Quantités ← B si fournie pour le poste, sinon A, sinon déduction de C
+  3. Prix unitaires ← toi (marché ivoirien 2024)
+
+Signale dans \`notes\` : hypothèses, postes écartés, contradictions A vs B résolues.`,
           },
         ],
       },
