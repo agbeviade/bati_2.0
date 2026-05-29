@@ -22,9 +22,12 @@ const CACHED_SYSTEM: Anthropic.MessageCreateParams["system"] = [
   { type: "text", text: QUOTE_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
 ];
 
+// max_tokens = 16384 : un devis BTP exhaustif (13 lots × ~10 items) génère
+// facilement 10k+ tokens JSON. À 8192 on tronquait au milieu d'un array et
+// le SDK plantait sur le JSON.parse interne (erreur "Expected ',' or ']'").
 const COMMON_PARAMS = {
   model: AI_MODEL,
-  max_tokens: 8192,
+  max_tokens: 16384,
   tools: [GENERATE_QUOTE_TOOL],
   tool_choice: { type: "tool" as const, name: "generate_quote" },
 };
@@ -264,6 +267,18 @@ export async function POST(request: NextRequest) {
   }
 
   await recordAiUsage({ companyId, userId: user.id, kind, model: AI_MODEL, startedAt, response });
+
+  // Si le modèle a atteint max_tokens, le JSON du tool_use est tronqué et le
+  // SDK plante au parse. On renvoie une erreur claire avant de tenter l'extract.
+  if (response.stop_reason === "max_tokens") {
+    return NextResponse.json(
+      {
+        error:
+          "Le devis généré dépasse la limite de tokens. Simplifiez l'instruction ou utilisez un modèle plus court.",
+      },
+      { status: 502 },
+    );
+  }
 
   try {
     const result = extractToolResult(response);
