@@ -256,16 +256,17 @@ export async function genererDevisDepuisMetres(
       })),
     );
 
-    const response = await ai.messages.create({
-      model: AI_MODEL,
-      max_tokens: 32768,
-      system: `Tu es un expert en devis BTP Côte d'Ivoire. Tu connais le Bordereau des Prix BTP CI 2024.
+    const response = await ai.messages
+      .stream({
+        model: AI_MODEL,
+        max_tokens: 32768,
+        system: `Tu es un expert en devis BTP Côte d'Ivoire. Tu connais le Bordereau des Prix BTP CI 2024.
 Tu génères des devis précis avec les prix du marché ivoirien (en FCFA).
 Tu réponds UNIQUEMENT en JSON valide, sans troncature ni résumé.`,
-      messages: [
-        {
-          role: "user",
-          content: `Génère un devis COMPLET et EXHAUSTIF pour le projet "${nomProjet}" basé sur ces métrés :
+        messages: [
+          {
+            role: "user",
+            content: `Génère un devis COMPLET et EXHAUSTIF pour le projet "${nomProjet}" basé sur ces métrés :
 
 ${ouvragesJson}
 
@@ -291,9 +292,10 @@ Réponds avec ce JSON (tableau items aussi long que nécessaire) :
 }
 
 Catégories valides : "material", "labor", "transport", "equipment", "other"`,
-        },
-      ],
-    });
+          },
+        ],
+      })
+      .finalMessage();
 
     if (response.stop_reason === "max_tokens") {
       return {
@@ -390,17 +392,19 @@ Réponds UNIQUEMENT avec ce JSON :
             source: { type: "base64" as const, media_type: imageMediaType, data: fileBase64 },
           };
 
-    const response = await ai.messages.create({
-      model: AI_MODEL,
-      max_tokens: 32768,
-      system: systemPrompt,
-      messages: [
-        {
-          role: "user",
-          content: [contentBlock, { type: "text", text: userText }],
-        },
-      ],
-    });
+    const response = await ai.messages
+      .stream({
+        model: AI_MODEL,
+        max_tokens: 32768,
+        system: systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: [contentBlock, { type: "text", text: userText }],
+          },
+        ],
+      })
+      .finalMessage();
 
     if (response.stop_reason === "max_tokens") {
       return {
@@ -444,15 +448,16 @@ export async function genererDevisDepuisDebourses(
 
     const lignesJson = lignes.map((l) => `- ${l.label} : ${l.quantity} ${l.unit}`).join("\n");
 
-    const response = await ai.messages.create({
-      model: AI_MODEL,
-      max_tokens: 32768,
-      system: `Tu es un expert en devis BTP Côte d'Ivoire (Bordereau des Prix BTP CI 2024).
+    const response = await ai.messages
+      .stream({
+        model: AI_MODEL,
+        max_tokens: 32768,
+        system: `Tu es un expert en devis BTP Côte d'Ivoire (Bordereau des Prix BTP CI 2024).
 Tu connais les prix du marché ivoirien. Tu reponds UNIQUEMENT en JSON valide.`,
-      messages: [
-        {
-          role: "user",
-          content: `Génère un devis COMPLET pour ce projet BTP.
+        messages: [
+          {
+            role: "user",
+            content: `Génère un devis COMPLET pour ce projet BTP.
 
 Description : ${description || "Construction BTP en Côte d'Ivoire"}
 
@@ -480,9 +485,10 @@ Réponds UNIQUEMENT avec ce JSON :
   ],
   "notes": "Devis basé sur calcul de débours secs. Prix selon marché ivoirien 2024."
 }`,
-        },
-      ],
-    });
+          },
+        ],
+      })
+      .finalMessage();
 
     if (response.stop_reason === "max_tokens") {
       return {
