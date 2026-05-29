@@ -260,9 +260,15 @@ export async function genererDevisDepuisMetres(
       .stream({
         model: AI_MODEL,
         max_tokens: 32768,
-        system: `Tu es un expert en devis BTP Côte d'Ivoire. Tu connais le Bordereau des Prix BTP CI 2024.
+        system: [
+          {
+            type: "text",
+            text: `Tu es un expert en devis BTP Côte d'Ivoire. Tu connais le Bordereau des Prix BTP CI 2024.
 Tu génères des devis précis avec les prix du marché ivoirien (en FCFA).
 Tu réponds UNIQUEMENT en JSON valide, sans troncature ni résumé.`,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
         messages: [
           {
             role: "user",
@@ -377,6 +383,9 @@ Réponds UNIQUEMENT avec ce JSON :
 
     const imageMediaType = mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
 
+    // cache_control sur le document PDF/image : un même template régénéré
+    // dans les 5 min ne re-paye pas l'input du fichier (~90% d'économie sur
+    // ce bloc, qui peut peser 4-8k tokens).
     const contentBlock =
       fileType === "pdf"
         ? {
@@ -386,17 +395,19 @@ Réponds UNIQUEMENT avec ce JSON :
               media_type: "application/pdf" as const,
               data: fileBase64,
             },
+            cache_control: { type: "ephemeral" as const },
           }
         : {
             type: "image" as const,
             source: { type: "base64" as const, media_type: imageMediaType, data: fileBase64 },
+            cache_control: { type: "ephemeral" as const },
           };
 
     const response = await ai.messages
       .stream({
         model: AI_MODEL,
         max_tokens: 32768,
-        system: systemPrompt,
+        system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
         messages: [
           {
             role: "user",
@@ -452,8 +463,14 @@ export async function genererDevisDepuisDebourses(
       .stream({
         model: AI_MODEL,
         max_tokens: 32768,
-        system: `Tu es un expert en devis BTP Côte d'Ivoire (Bordereau des Prix BTP CI 2024).
+        system: [
+          {
+            type: "text",
+            text: `Tu es un expert en devis BTP Côte d'Ivoire (Bordereau des Prix BTP CI 2024).
 Tu connais les prix du marché ivoirien. Tu reponds UNIQUEMENT en JSON valide.`,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
         messages: [
           {
             role: "user",
