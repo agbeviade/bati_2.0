@@ -20,27 +20,44 @@ class OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<OnboardingPage> {
   final _controller = PageController();
-  double _page = 0;
   int _currentIndex = 0;
+  bool _imagesPrecached = false;
 
   @override
   void initState() {
     super.initState();
-    // Status bar : icônes blanches pour lisibilité sur image
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
-    _controller.addListener(() {
-      final p = _controller.page ?? 0;
-      if ((p - _page).abs() > 0.001) {
-        setState(() {
-          _page = p;
-          _currentIndex = p.round();
-        });
+    // Throttle au changement d'index entier seulement. La parallax continue
+    // (basée sur _controller.page) est gérée localement par chaque slide via
+    // AnimatedBuilder, donc le parent ne se rebuild PAS à chaque frame de
+    // scroll → fini les saccades.
+    _controller.addListener(_onPageChanged);
+  }
+
+  void _onPageChanged() {
+    final p = _controller.page;
+    if (p == null) return;
+    final newIndex = p.round();
+    if (newIndex != _currentIndex) {
+      setState(() => _currentIndex = newIndex);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Précharge les 4 JPG une fois pour éviter le hitch lors du premier swipe.
+    if (!_imagesPrecached) {
+      _imagesPrecached = true;
+      for (final slide in onboardingSlides) {
+        precacheImage(AssetImage(slide.imageAsset), context);
       }
-    });
+    }
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onPageChanged);
     _controller.dispose();
     super.dispose();
   }
@@ -75,10 +92,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
             itemCount: onboardingSlides.length,
             physics: const BouncingScrollPhysics(),
             itemBuilder: (context, index) {
-              final slide = onboardingSlides[index];
-              // Distance entre la slide et la position courante (-1, 0, +1)
-              final delta = index - _page;
-              return _OnboardingSlideView(slide: slide, delta: delta);
+              return _OnboardingSlideView(
+                slide: onboardingSlides[index],
+                index: index,
+                controller: _controller,
+              );
             },
           ),
 
@@ -199,108 +217,122 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 }
 
-/// Une slide individuelle :
-/// - background = image (ou dégradé de fallback) avec parallax horizontal
-/// - dégradé sombre au-dessous pour lisibilité
-/// - badge icône au centre + card flottante en bas avec titre + description
+/// Une slide individuelle. Écoute le PageController localement via
+/// AnimatedBuilder pour calculer sa parallax et son fade — ainsi le parent
+/// n'a pas besoin de setState à chaque frame de scroll.
 class _OnboardingSlideView extends StatelessWidget {
   final OnboardingSlide slide;
-  final double delta;
+  final int index;
+  final PageController controller;
 
-  const _OnboardingSlideView({required this.slide, required this.delta});
+  const _OnboardingSlideView({
+    required this.slide,
+    required this.index,
+    required this.controller,
+  });
+
+  // Le gradient ne dépend ni de delta ni du thème → const, partagé.
+  static const _darkenGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0x26000000), Color(0x73000000), Color(0xD9000000)],
+    stops: [0.0, 0.5, 1.0],
+  );
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    // Parallax horizontal : l'image bouge à 40% du swipe (effet de profondeur)
-    final parallaxX = -delta * size.width * 0.4;
-    // Fade-in du contenu : seulement quand la slide est proche de l'écran
-    final contentOpacity = (1 - delta.abs()).clamp(0.0, 1.0);
-    final contentTranslate = delta.abs() * 30;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        // ── Background image (avec parallax) ──────────────────────────
-        Transform.translate(
-          offset: Offset(parallaxX, 0),
-          child: OverflowBox(
-            maxWidth: size.width * 1.4,
-            child: _BackgroundImage(slide: slide),
-          ),
-        ),
-
-        // ── Dégradé sombre pour lisibilité du texte ───────────────────
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withValues(alpha: 0.15),
-                Colors.black.withValues(alpha: 0.45),
-                Colors.black.withValues(alpha: 0.85),
-              ],
-              stops: const [0.0, 0.5, 1.0],
+        // ── Background avec parallax — rebuild local sur scroll ───────
+        RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: controller,
+            builder: (context, child) {
+              final page = controller.hasClients ? (controller.page ?? index.toDouble()) : index.toDouble();
+              final delta = index - page;
+              return Transform.translate(
+                offset: Offset(-delta * size.width * 0.4, 0),
+                child: child,
+              );
+            },
+            child: OverflowBox(
+              maxWidth: size.width * 1.4,
+              child: _BackgroundImage(slide: slide),
             ),
           ),
         ),
 
-        // ── Contenu : badge icône (centre) + card flottante (bas) ─────
+        // ── Dégradé sombre — const, jamais re-build ──────────────────
+        const DecoratedBox(
+          decoration: BoxDecoration(gradient: _darkenGradient),
+          child: SizedBox.expand(),
+        ),
+
+        // ── Contenu : badge icône + titre + description ──────────────
+        // AnimatedBuilder local : seul ce sous-arbre se rebuild quand le
+        // scroll change la valeur de page. Le titre/description restent
+        // identiques entre les rebuilds (child immuable).
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 180),
-            child: Opacity(
-              opacity: contentOpacity,
-              child: Transform.translate(
-                offset: Offset(0, contentTranslate),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Spacer(),
-                    // Badge icône
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: slide.accent,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: slide.accent.withValues(alpha: 0.5),
-                            blurRadius: 24,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Icon(slide.icon, color: Colors.white, size: 36),
+            child: AnimatedBuilder(
+              animation: controller,
+              builder: (context, child) {
+                final page = controller.hasClients ? (controller.page ?? index.toDouble()) : index.toDouble();
+                final deltaAbs = (index - page).abs();
+                return Opacity(
+                  opacity: (1 - deltaAbs).clamp(0.0, 1.0),
+                  child: Transform.translate(
+                    offset: Offset(0, deltaAbs * 30),
+                    child: child,
+                  ),
+                );
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Spacer(),
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: slide.accent,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: slide.accent.withValues(alpha: 0.5),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 28),
-                    // Titre
-                    Text(
-                      slide.title,
-                      style: GoogleFonts.inter(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
-                        height: 1.1,
-                      ),
+                    child: Icon(slide.icon, color: Colors.white, size: 36),
+                  ),
+                  const SizedBox(height: 28),
+                  Text(
+                    slide.title,
+                    style: GoogleFonts.inter(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                      height: 1.1,
                     ),
-                    const SizedBox(height: 16),
-                    // Description
-                    Text(
-                      slide.description,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white.withValues(alpha: 0.85),
-                        height: 1.5,
-                      ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    slide.description,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white.withValues(alpha: 0.85),
+                      height: 1.5,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
