@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,6 +12,8 @@ import {
   ChevronUp,
   BookTemplate,
   ExternalLink,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createQuote, type QuoteItemInput } from "../actions";
@@ -78,6 +80,7 @@ export default function NewQuotePage() {
   const [aiOpen, setAiOpen] = useState(false);
   const [aiDesc, setAiDesc] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiElapsedMs, setAiElapsedMs] = useState(0);
 
   // Modeles debours secs
   const [debourseModels, setDebourseModels] = useState<{ id: string; name: string }[]>([]);
@@ -113,6 +116,36 @@ export default function NewQuotePage() {
       if (typeof rate === "number") setTaxRate(String(rate));
     });
   }, []);
+
+  // Chrono pendant la génération IA. Tick à 250ms pour fluidité sans surcharge.
+  // Le reset à 0 se fait dans handleGenerateAI avant setAiLoading(true) pour
+  // éviter setState dans un effect (lint react-hooks/set-state-in-effect).
+  useEffect(() => {
+    if (!aiLoading) return;
+    const start = Date.now();
+    const id = setInterval(() => setAiElapsedMs(Date.now() - start), 250);
+    return () => clearInterval(id);
+  }, [aiLoading]);
+
+  // Phases conditionnelles selon les inputs choisis. Chaque phase a un seuil
+  // (ms) à partir duquel on considère "active". Avant son seuil → en attente,
+  // après le seuil de la suivante → terminée (cochée).
+  const aiPhases = useMemo(() => {
+    const p: { label: string; threshold: number }[] = [];
+    if (selectedTemplateId) p.push({ label: "Lecture du modèle de devis", threshold: 0 });
+    if (selectedDebourseId) p.push({ label: "Analyse du métré", threshold: p.length ? 1500 : 0 });
+    p.push({
+      label: "Génération du devis par l'IA",
+      threshold: p.length ? 3000 : 0,
+    });
+    p.push({ label: "Calcul des prix unitaires (Abidjan 2024)", threshold: 18000 });
+    p.push({ label: "Finalisation", threshold: 35000 });
+    return p;
+  }, [selectedTemplateId, selectedDebourseId]);
+
+  // Asymptote vers 95% pour ne jamais "remplir" la barre avant la fin réelle.
+  // τ=22s → 50% à 15s, 90% à 50s, 95% à 66s.
+  const aiProgress = aiLoading ? Math.min(95, (1 - Math.exp(-aiElapsedMs / 22000)) * 100) : 0;
 
   const subtotal = items.reduce((s, i) => s + lineTotal(i), 0);
   const tax = (subtotal * (Number(taxRate) || 0)) / 100;
@@ -160,6 +193,7 @@ export default function NewQuotePage() {
       return;
     }
 
+    setAiElapsedMs(0);
     setAiLoading(true);
     try {
       if (hasTemplate) {
@@ -374,16 +408,19 @@ export default function NewQuotePage() {
                 />
               </div>
 
-              <Button
-                type="button"
-                size="sm"
-                disabled={aiLoading}
-                className="bg-purple-600 text-white hover:bg-purple-700"
-                onClick={handleGenerateAI}
-              >
-                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                {generateButtonLabel()}
-              </Button>
+              {aiLoading ? (
+                <AiProgress elapsedMs={aiElapsedMs} progress={aiProgress} phases={aiPhases} />
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-purple-600 text-white hover:bg-purple-700"
+                  onClick={handleGenerateAI}
+                >
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                  {generateButtonLabel()}
+                </Button>
+              )}
             </CardContent>
           )}
         </Card>
@@ -573,6 +610,76 @@ export default function NewQuotePage() {
           </Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function AiProgress({
+  elapsedMs,
+  progress,
+  phases,
+}: {
+  elapsedMs: number;
+  progress: number;
+  phases: { label: string; threshold: number }[];
+}) {
+  const seconds = Math.floor(elapsedMs / 1000);
+  // Index de la phase active : dernière dont le threshold est dépassé.
+  const activeIdx = phases.reduce((acc, p, i) => (elapsedMs >= p.threshold ? i : acc), 0);
+
+  return (
+    <div className="rounded-lg border border-purple-200 bg-white px-4 py-4">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="flex items-center gap-2 text-sm font-semibold text-purple-800">
+          <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+          Génération du devis en cours…
+        </p>
+        <span className="text-xs font-medium text-purple-600 tabular-nums">{seconds}s</span>
+      </div>
+
+      <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-purple-100">
+        <div
+          className="h-full bg-gradient-to-r from-purple-500 to-purple-600 transition-[width] duration-500 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <ol className="space-y-2">
+        {phases.map((p, i) => {
+          const done = i < activeIdx;
+          const active = i === activeIdx;
+          return (
+            <li key={p.label} className="flex items-center gap-2.5 text-sm">
+              <span
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                  done
+                    ? "bg-purple-600 text-white"
+                    : active
+                      ? "border-2 border-purple-500 bg-white"
+                      : "border-2 border-gray-200 bg-white"
+                }`}
+              >
+                {done ? (
+                  <Check className="h-3 w-3" />
+                ) : active ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-purple-600" />
+                ) : null}
+              </span>
+              <span
+                className={
+                  done ? "text-gray-500" : active ? "font-medium text-purple-900" : "text-gray-400"
+                }
+              >
+                {p.label}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+
+      <p className="mt-3 text-xs text-gray-500">
+        L&apos;IA construit un devis exhaustif (jusqu&apos;à 1 min). Ne fermez pas la page.
+      </p>
     </div>
   );
 }

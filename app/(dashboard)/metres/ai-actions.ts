@@ -258,7 +258,7 @@ export async function genererDevisDepuisMetres(
 
     const response = await ai.messages.create({
       model: AI_MODEL,
-      max_tokens: 8192,
+      max_tokens: 32768,
       system: `Tu es un expert en devis BTP Côte d'Ivoire. Tu connais le Bordereau des Prix BTP CI 2024.
 Tu génères des devis précis avec les prix du marché ivoirien (en FCFA).
 Tu réponds UNIQUEMENT en JSON valide, sans troncature ni résumé.`,
@@ -294,6 +294,15 @@ Catégories valides : "material", "labor", "transport", "equipment", "other"`,
         },
       ],
     });
+
+    if (response.stop_reason === "max_tokens") {
+      return {
+        items: [],
+        notes: "",
+        error:
+          "Le devis généré dépasse la limite de tokens. Simplifiez le projet ou divisez en plusieurs devis.",
+      };
+    }
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";
     const json = extractJson(text);
@@ -383,7 +392,7 @@ Réponds UNIQUEMENT avec ce JSON :
 
     const response = await ai.messages.create({
       model: AI_MODEL,
-      max_tokens: 8192,
+      max_tokens: 32768,
       system: systemPrompt,
       messages: [
         {
@@ -392,6 +401,15 @@ Réponds UNIQUEMENT avec ce JSON :
         },
       ],
     });
+
+    if (response.stop_reason === "max_tokens") {
+      return {
+        items: [],
+        notes: "",
+        error:
+          "Le devis généré dépasse la limite de tokens. Simplifiez l'instruction ou utilisez un modèle plus court.",
+      };
+    }
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";
     const json = extractJson(text);
@@ -428,7 +446,7 @@ export async function genererDevisDepuisDebourses(
 
     const response = await ai.messages.create({
       model: AI_MODEL,
-      max_tokens: 8192,
+      max_tokens: 32768,
       system: `Tu es un expert en devis BTP Côte d'Ivoire (Bordereau des Prix BTP CI 2024).
 Tu connais les prix du marché ivoirien. Tu reponds UNIQUEMENT en JSON valide.`,
       messages: [
@@ -465,6 +483,14 @@ Réponds UNIQUEMENT avec ce JSON :
         },
       ],
     });
+
+    if (response.stop_reason === "max_tokens") {
+      return {
+        items: [],
+        notes: "",
+        error: "Le devis généré dépasse la limite de tokens. Simplifiez l'instruction.",
+      };
+    }
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";
     const json = extractJson(text);
