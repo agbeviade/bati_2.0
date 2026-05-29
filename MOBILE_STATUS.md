@@ -17,8 +17,8 @@
 | **3. Chantiers** — CRUD + détail | ✅ | projects/, project_detail_page.dart. Onglets photos/dépenses présents. |
 | **3. Timeline chantier** | ❓ | À vérifier dans `project_detail_page.dart` (non audité ligne par ligne). |
 | **4. Devis** — Manuel | ✅ | quote_form_page.dart |
-| **4. Devis** — IA | ✅ | quote_ai_page.dart — branche sur l'API web `/api/ai/quote`. |
-| **4. Devis** — Templates | ✅ | quote_templates_page.dart |
+| **4. Devis** — IA | ✅ | [quote_ai_page.dart](lib/features/quotes/presentation/quote_ai_page.dart) → Supabase Edge Function `generate-quote` (Anthropic Claude Sonnet 4.6). Supporte les 3 chemins : description / modèle de devis (PDF) / modèle de métré. |
+| **4. Devis** — Templates | ✅ | [quote_templates_page.dart](lib/features/quotes/presentation/quote_templates_page.dart). Sélectionnables depuis `quote_ai_page` pour générer un devis structuré. |
 | **4. Devis** — PDF | ✅ | `pdf` + `printing` packages, [pdf_service.dart](lib/core/services/pdf_service.dart). |
 | **4. Devis** — Envoi WhatsApp | ❌ | Pas d'intégration WhatsApp côté mobile. |
 | **5. Matériaux + Stock** | ✅ | materials/ + movement_form_page.dart |
