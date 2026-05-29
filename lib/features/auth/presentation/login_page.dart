@@ -56,20 +56,22 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: Stack(
-        children: [
-          // ── Hero gradient + logo + titre ─────────────────────────────
-          const _HeroHeader(
-            title: 'Bon retour',
-            subtitle: 'Connectez-vous pour piloter vos chantiers',
-          ),
-
-          // ── Card flottante avec le formulaire ────────────────────────
-          Positioned.fill(
-            top: 220,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              child: _AuthCard(
+      // resizeToAvoidBottomInset: true par défaut → le clavier pousse la card.
+      body: SingleChildScrollView(
+        // ClampingScrollPhysics : pas de bounce sur la page d'auth (UX Android natif).
+        physics: const ClampingScrollPhysics(),
+        child: Column(
+          children: [
+            const _HeroHeader(
+              title: 'Bon retour',
+              subtitle: 'Connectez-vous pour piloter vos chantiers',
+            ),
+            // Card chevauche le hero de 40px vers le haut pour créer la profondeur.
+            Transform.translate(
+              offset: const Offset(0, -40),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: _AuthCard(
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -186,7 +188,8 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
