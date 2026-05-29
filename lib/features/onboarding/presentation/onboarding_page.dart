@@ -246,21 +246,27 @@ class _OnboardingSlideView extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // ── Background avec parallax — rebuild local sur scroll ───────
-        RepaintBoundary(
-          child: AnimatedBuilder(
-            animation: controller,
-            builder: (context, child) {
-              final page = controller.hasClients ? (controller.page ?? index.toDouble()) : index.toDouble();
-              final delta = index - page;
-              return Transform.translate(
-                offset: Offset(-delta * size.width * 0.4, 0),
-                child: child,
-              );
-            },
-            child: OverflowBox(
-              maxWidth: size.width * 1.4,
-              child: _BackgroundImage(slide: slide),
+        // ── Background avec parallax ─────────────────────────────────
+        // ClipRect contraint l'image à la zone visible de la slide pour
+        // qu'elle ne déborde PAS sur la slide voisine pendant le swipe
+        // (sinon on voit des bandes verticales : la slide adjacente +
+        // notre image qui dépasse de l'OverflowBox + leur intersection).
+        ClipRect(
+          child: RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: controller,
+              builder: (context, child) {
+                final page = controller.hasClients ? (controller.page ?? index.toDouble()) : index.toDouble();
+                final delta = index - page;
+                return Transform.translate(
+                  offset: Offset(-delta * size.width * 0.4, 0),
+                  child: child,
+                );
+              },
+              child: OverflowBox(
+                maxWidth: size.width * 1.4,
+                child: _BackgroundImage(slide: slide),
+              ),
             ),
           ),
         ),
