@@ -16,6 +16,7 @@ class _SignupPageState extends State<SignupPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _obscure = true;
@@ -30,6 +31,7 @@ class _SignupPageState extends State<SignupPage> {
   void dispose() {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
+    _phoneCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -38,10 +40,14 @@ class _SignupPageState extends State<SignupPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
+      final phone = _phoneCtrl.text.trim();
       await Supabase.instance.client.auth.signUp(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
-        data: {'full_name': _nameCtrl.text.trim()},
+        data: {
+          'full_name': _nameCtrl.text.trim(),
+          if (phone.isNotEmpty) 'phone': phone,
+        },
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -123,6 +129,16 @@ class _SignupPageState extends State<SignupPage> {
                             ),
                             const SizedBox(height: 14),
                             TextFormField(
+                              controller: _phoneCtrl,
+                              keyboardType: TextInputType.phone,
+                              decoration: const InputDecoration(
+                                labelText: 'Téléphone (optionnel)',
+                                hintText: '+225 07 00 00 00 00',
+                                prefixIcon: Icon(Icons.phone_outlined),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            TextFormField(
                               controller: _passwordCtrl,
                               obscureText: _obscure,
                               decoration: InputDecoration(
@@ -135,7 +151,7 @@ class _SignupPageState extends State<SignupPage> {
                                   onPressed: () => setState(() => _obscure = !_obscure),
                                 ),
                               ),
-                              validator: (v) => v == null || v.length < 6 ? 'Minimum 6 caractères' : null,
+                              validator: (v) => v == null || v.length < 8 ? 'Minimum 8 caractères' : null,
                               onFieldSubmitted: (_) => _signUp(),
                             ),
                             const SizedBox(height: 24),
