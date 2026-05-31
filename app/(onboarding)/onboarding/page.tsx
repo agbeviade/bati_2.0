@@ -62,7 +62,7 @@ export default function OnboardingPage() {
         <CardDescription>Ces informations apparaîtront sur vos devis et factures.</CardDescription>
       </CardHeader>
 
-      <form ref={formRef} onSubmit={handleSubmit}>
+      <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-6">
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nom de l&apos;entreprise *</Label>

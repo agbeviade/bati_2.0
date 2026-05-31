@@ -75,7 +75,7 @@ export default function RegisterPage() {
         <CardDescription>Commencez gratuitement — 1 chantier inclus.</CardDescription>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
